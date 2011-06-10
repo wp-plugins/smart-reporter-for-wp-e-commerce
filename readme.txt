@@ -1,5 +1,5 @@
 === Smart Reporter for WP e-Commerce ===
-Contributors: niravmehta, rohan@storeapps, angelin.nadar
+Contributors: niravmehta, rohan@storeapps, angelin.nadar, malayladu
 Donate link: http://www.storeapps.org/
 Tags: administration, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
@@ -27,7 +27,7 @@ Compatible with WPeC 3.8+. Will not work with WPeC 3.7.
 
 = Does this work with WP e-Commerce 3.8? =
 
-Yes. Smart Manager is compatible only with WP e-Commerce 3.8+, and not with 3.7.
+Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7.
 
 == Screenshots ==
 
