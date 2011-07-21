@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
 Description: Store analysis like never before. 
-Version: 1.0
+Version: 1.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -37,7 +37,7 @@ if (is_admin ()) {
 	
 	define ( 'ADMIN_URL', get_admin_url () ); //defining the admin url
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
-	define ( 'IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );
+	define ( 'SR_IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );
 	
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
 	define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/json.php" );
@@ -88,7 +88,7 @@ if (is_admin ()) {
 		?>
 <div class="wrap">
 <div id="icon-smart-manager" class="icon32"><img alt="Smart Reporter"
-	src="<?php echo IMG_URL.'/logo.png'?>"></div>
+	src="<?php echo SR_IMG_URL.'/logo.png'?>"></div>
 <h2><?php
 		echo _e ( 'Smart Reporter' );
 		?>
@@ -100,8 +100,6 @@ if (is_admin ()) {
 	?></p>
 </h2>
 </div>
-
-
 <?php
 			// checking the version for WPSC plugin
 			define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
@@ -132,8 +130,6 @@ if (is_admin ()) {
 
 				sr_display_err ( $error_message );
 				?>
-</p>
-</div>
 <?php
 			}
 	}
