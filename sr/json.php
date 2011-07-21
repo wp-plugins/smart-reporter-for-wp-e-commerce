@@ -115,78 +115,75 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 	// EOF 
 	}
 	
-	$select = " SELECT prodid as id,
-					name as products,
-					sum(price * quantity) as sales";
+	$select  = " SELECT prodid as id, sum(price * quantity) as sales, name as products";
 		
-	$from = " FROM " . WPSC_TABLE_CART_CONTENTS . " as wtcc
-			  JOIN `" . WPSC_TABLE_PURCHASE_LOGS . "` as wtpl on (wtcc.`purchaseid` = wtpl.`id`)";
+	$from    = " FROM " . WPSC_TABLE_CART_CONTENTS . " as wtcc
+			     JOIN `" . WPSC_TABLE_PURCHASE_LOGS . "` as wtpl on (wtcc.`purchaseid` = wtpl.`id`)";
 		
-	$limit = " LIMIT " . $offset . "," . $limit . "";
-	
-	$where .= "AND wtpl.`processed` >= 2";
-	
+	$limit    = " LIMIT " . $offset . "," . $limit . "";
+	$where   .= "AND wtpl.`processed` >= 2";
 	$order_by = "ORDER BY sales DESC";
-		
+	
+	if (isset ( $_GET ['searchText'] ) && $_GET ['searchText'] != '') {
+		$search_on = mysql_escape_string ( trim ( $_GET ['searchText'] ) );
+		$where .= " AND (name LIKE '%$search_on%') ";
+	}
+
 	if ($_GET ['cmd'] == 'gridGetData') {
 		
-		$group_by = " GROUP BY prodid";
+		$group_by   = " GROUP BY prodid";		
+		$query 	    = "$select $from $where $group_by $order_by ";
 		
-		$query = "$select $from $where $group_by $order_by ";
-		
-		$results = $wpdb->get_results ( $query, 'ARRAY_A' );
-		$num_rows = $wpdb->num_rows;
+		$results 	= $wpdb->get_results ( $query, 'ARRAY_A' );		
+		$num_rows   = $wpdb->num_rows;
 		$no_records = $num_rows;
 			
 		if ($no_records == 0) {
-			$encoded ['gridItems']['products'] = '';
-			$encoded ['gridItems']['sales'] = '';
-			$encoded ['gridTotalCount'] = 0;
-			$encoded ['period_div'] = $parts ['category'];
-			$encoded ['msg'] = 'No Records Found';
+			$encoded ['gridItems'] 		= '';			
+			$encoded ['gridTotalCount'] = '';
+			$encoded ['msg']			= 'No Records Found';
 		} else {
 			
 			$count = 0 ;
-			$grid_data [$count] ['sales'] = 0;
-			$grid_data [$count] ['products'] = 'All Products';
-			$grid_data [$count] ['period'] = 'selected period';
-			$grid_data [$count] ['id'] = '';
-			
-			foreach ( $results as $result ) {
-				$grid_data [$count] ['sales'] = $grid_data[$count] ['sales'] + $result ['sales'];
-			}
-			
-			foreach ( $results as $result ) { 
+			$grid_data = array();
+			if ($_GET ['searchText'] == '') {
+				$grid_data [$count] ['sales']    = 0;
+				$grid_data [$count] ['products'] = 'All Products';
+				$grid_data [$count] ['period']   = 'selected period';
+				$grid_data [$count] ['id'] 	     = '';
+
+				foreach ( $results as $result ) {
+					$grid_data [$count] ['sales'] = $grid_data[$count] ['sales'] + $result ['sales'];
+				}
 				$count++;
-				$grid_data [$count] ['products'] = $result ['products'];
-				$grid_data [$count] ['period'] = $result ['period'];
-				$grid_data [$count] ['sales'] = $result ['sales'];
-				$grid_data [$count] ['id'] = $result ['id'];
-			
 			}
 			
-			$encoded ['gridItems'] = $grid_data;
-			$encoded ['period_div'] = $parts ['category'];
+			foreach ( $results as $result ) { 				
+				$grid_data [$count] ['products'] = $result ['products'];
+				$grid_data [$count] ['period']   = $result ['period'];
+				$grid_data [$count] ['sales']    = $result ['sales'];
+				$grid_data [$count] ['id'] 	 	 = $result ['id'];
+				$count++;
+			}
+			
+			$encoded ['gridItems']      = $grid_data;
+			$encoded ['period_div'] 	= $parts ['category'];
 			$encoded ['gridTotalCount'] = count($grid_data);
 		}
-	
 	} else {
-		$select .= " ,FROM_UNIXTIME(wtpl.`date`, '{$parts ['abbr']}') AS period";
-		
+		$select  .= " ,FROM_UNIXTIME(wtpl.`date`, '{$parts ['abbr']}') AS period";		
 		$group_by = " GROUP BY period";
 		
 		if (isset ( $_GET ['id'] ) && $_GET ['id'] != 0) {
-			$group_by .= ", prodid";
-			 
+			$group_by  .= ", prodid";
 			$product_id = mysql_escape_string ( $_GET ['id'] );
-			
-			$where .= " AND prodid = $product_id ";
+			$where 	   .= " AND prodid = $product_id ";
 		}
 		
 		$query = "$select $from $where $group_by";
 		
-		$results = $wpdb->get_results ( $query, 'ARRAY_A' );
-		$num_rows = $wpdb->num_rows;
+		$results 	= $wpdb->get_results ( $query, 'ARRAY_A' );		
+		$num_rows   = $wpdb->num_rows;
 		$no_records = ($num_rows != 0)? count ( $cat_rev ) : 0;
 
 		if ($no_records != 0) {
@@ -202,20 +199,14 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 		}
 		
 		if ($no_records == 0) {
-//			$encoded ['items'][0]['period'] = '';
-//			$encoded ['items'][0]['sales'] = 0;
 			$encoded ['items'] = '';
 			$encoded ['totalCount'] = 0;
 			$encoded ['msg'] = 'No Records Found';
 		} else {
 			$encoded ['items'] = $records;
 			$encoded ['totalCount'] = count($cat_rev);
-		}
+		}		
 	}
-
-	//	echo '<pre>';
-//	print_r ( $encoded );
-//	echo '</pre>';
 }
 
 echo json_encode ( $encoded );

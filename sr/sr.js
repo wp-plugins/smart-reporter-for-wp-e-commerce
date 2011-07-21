@@ -1,27 +1,154 @@
 Ext.onReady(function() {
 
-	// var itemsPerPage = 25; // set the number of items you want per page
-	var selectedStoreItem = false;
+	var SR = {};
+	SR.searchTextField = '';
+	
+	SR.searchTextField = new Ext.form.field.Text({
+		id: 'tf',
+		width: 250,
+		cls: 'searchPanel',
+		style: {
+			fontSize: '14px',
+			paddingLeft: '2px',
+			width: '100%'
+		},
+		params: {
+			cmd: 'searchText'
+		},
+		emptyText: 'Search...',
+		enableKeyEvents: true,
+		listeners: {
+			keyup: function () {
 
+				// make server request after some time - let people finish typing their keyword
+				clearTimeout(search_timeout_id);
+				search_timeout_id = setTimeout(function () {					
+					gridPanelSearchLogic();
+				}, 500);
+			}}
+	});
+	
 	// from-date and to-date textfields
 	var fromDateTxt = new Ext.form.TextField({
 		emptyText : 'From Date',
 		readOnly : true,
-		width : 80
+		width : 90
 	});
 	var toDateTxt = new Ext.form.TextField({
 		emptyText : 'To Date',
 		readOnly : true,
-		width : 80
+		width : 90
 	});
 	var now = new Date();
-	var initDate = new Date(0);
-	var lastMonDate = new Date(now.getFullYear(), now.getMonth() - 1, now
-			.getDate() + 1);
+	var lastMonDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate() + 1);
+	var search_timeout_id = 0; //timeout for sending request while searching.
+	var dateFormat = 'M d Y';
 
-	fromDateTxt.setValue(Ext.Date.format(lastMonDate, 'M j Y'));
-	toDateTxt.setValue(Ext.Date.format(now, 'M j Y'));
+	fromDateTxt.setValue(Ext.Date.format(lastMonDate, dateFormat));
+	toDateTxt.setValue(Ext.Date.format(now, dateFormat));
 
+	var smartDateComboBox = Ext.create('Ext.form.ComboBox', {
+		queryMode: 'local',
+		width : 100,
+		store: new Ext.data.ArrayStore({
+			autoDestroy: true,
+			forceSelection: true,
+			fields: ['value', 'name'],
+			data: [
+					['TODAY',      'Today'],
+					['YESTERDAY',  'Yesterday'],
+					['THIS WEEK',  'This Week'],
+					['LAST WEEK',  'Last Week'],
+					['THIS MONTH', 'This Month'],
+					['LAST MONTH', 'Last Month'],
+					['3 MONTHS',   '3 Months'],
+					['6 MONTHS',   '6 Months'],
+					['THIS YEAR',  'This Year'],
+					['LAST YEAR',  'Last Year']
+				]
+		}),
+		displayField: 'name',
+		valueField: 'value',
+		triggerAction: 'all',
+		editable: false,
+		emptyText : 'Select Date',
+		style: {
+			fontSize: '14px',
+			paddingLeft: '2px'
+		},
+		forceSelection: true,
+		listeners: {
+			select: function () {
+				var fromDate,toDate,
+					dateValue = this.value;				
+
+				switch (dateValue){
+
+					case 'TODAY':
+					fromDate = now;
+					toDate 	 = now;
+					break;
+
+					case 'YESTERDAY':
+					fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+					toDate 	 = now;
+					break;
+
+					case 'THIS WEEK':
+					fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() - 1));
+					toDate 	 = now;
+					break;
+
+					case 'LAST WEEK':
+					fromDate = new Date(now.getFullYear(), now.getMonth(), (now.getDate() - (now.getDay() - 1) - 7));
+					toDate   = new Date(now.getFullYear(), now.getMonth(), (now.getDate() - (now.getDay() - 1) - 1));
+					break;
+
+					case 'THIS MONTH':
+					fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+					toDate 	 = now;
+					break;
+
+					case 'LAST MONTH':
+					fromDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+					toDate   = new Date(now.getFullYear(), now.getMonth(), 0);
+					break;
+
+					case '3 MONTHS':
+					fromDate = new Date(now.getFullYear(), now.getMonth()-2, 1);
+					toDate 	 = now;
+					break;
+
+					case '6 MONTHS':
+					fromDate = new Date(now.getFullYear(), now.getMonth()-5, 1);
+					toDate 	 = now;
+					break;
+
+					case 'THIS YEAR':
+					fromDate = new Date(now.getFullYear(), 0, 1);
+					toDate 	 = now;
+					break;
+
+					case 'LAST YEAR':
+					fromDate = new Date(now.getFullYear() - 1, 0, 1);
+					toDate 	 = new Date(now.getFullYear(), 0 , 0);
+					break;
+
+					default:
+					fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+					toDate 	 = now;
+					break;
+				}
+
+				fromDateTxt.setValue(Ext.Date.format(fromDate, dateFormat));
+				toDateTxt.setValue(Ext.Date.format(toDate, dateFormat));
+
+				loadGridStore();
+				lineGraphStoreLoad(0);
+			}
+		}
+	});
+	
 	// store for graph
 	var lineGraphStore = Ext.create('Ext.data.Store', {
 		id : 'lineGraphStore',
@@ -39,18 +166,20 @@ Ext.onReady(function() {
 			fromDate : fromDateTxt.getValue(),
 			toDate : toDateTxt.getValue(),
 			start : 0,
-			// limit: itemsPerPage,
 			cmd : 'getData'
 		},
-		// pageSize: itemsPerPage, // items per page
 		proxy : {
 			type : 'ajax',
 			url : jsonUrl, // url that will load data with respect to start and
-			// limit params
 			reader : {
 				type : 'json',
-				totalProperty : 'totalCount',
-				root : 'items'
+				totalProperty : 'totalCount'
+				,root : 'items'
+			},
+			//this will be used in place of BaseParams of extjs 3
+			//Extra parameters that will be included on every request which will help us if we use pagination.
+			extraParams :{
+				searchText: SR.searchTextField.getValue()
 			}
 		}
 	});
@@ -58,22 +187,21 @@ Ext.onReady(function() {
 	lineGraphStore.on('load',
 			function() {
 				if (lineGraphStore.getTotalCount() == 0) {
-					Ext.Msg.alert('Info',
-							'No sales found between the selected period');
+					Ext.Msg.alert('Info','No sales found between the selected period');
 				} else {
 				}
-
 			});
 
-	// store for graph
-	var lineGraphStoreLoad = function() {
+	// store for graph function
+	var lineGraphStoreLoad = function(id) {
 		lineGraphStore.load({
 			params : {
-				fromDate : fromDateTxt.getValue(),
-				toDate : toDateTxt.getValue(),
-				start : 0,
-				// limit: itemsPerPage,
-				cmd : 'getData'
+				fromDate  : fromDateTxt.getValue(),
+				toDate    : toDateTxt.getValue(),
+				searchText: SR.searchTextField.getValue(),
+				start 	  : 0,
+				id 		  : id,
+				cmd 	  : 'getData'
 			}
 		});
 	};
@@ -91,45 +219,32 @@ Ext.onReady(function() {
 		}, {
 			name : 'sales',
 			type : 'float'
-		}, ],
-		// pageSize: itemsPerPage, // items per page
+		}],
 		proxy : {
 			type : 'ajax',
 			url : jsonUrl, // url that will load data with respect to start and
-			// limit params
 			reader : {
 				type : 'json',
-				totalProperty : 'gridTotalCount',
-				root : 'gridItems'
+				totalProperty : 'gridTotalCount'
+				,root : 'gridItems'
 			}
 		},
 		params : {
 			fromDate : fromDateTxt.getValue(),
 			toDate : toDateTxt.getValue(),
 			start : 0,
-			// limit: itemsPerPage,
 			cmd : 'gridGetData'
 		},
+		extraParams :{
+			searchText: SR.searchTextField.getValue()
+		},
 		listeners : {
-			load : function() {
+			load : function() {				
 				var model = gridPanel.getSelectionModel();
-				model.select(0);
-
-				if (this.getTotalCount() == 0) {
-//					this.item = ;
-				} else {
-					lineGraphStore.load({
-						params : {
-							fromDate : fromDateTxt.getValue(),
-							toDate : toDateTxt.getValue(),
-							start : 0,
-							id : 0,
-							// limit: itemsPerPage,
-							cmd : 'getData'
-						}
-					});
+				
+				if (this.getTotalCount() != 0) {
+					model.select(0);
 				}
-
 			}
 		}
 	});
@@ -141,9 +256,6 @@ Ext.onReady(function() {
 		flex : 2,
 		store : gridStore,
 		columns : [
-		/*
-		 * { text : 'Id', width : 150, sortable : true, dataIndex: 'id', },
-		 */
 		{
 			text : 'Products',
 			width : 200,
@@ -165,17 +277,7 @@ Ext.onReady(function() {
 			selectionchange : function(model, records) {
 				if (records[0] != undefined) {
 					var selectedId = records[0].data.id;
-
-					lineGraphStore.load({
-						params : {
-							fromDate : fromDateTxt.getValue(),
-							toDate : toDateTxt.getValue(),
-							start : 0,
-							id : selectedId,
-							// limit: itemsPerPage,
-							cmd : 'getData'
-						}
-					});
+					lineGraphStoreLoad(selectedId);
 				}
 			}
 		}
@@ -183,49 +285,68 @@ Ext.onReady(function() {
 
 	var fromDateMenu = new Ext.menu.DatePicker({
 		handler : function(dp, date) {
-			fromDateTxt.setValue(Ext.Date.format(date, 'M j Y'));
+			smartDateComboBox.reset();
+			fromDateTxt.setValue(Ext.Date.format(date, dateFormat));
 			loadGridStore();
-
-			lineGraphStore.load({
-				params : {
-					fromDate : fromDateTxt.getValue(),
-					toDate : toDateTxt.getValue(),
-					start : 0,
-					id : 0,
-					// limit: itemsPerPage,
-					cmd : 'getData'
-				}
-			});
+			lineGraphStoreLoad(0);
 		},
 		maxDate : now
 	});
 
 	var toDateMenu = new Ext.menu.DatePicker({
 		handler : function(dp, date) {
-			toDateTxt.setValue(Ext.Date.format(date, 'M j Y'));
+			smartDateComboBox.reset();
+			toDateTxt.setValue(Ext.Date.format(date, dateFormat));
 			loadGridStore();
-
-			lineGraphStore.load({
-				params : {
-					fromDate : fromDateTxt.getValue(),
-					toDate : toDateTxt.getValue(),
-					start : 0,
-					id : 0,
-					// limit: itemsPerPage,
-					cmd : 'getData'
-				}
-			});
+			lineGraphStoreLoad(0);
 		},
 		maxDate : now
-	});
+	});	
+	
+	var gridPanelSearchLogic = function () {
 
+		var o = {
+			url : jsonUrl,
+			method: 'get',
+			callback: function (options, success, response) {
+				var myJsonObj = Ext.decode(response.responseText);
+				if (true !== success) {
+					Ext.notification.msg('Failed',response.responseText);
+					return;
+				}
+				try {
+
+					var records_cnt = myJsonObj.totalCount;
+					if (records_cnt == 0){
+						myJsonObj.items = '';
+					}
+
+					loadGridStore();
+					lineGraphStoreLoad(0);
+					
+				} catch (e) {
+					return;
+				}
+			},
+			scope: this,
+			params: {
+				cmd: 'gridGetData',
+				searchText: SR.searchTextField.getValue(),
+				fromDate: fromDateTxt.getValue(),
+				toDate: toDateTxt.getValue(),
+				start: 0
+			}
+		};
+		Ext.Ajax.request(o);
+	};	
+	
 	var loadGridStore = function() {
 		gridStore.load({
 			params : {
 				fromDate : fromDateTxt.getValue(),
 				toDate : toDateTxt.getValue(),
 				start : 0,
-				// limit: itemsPerPage,
+				searchText: SR.searchTextField.getValue(),
 				cmd : 'gridGetData'
 			}
 		});
@@ -239,7 +360,6 @@ Ext.onReady(function() {
 		cls: 'bar-chart',
 		height : 300,
 		width: 150,
-		// theme: 'Red',
 		insetPadding: 10,
 		shadow : false,
 		animate : true,
@@ -249,7 +369,6 @@ Ext.onReady(function() {
 			fromDate : fromDateTxt.getValue(),
 			toDate : toDateTxt.getValue(),
 			start : 0,
-			// limit: itemsPerPage,
 			cmd : 'getData'
 		},
 		axes : [{
@@ -288,16 +407,13 @@ Ext.onReady(function() {
 				type : 'circle',
 				size : 4,
 				radius : 2
-//				'stroke-width' : 1,
-//				stroke : 'rgb(215, 227, 242)'
 			},
 			tips : {
 				trackMouse : true,
 				width : 100,
 				renderer : function(storeItem, item) {
 					var toolTipText = '';
-					toolTipText = storeItem.data['sales'] + '<br\> '
-							+ storeItem.data['period'];
+						toolTipText = storeItem.data['sales'] + '<br\> ' + storeItem.data['period'];
 					this.setTitle(toolTipText);
 				}
 			},
@@ -315,8 +431,7 @@ Ext.onReady(function() {
 
 	var gridForm = Ext.create('Ext.form.Panel', {
 		tbar : [ '<b>Sales</b>', {
-			xtype : 'tbspacer',
-			width : 300
+			xtype : 'tbspacer'
 		}, {
 			text : 'From:'
 		}, fromDateTxt, {
@@ -327,7 +442,8 @@ Ext.onReady(function() {
 		}, toDateTxt, {
 			icon : imgURL + 'calendar.gif',
 			menu : toDateMenu
-		}, '->', {
+		},smartDateComboBox, '',SR.searchTextField,{ icon: imgURL + 'search.png' }, 
+		'->', {
 			text : '',
 			icon : imgURL + 'refresh.gif',
 			tooltip : 'Reload',
@@ -340,7 +456,6 @@ Ext.onReady(function() {
 			}
 		} ],
 		height : 400,
-		// title: 'Company data',
 		layout : {
 			type : 'hbox',
 			align : 'stretch'
@@ -366,7 +481,6 @@ Ext.onReady(function() {
 		} ],
 		renderTo : 'smart-reporter'
 	});
-
 	loadGridStore();
-
+	lineGraphStoreLoad(0);
 });
