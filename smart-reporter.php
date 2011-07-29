@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
 Description: Store analysis like never before. 
-Version: 1.1
+Version: 1.2
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -43,17 +43,23 @@ if (is_admin ()) {
 	define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/json.php" );
 	// EOF
 	
-
 	add_action ( 'admin_notices', 'sr_admin_notices' );
 	add_action ( 'admin_init', 'sr_admin_init' );
 	
 	function sr_admin_init() {
 		$plugin_info = get_plugins ( '/smart-reporter' );
 		$ext_version = '0.1';
-		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
-		wp_register_script ( 'sr_js', plugins_url ( '/sr/sr.js', __FILE__ ), array ('sr_ext_all' ), $ext_version );
-		wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
-		wp_register_style ( 'sr_js', plugins_url ( '/sr/sr.css', __FILE__ ), array ('sr_ext_all' ), $plugin_info ['Version'] );
+		
+		// checking the version for WPSC plugin
+		define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
+		define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
+			
+		if (IS_WPSC38) {
+			wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
+			wp_register_script ( 'sr_js', plugins_url ( '/sr/sr.js', __FILE__ ), array ('sr_ext_all' ), $ext_version );
+			wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
+			wp_register_style ( 'sr_js', plugins_url ( '/sr/sr.css', __FILE__ ), array ('sr_ext_all' ), $plugin_info ['Version'] );
+		}
 	}
 	
 	function sr_admin_notices() {
@@ -101,10 +107,6 @@ if (is_admin ()) {
 </h2>
 </div>
 <?php
-			// checking the version for WPSC plugin
-			define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
-			define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
-
 			$error_message = '';
 			if (file_exists ( $wp_ecom_path . 'wp-shopping-cart.php' )) {
 				if (is_plugin_active ( 'wp-e-commerce/wp-shopping-cart.php' )) {
