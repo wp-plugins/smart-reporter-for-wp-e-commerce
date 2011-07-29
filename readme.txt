@@ -1,10 +1,10 @@
 === Smart Reporter for WP e-Commerce ===
-Contributors: niravmehta, rohan@storeapps, angelin.nadar, malayladu
+Contributors: niravmehta, rohankamble, angelin.nadar, malayladu
 Donate link: http://www.storeapps.org/
 Tags: administration, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.2.1
-Stable tag: 1.1
+Stable tag: 1.2
 
 Store analysis like never before.
 
@@ -35,6 +35,10 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 == Changelog ==
 
+= 1.2 =
+* NEW: You can now see the categories of products and product variations.
+* NEW: You can also search on product categories.
+
 = 1.1 =
 * NEW: You can now search on products to see reports for specific products
 * NEW: Smart date filters let you select common date ranges easily
@@ -44,6 +48,8 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 
 == Upgrade Notice ==
+= 1.2 =
+New features - see categories for products and search on them.
 
 = 1.1 =
 Feature additions - product search and smart date filters. Recommended upgrade.
