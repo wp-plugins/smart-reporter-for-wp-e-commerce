@@ -9,6 +9,7 @@ require_once ('../../' . WPSC_FOLDER . '/wpsc-includes/purchaselogs.class.php');
 $del = 3;
 $result = array ();
 $encoded = array ();
+global $wpdb;
 
 if (isset ( $_GET ['start'] ))
 	$offset = $_GET ['start'];
@@ -115,18 +116,35 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 	// EOF 
 	}
 	
-	$select  = " SELECT prodid as id, sum(price * quantity) as sales, name as products";
+	$select  = " SELECT prodid as id, sum(price * quantity) as sales, wtcc.name as products";
 		
-	$from    = " FROM " . WPSC_TABLE_CART_CONTENTS . " as wtcc
-			     JOIN `" . WPSC_TABLE_PURCHASE_LOGS . "` as wtpl on (wtcc.`purchaseid` = wtpl.`id`)";
+	$from    = " FROM {$wpdb->prefix}wpsc_cart_contents as wtcc
+			     JOIN {$wpdb->prefix}wpsc_purchase_logs as wtpl on (wtcc.`purchaseid` = wtpl.`id`)";
 		
 	$limit    = " LIMIT " . $offset . "," . $limit . "";
 	$where   .= "AND wtpl.`processed` >= 2";
 	$order_by = "ORDER BY sales DESC";
 	
+	//To get categories 
+	$select .= " , GROUP_CONCAT( DISTINCT wt.name ) AS category";
+	$from   .= "  	   JOIN {$wpdb->prefix}posts 		      AS p    ON (p.ID = prodid)
+					   JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(post_parent = 0,prodid,post_parent) = wtr.object_id)
+             	  LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
+             	  LEFT JOIN {$wpdb->prefix}terms 			  AS wt   ON (wtt.term_id = wt.term_id)";
+	
 	if (isset ( $_GET ['searchText'] ) && $_GET ['searchText'] != '') {
 		$search_on = mysql_escape_string ( trim ( $_GET ['searchText'] ) );
-		$where .= " AND (name LIKE '%$search_on%') ";
+		$where .= " AND (wtcc.name LIKE '%$search_on%' 
+            			 OR prodid in (                         
+                         SELECT prodid 
+                         FROM 	   {$wpdb->prefix}wpsc_cart_contents
+                              JOIN {$wpdb->prefix}posts              AS p    ON (p.ID = prodid)
+                              JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(p.post_parent = 0,prodid,post_parent) = wtr.object_id)
+                         LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
+                         LEFT JOIN {$wpdb->prefix}terms              AS wt   ON (wtt.term_id = wt.term_id)
+                         WHERE wt.name LIKE '%$search_on%'
+              						)
+		             	)";
 	}
 
 	if ($_GET ['cmd'] == 'gridGetData') {
@@ -150,6 +168,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 				$grid_data [$count] ['sales']    = 0;
 				$grid_data [$count] ['products'] = 'All Products';
 				$grid_data [$count] ['period']   = 'selected period';
+				$grid_data [$count] ['category'] = 'All Categories';
 				$grid_data [$count] ['id'] 	     = '';
 
 				foreach ( $results as $result ) {
@@ -162,6 +181,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 				$grid_data [$count] ['products'] = $result ['products'];
 				$grid_data [$count] ['period']   = $result ['period'];
 				$grid_data [$count] ['sales']    = $result ['sales'];
+				$grid_data [$count] ['category'] = $result ['category'];
 				$grid_data [$count] ['id'] 	 	 = $result ['id'];
 				$count++;
 			}

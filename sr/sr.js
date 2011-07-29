@@ -1,3 +1,37 @@
+// Floating notification start
+Ext.notification = function(){
+	var msgCt;
+	function createBox(t, s){
+		return ['<div class="msg">',
+		'<div class="x-box-tl"><div class="x-box-tr"><div class="x-box-tc"></div></div></div>',
+		'<div class="x-box-ml"><div class="x-box-mr"><div class="x-box-mc"><h3>', t, '</h3>', s, '</div></div></div>',
+		'<div class="x-box-bl"><div class="x-box-br"><div class="x-box-bc"></div></div></div>',
+		'</div>'].join('');
+	}
+	return {
+		msg : function(title, format){
+			if(!msgCt){
+				msgCt = Ext.core.DomHelper.insertFirst(document.body, {id:'msg-div'}, true);
+			}
+
+			Ext.Element = msgCt;
+			msgCt = Ext.Element;
+			msgCt.alignTo(document, 't-t');
+			var s = Ext.String.format.apply(String, Array.prototype.slice.call(arguments, 1));
+			var m = Ext.core.DomHelper.append(msgCt, {html:createBox(title, s)}, true);
+			m.slideIn('t').pause(1000).ghost("t", {remove:true});
+		},
+
+		init : function(){
+			var lb = Ext.get('lib-bar');
+			if(lb){
+				lb.show();
+			}
+		}
+	};
+}();
+// Floating notification end
+
 Ext.onReady(function() {
 
 	var SR = {};
@@ -170,7 +204,7 @@ Ext.onReady(function() {
 		},
 		proxy : {
 			type : 'ajax',
-			url : jsonUrl, // url that will load data with respect to start and
+			url : jsonURL, // url that will load data with respect to start and
 			reader : {
 				type : 'json',
 				totalProperty : 'totalCount'
@@ -187,7 +221,7 @@ Ext.onReady(function() {
 	lineGraphStore.on('load',
 			function() {
 				if (lineGraphStore.getTotalCount() == 0) {
-					Ext.Msg.alert('Info','No sales found between the selected period');
+					Ext.notification.msg('Info','No sales found');
 				} else {
 				}
 			});
@@ -216,13 +250,16 @@ Ext.onReady(function() {
 		}, {
 			name : 'products',
 			type : 'string'
+		},{
+			name : 'category',
+			type : 'string'
 		}, {
 			name : 'sales',
 			type : 'float'
 		}],
 		proxy : {
 			type : 'ajax',
-			url : jsonUrl, // url that will load data with respect to start and
+			url : jsonURL, // url that will load data with respect to start and
 			reader : {
 				type : 'json',
 				totalProperty : 'gridTotalCount'
@@ -263,6 +300,12 @@ Ext.onReady(function() {
 			sortable : true,
 			dataIndex : 'products'
 		}, {
+			text : 'Category',
+			width : 150,
+			flex : 1,
+			sortable : true,
+			dataIndex : 'category'
+		},{
 			text : 'Sales',
 			width : 150,
 			flex : 0.5,
@@ -306,7 +349,7 @@ Ext.onReady(function() {
 	var gridPanelSearchLogic = function () {
 
 		var o = {
-			url : jsonUrl,
+			url : jsonURL,
 			method: 'get',
 			callback: function (options, success, response) {
 				var myJsonObj = Ext.decode(response.responseText);
