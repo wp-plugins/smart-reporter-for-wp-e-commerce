@@ -6,13 +6,11 @@ Requires at least: 2.0.2
 Tested up to: 3.2.1
 Stable tag: 1.3
 
-Store analysis like never before.
+Store analysis like never before for WordPress e-Commerce 3.8 and above.
 
 == Description ==
 
 Smart Reporter shows you product wise sales in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
-
-This is the initial version. We will enhance both features and this description as we move along.
 
 Compatible with WPeC 3.8+. Will not work with WPeC 3.7.
 
