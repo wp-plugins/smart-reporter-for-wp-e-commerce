@@ -118,19 +118,23 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 	
 	$select  = " SELECT prodid as id, sum(price * quantity) as sales, wtcc.name as products";
 		
-	$from    = " FROM {$wpdb->prefix}wpsc_cart_contents as wtcc
-			     JOIN {$wpdb->prefix}wpsc_purchase_logs as wtpl on (wtcc.`purchaseid` = wtpl.`id`)";
+	$from   = "  FROM 		{$wpdb->prefix}wpsc_cart_contents AS wtcc
+                 	   JOIN {$wpdb->prefix}wpsc_purchase_logs AS wtpl ON (wtcc.`purchaseid` = wtpl.`id`)
+                  LEFT JOIN {$wpdb->prefix}posts              AS p    ON (p.ID = prodid)";
 		
 	$limit    = " LIMIT " . $offset . "," . $limit . "";
 	$where   .= "AND wtpl.`processed` >= 2";
 	$order_by = "ORDER BY sales DESC";
 	
 	//To get categories 
-	$select .= " , GROUP_CONCAT( DISTINCT wt.name ) AS category";
-	$from   .= "  	   JOIN {$wpdb->prefix}posts 		      AS p    ON (p.ID = prodid)
-					   JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(post_parent = 0,prodid,post_parent) = wtr.object_id)
-             	  LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
-             	  LEFT JOIN {$wpdb->prefix}terms 			  AS wt   ON (wtt.term_id = wt.term_id)";
+	$select .= " , (   SELECT GROUP_CONCAT( DISTINCT wt.name)
+	                   FROM 		 	{$wpdb->prefix}posts
+			                  LEFT JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(post_parent = 0,ID,post_parent) = wtr.object_id)
+			                  LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
+			                  LEFT JOIN {$wpdb->prefix}terms              AS wt   ON (wtt.term_id = wt.term_id)
+	                   WHERE ID = prodid
+	                   GROUP BY ID
+                  	) AS category";
 	
 	if (isset ( $_GET ['searchText'] ) && $_GET ['searchText'] != '') {
 		$search_on = mysql_escape_string ( trim ( $_GET ['searchText'] ) );
@@ -139,7 +143,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
                          SELECT prodid 
                          FROM 	   {$wpdb->prefix}wpsc_cart_contents
                               JOIN {$wpdb->prefix}posts              AS p    ON (p.ID = prodid)
-                              JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(p.post_parent = 0,prodid,post_parent) = wtr.object_id)
+                         LEFT JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(p.post_parent = 0,prodid,post_parent) = wtr.object_id)
                          LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
                          LEFT JOIN {$wpdb->prefix}terms              AS wt   ON (wtt.term_id = wt.term_id)
                          WHERE wt.name LIKE '%$search_on%'

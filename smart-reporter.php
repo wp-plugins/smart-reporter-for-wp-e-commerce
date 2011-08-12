@@ -2,8 +2,8 @@
 /*
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
-Description: Store analysis like never before. 
-Version: 1.2
+Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
+Version: 1.3
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -32,14 +32,13 @@ if (is_admin ()) {
 	// BOF automatic upgrades
 	include ABSPATH . 'wp-includes/pluggable.php';
 	$plugin = plugin_basename ( __FILE__ );
+	define ( 'SR_PLUGIN_DIR', dirname(__FILE__) );
 	define ( 'SR_PLUGIN_FILE', $plugin );
 	define ( 'STORE_APPS_URL', 'http://www.storeapps.org/' );
 	
 	define ( 'ADMIN_URL', get_admin_url () ); //defining the admin url
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
-	define ( 'SR_IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );
-	
-	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
+	define ( 'SR_IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );	
 	define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/json.php" );
 	// EOF
 	
@@ -47,8 +46,8 @@ if (is_admin ()) {
 	add_action ( 'admin_init', 'sr_admin_init' );
 	
 	function sr_admin_init() {
-		$plugin_info = get_plugins ( '/smart-reporter' );
-		$ext_version = '0.1';
+		$sr_plugin_info = get_plugins ( '/smart-reporter' );
+		$ext_version = '4.0.1';
 		
 		// checking the version for WPSC plugin
 		define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
@@ -56,10 +55,16 @@ if (is_admin ()) {
 			
 		if (IS_WPSC38) {
 			wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
-			wp_register_script ( 'sr_js', plugins_url ( '/sr/sr.js', __FILE__ ), array ('sr_ext_all' ), $ext_version );
-			wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
-			wp_register_style ( 'sr_js', plugins_url ( '/sr/sr.css', __FILE__ ), array ('sr_ext_all' ), $plugin_info ['Version'] );
+			wp_register_script ( 'sr_main', plugins_url    ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $ext_version );
+			wp_register_style  ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
+			wp_register_style  ( 'sr_main', plugins_url    ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 		}
+		
+		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.php' )) {
+			define ( 'SRPRO', true );
+		} else {
+			define ( 'SRPRO', false );
+		}		
 	}
 	
 	function sr_admin_notices() {
@@ -70,12 +75,12 @@ if (is_admin ()) {
 		}
 	}
 	
-	function sr_admin_scripts() {
-		wp_enqueue_script ( 'sr_js' );
+	function sr_admin_scripts() {		
+		wp_enqueue_script ( 'sr_main' );
 	}
 	
 	function sr_admin_styles() {
-		wp_enqueue_style ( 'sr_js' );
+		wp_enqueue_style ( 'sr_main' );
 	}
 	
 	function wpsc_add_modules_sr_admin_pages($page_hooks, $base_page) {
@@ -93,7 +98,7 @@ if (is_admin ()) {
 		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
 		?>
 <div class="wrap">
-<div id="icon-smart-manager" class="icon32"><img alt="Smart Reporter"
+<div id="icon-smart-reporter" class="icon32"><img alt="Smart Reporter"
 	src="<?php echo SR_IMG_URL.'/logo.png'?>"></div>
 <h2><?php
 		echo _e ( 'Smart Reporter' );
