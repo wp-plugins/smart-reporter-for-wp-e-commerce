@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 1.3
+Version: 1.4
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -25,17 +25,38 @@ function sr_activate() {
 function sr_deactivate() {
 }
 
+function get_latest_version($plugin_file) {
+	$sr_plugin_info = get_site_transient ( 'update_plugins' );
+	$latest_version = $sr_plugin_info->response [$plugin_file]->new_version;
+	return $latest_version;
+}
+
+
+function get_user_sr_version($plugin_file) {
+	$sr_plugin_info = get_plugins ();
+	$user_version = $sr_plugin_info [$plugin_file] ['Version'];
+	return $user_version;
+}
+
+function is_pro_updated() {
+	$user_version = get_user_sr_version (SR_PLUGIN_FILE);
+	$latest_version = get_latest_version (SR_PLUGIN_FILE);
+	return version_compare ( $user_version, $latest_version, '>=' );
+}
+
 /**
  * Throw an error on admin page when WP e-Commerece plugin is not activated.
  */
 if (is_admin ()) {
 	// BOF automatic upgrades
 	include ABSPATH . 'wp-includes/pluggable.php';
+	
 	$plugin = plugin_basename ( __FILE__ );
-	define ( 'SR_PLUGIN_DIR', dirname(__FILE__) );
+	define ( 'SR_PLUGIN_DIR',dirname($plugin));
+	define ( 'SR_PLUGIN_DIR_ABSPATH', dirname(__FILE__) );
 	define ( 'SR_PLUGIN_FILE', $plugin );
 	define ( 'STORE_APPS_URL', 'http://www.storeapps.org/' );
-	
+		
 	define ( 'ADMIN_URL', get_admin_url () ); //defining the admin url
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
 	define ( 'SR_IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );	
@@ -46,8 +67,9 @@ if (is_admin ()) {
 	add_action ( 'admin_init', 'sr_admin_init' );
 	
 	function sr_admin_init() {
-		$sr_plugin_info = get_plugins ( '/smart-reporter' );
-		$ext_version = '4.0.1';
+		$plugin_info 	= get_plugins ();
+		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
+		$ext_version 	= '4.0.1';
 		
 		// checking the version for WPSC plugin
 		define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
@@ -65,10 +87,16 @@ if (is_admin ()) {
 		} else {
 			define ( 'SRPRO', false );
 		}		
+		
+		if (SRPRO === true) {
+			include ('pro/upgrade.php');
+			add_action ( 'after_plugin_row_' . plugin_basename ( __FILE__ ), 'sr_plugin_row', '', 1 );
+			add_action ( 'in_plugin_update_message-' . plugin_basename ( __FILE__ ), 'sr_update_notice' );
+		}
 	}
 	
 	function sr_admin_notices() {
-		if (! is_plugin_active ( 'wp-e-commerce/wp-shopping-cart.php' )) {
+		if (! is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
 			echo '<div id="notice" class="error"><p>';
 			_e ( '<b>Smart Reporter</b> add-on requires <a href="http://getshopped.org/">WP e-Commerce</a> plugin. Please install and activate it.' );
 			echo '</p></div>', "\n";
@@ -94,28 +122,63 @@ if (is_admin ()) {
 	add_filter ( 'wpsc_additional_pages', 'wpsc_add_modules_sr_admin_pages', 10, 2 );
 	
 	function sr_show_console() {
-		$wp_ecom_path = WP_PLUGIN_DIR . '/wp-e-commerce/';
-		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
+		$latest_version = get_latest_version (SR_PLUGIN_FILE );
+		$is_pro_updated = is_pro_updated ();
+		
+		if ($_GET ['action'] == 'sr-settings') {
+			sr_settings_page (SR_PLUGIN_FILE);
+		} else {
+			$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
 		?>
 <div class="wrap">
 <div id="icon-smart-reporter" class="icon32"><img alt="Smart Reporter"
 	src="<?php echo SR_IMG_URL.'/logo.png'?>"></div>
 <h2><?php
 		echo _e ( 'Smart Reporter' );
+		echo ' ';
+			if (SMPRO === true) {
+				echo _e ( 'Pro' );
+			} else {
+				echo _e ( 'Lite' );
+			}
 		?>
-   	<p class="wrap"><span style="float: right"> <?php
-		printf ( __ ( '<a href="%1s" target=_storeapps>Need Help?</a>' ), "http://www.storeapps.org/support" );
+   	<p class="wrap">
+	   	<span style="float: right"> <?php
+				if (SRPRO === true) {
+					printf ( __ ( '<a href="admin.php?page=smart-reporter&action=sr-settings">Settings</a> |
+	                               <a href="%1s" target=_storeapps>Need Help?</a>' ), "http://www.storeapps.org/support" );
+				} else {
+					printf ( __ ( '<a href="%1s" target=_storeapps>Need Help?</a>' ), "http://www.storeapps.org/support" );
+				}
+		?>
+		</span>
+		<?php
+			echo __ ( 'Store analysis like never before.' );
+		?>
+	</p>
+	<h6 align="right"><?php
+			if (isset($is_pro_updated) && ! $is_pro_updated) {
+				$admin_url = ADMIN_URL . "plugins.php";
+				$update_link = "An upgrade for Smart Reporter Pro  $latest_version is available. <a align='right' href=$admin_url> Click to upgrade. </a>";
+				sr_display_notice ( $update_link );
+			}
+			?>
+   </h6>
+   <h6 align="right"> 
+	<?php
+	if (SMPRO === true) {
+			$license_key = sr_get_license_key();
+			if( $license_key == '' ) {
+			  sr_display_notice("Please enter your license key for automatic upgrades and support to get activated. <a href=admin.php?page=smart-reporter&action=sr-settings>Enter License Key</a>");
+			}
+	}
 	?>
-	</span><?php
-		echo __ ( 'Store analysis like never before.' );
-	?></p>
 </h2>
 </div>
 <?php
-			$error_message = '';
-			if (file_exists ( $wp_ecom_path . 'wp-shopping-cart.php' )) {
-				if (is_plugin_active ( 'wp-e-commerce/wp-shopping-cart.php' )) {
-					require_once ($wp_ecom_path . 'wp-shopping-cart.php');
+			if (file_exists ( WPSC_FILE_PATH . '/wp-shopping-cart.php' )) {
+				if (is_plugin_active ( WPSC_FOLDER.'/wp-shopping-cart.php' )) {
+					require_once (WPSC_FILE_PATH . '/wp-shopping-cart.php');
 					if (IS_WPSC38) {
 						if (file_exists ( $base_path . 'reporter-console.php' )) {
 							include_once ($base_path . 'reporter-console.php');
@@ -128,29 +191,42 @@ if (is_admin ()) {
 						$error_message = 'Smart Reporter currently works only with WP e-Commerce 3.8 or above.';
 					}
 				} else {
-					$error_message = 'WP e-Commerce plugin is not activated. <br /><br />Smart Manager add-on requires WP e-Commerce plugin.';
+					$error_message = 'WP e-Commerce plugin is not activated. <br /><br />Smart Reporter add-on requires WP e-Commerce plugin.';
 				}
 			} else {
 				$error_message = '<b>Smart Reporter</b> add-on requires <a href="http://getshopped.org/">WP e-Commerce</a> plugin to do its job. Please install and activate it.';
 			}
 			if ($error_message != '') {
-
 				sr_display_err ( $error_message );
 				?>
 <?php
 			}
+		}
 	}
-	function sr_display_err ($error_message) {
-		echo "<div id='notice' class='error'>";
-		echo _e ( '<b>Error: </b>' . $error_message );
-		echo "</div>";
+	
+	function sr_update_notice() {
+		$plugins = get_site_transient ( 'update_plugins' );
+		$link = $plugins->response [SR_PLUGIN_FILE]->package;
+		
+		echo $man_download_link = " Or <a href='$link'>click here to download the latest version.</a>";
+	
 	}
-
-	function sr_display_notice($notice) {
-		echo "<div id='message' class='updated fade'>
+		
+	if (! function_exists ( 'sr_display_err' )) {
+		function sr_display_err($error_message) {
+			echo "<div id='notice' class='error'>";
+			echo _e ( '<b>Error: </b>' . $error_message );
+			echo "</div>";
+		}
+	}
+	
+	if (! function_exists ('sr_display_notice')) {
+		function sr_display_notice($notice) {
+			echo "<div id='message' class='updated fade'>
              <p>";
-		echo _e ( $notice );
-		echo "</p></div>";
+			echo _e ( $notice );
+			echo "</p></div>";
+		}
 	}
 
 // EOF auto upgrade code
