@@ -4,8 +4,8 @@ $fileExists = (SRPRO === true) ? 1 : 0;
 $selectDateValue = (SRPRO === true) ? 'THIS_MONTH' : 'LAST_SEVEN_DAYS';
 
 if ($fileExists){
-	if(file_exists ( SR_PLUGIN_DIR. '/pro/sr.php' )){
-		include_once( SR_PLUGIN_DIR. '/pro/sr.php' );
+	if(file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' )){
+		include_once( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' );
 	}
 }
 

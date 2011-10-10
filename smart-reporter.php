@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 1.4
+Version: 1.5
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -136,7 +136,7 @@ if (is_admin ()) {
 <h2><?php
 		echo _e ( 'Smart Reporter' );
 		echo ' ';
-			if (SMPRO === true) {
+			if (SRPRO === true) {
 				echo _e ( 'Pro' );
 			} else {
 				echo _e ( 'Lite' );
@@ -166,11 +166,13 @@ if (is_admin ()) {
    </h6>
    <h6 align="right"> 
 	<?php
-	if (SMPRO === true) {
+	if (SRPRO === true) {
+		if (function_exists ( 'sr_get_license_key' )) {
 			$license_key = sr_get_license_key();
 			if( $license_key == '' ) {
-			  sr_display_notice("Please enter your license key for automatic upgrades and support to get activated. <a href=admin.php?page=smart-reporter&action=sr-settings>Enter License Key</a>");
+				sr_display_notice("Please enter your license key for automatic upgrades and support to get activated. <a href=admin.php?page=smart-reporter&action=sr-settings>Enter License Key</a>");
 			}
+		}
 	}
 	?>
 </h2>

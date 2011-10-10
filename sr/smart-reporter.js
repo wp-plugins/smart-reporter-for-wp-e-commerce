@@ -206,8 +206,7 @@ Ext.onReady(function() {
 		SR.fromDate = fromDate;
 		SR.toDate 	= toDate;
 		
-		return SR;
-						
+		return SR;						
 	};
 		
 	// store for graph
@@ -551,13 +550,8 @@ Ext.onReady(function() {
 		renderTo : 'smart-reporter'
 	});
 	
-	//For pro version check if the required file exists
-	if(fileExists == 0){
-		console.debug(fromDateMenu);
-//		fromDateMenu.minDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-	}
-	
 	selectDate(selectDateValue);
+	smartDateComboBox.setValue(selectDateValue);
 	loadGridStore();
 	lineGraphStoreLoad(0);
 });
