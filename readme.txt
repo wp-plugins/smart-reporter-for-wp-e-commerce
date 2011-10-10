@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.2.1
-Stable tag: 1.4
+Stable tag: 1.5
 
 Store analysis like never before.
 
@@ -35,6 +35,9 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 == Changelog ==
 
+= 1.5 =
+* Fixed: Grid not visible on plugin activation.
+
 = 1.4 =
 * NEW: Auto upgrade feature for Pro version added.
 
@@ -55,6 +58,9 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 
 == Upgrade Notice ==
+
+= 1.5 =
+Important bug fix. 
 
 = 1.4 =
 New feature - Auto upgrade functionality for Pro version only.
