@@ -7,8 +7,10 @@ include_once (ABSPATH . WPINC . '/functions.php');
 require_once ('../../' . WPSC_FOLDER . '/wpsc-includes/purchaselogs.class.php');
 
 $del = 3;
-$result = array ();
+$result  = array ();
 $encoded = array ();
+$months  = array ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
+$cat_rev = array ();
 global $wpdb;
 
 if (isset ( $_GET ['start'] ))
@@ -19,103 +21,108 @@ else
 if (isset ( $_GET ['limit'] ))
 	$limit = $_GET ['limit'];
 
-	// Searching a product in the grid
-//if (isset ( $_POST ['cmd'] ) && $_POST ['cmd'] == 'getData') {
-if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
-	global $wpdb;
-	$months = array ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
-	
-	$cat_rev = array ();
-	function arr_init($arr_start, $arr_end, $category = '') {
-		global $cat_rev, $months;
-		
-		for($i = $arr_start; $i <= $arr_end; $i ++) {
-			$key = ($category == 'month') ? $months [$i - 1] : $i;
-			$cat_rev [$key] = 0;
-		
-		}
+// For pro version check if the required file exists
+if (file_exists ( '../pro/sr.php' )){
+	define ( 'SRPRO', true );
+} else {
+	define ( 'SRPRO', false );
+}
+
+function arr_init($arr_start, $arr_end, $category = '') {
+	global $cat_rev, $months;
+
+	for($i = $arr_start; $i <= $arr_end; $i ++) {
+		$key = ($category == 'month') ? $months [$i - 1] : $i;
+		$cat_rev [$key] = 0;
 	}
-	
+}
+
+if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
+
 	if (isset ( $_GET ['fromDate'] )) {
 		$from ['date'] = strtotime ( $_GET ['fromDate'] );
 		$to ['date'] = strtotime ( $_GET ['toDate'] );
-		
+
 		if ($to ['date'] == 0) {
 			$to ['date'] = strtotime ( 'today' );
 		}
 		// move it forward till the end of day
 		$to ['date'] += 86399;
-		
+
 		// Swap the two dates if to_date is less than from_date
 		if ($to ['date'] < $from ['date']) {
 			$temp = $to ['date'];
 			$to ['date'] = $from ['date'];
 			$from ['date'] = $temp;
 		}
-		
-		$where = "WHERE (wtpl.`date` between '{$from ['date']}' AND '{$to['date']}') ";
-		
+
+		if (SRPRO == true){
+			$where = "WHERE (wtpl.`date` between '{$from ['date']}' AND '{$to['date']}')";
+		}else{
+			$diff = 86400 * 7;
+			if ( (( $from ['date'] - $to ['date'] ) <= $diff ) )
+			$where = "WHERE (wtpl.`date` between '{$from ['date']}' AND '{$to['date']}')";
+		}
+
 		//BOF bar graph calc
-		
 
 		$frm ['yr'] = date ( "Y", $from ['date'] );
 		$to ['yr'] = date ( "Y", $to ['date'] );
-		
+
 		$frm ['mon'] = date ( "n", $from ['date'] );
 		$to ['mon'] = date ( "n", $to ['date'] );
-		
+
 		$frm ['week'] = date ( "W", $from ['date'] );
 		$to ['week'] = date ( "W", $to ['date'] );
-		
+
 		$frm ['day'] = date ( "j", $from ['date'] );
 		$to ['day'] = date ( "j", $to ['date'] );
-		
+
 		$parts ['category'] = '';
 		$parts ['no'] = 0;
-		
+
 		if ($frm ['yr'] == $to ['yr']) {
 			if ($frm ['mon'] == $to ['mon']) {
-				
+
 				if ($frm ['week'] == $to ['week']) {
 					if ($frm ['day'] == $to ['day']) {
 						$diff = $to ['date'] - $from ['date'];
 						$parts ['category'] = 'hr';
 						$parts ['no'] = 23;
 						$parts ['abbr'] = '%k';
-						
+
 						arr_init ( 0, $parts ['no'],'hr' );
 					} else {
 						$parts ['category'] = 'day';
 						$parts ['no'] = date ( 't', $from ['date'] );
 						$parts ['abbr'] = '%e';
-						
+
 						arr_init ( 1, $parts ['no'] );
 					}
 				} else {
 					$parts ['category'] = 'day';
 					$parts ['no'] = date ( 't', $from ['date'] );
 					$parts ['abbr'] = '%e';
-					
+
 					arr_init ( 1, $parts ['no'] );
 				}
 			} else {
 				$parts ['category'] = 'month';
 				$parts ['no'] = $to ['mon'] - $frm ['mon'];
 				$parts ['abbr'] = '%b';
-				
+
 				arr_init ( $frm ['mon'], $to ['mon'], $parts ['category'] );
 			}
 		} else {
 			$parts ['category'] = 'year';
 			$parts ['no'] = $to ['yr'] - $frm ['yr'];
 			$parts ['abbr'] = '%Y';
-			
+
 			arr_init ( $frm ['yr'], $to ['yr'] );
 		}
-	
-	// EOF 
+		// EOF
 	}
-	
+
 	$select  = " SELECT prodid as id, sum(price * quantity) as sales, wtcc.name as products";
 		
 	$from   = "  FROM 		{$wpdb->prefix}wpsc_cart_contents AS wtcc
@@ -232,6 +239,5 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 		}		
 	}
 }
-
 echo json_encode ( $encoded );
 ?>
