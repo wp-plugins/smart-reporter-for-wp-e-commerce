@@ -1,10 +1,10 @@
 === Smart Reporter for WP e-Commerce ===
-Contributors: niravmehta, rohankamble, angelin.nadar, malayladu
+Contributors: niravmehta, rohankamble, angelin.deboral, malayladu
 Donate link: http://www.storeapps.org/
 Tags: administration, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.2.1
-Stable tag: 1.5
+Stable tag: 1.6
 
 Store analysis like never before.
 
@@ -35,6 +35,9 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 == Changelog ==
 
+= 1.6 =
+* Fixed: Minor issues in date picker.
+
 = 1.5 =
 * Fixed: Grid not visible on plugin activation.
 
@@ -58,6 +61,9 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 
 == Upgrade Notice ==
+
+= 1.6 =
+Important date picker fix.
 
 = 1.5 =
 Important bug fix. 
