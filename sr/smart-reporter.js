@@ -33,9 +33,12 @@ Ext.notification = function(){
 // Floating notification end
 
 Ext.onReady(function() {
-
-	var SR = {};
-	SR.searchTextField = '';
+	
+	SR.searchTextField 	  = '';	
+	var now 		      = new Date();
+	var lastMonDate       = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate() + 1);
+	var search_timeout_id = 0; //timeout for sending request while searching.
+	var dateFormat        = 'M d Y';
 	
 	SR.searchTextField = new Ext.form.field.Text({
 		id: 'tf',
@@ -61,25 +64,43 @@ Ext.onReady(function() {
 				}, 500);
 			}}
 	});
-	
-	// from-date and to-date textfields
-	var fromDateTxt = new Ext.form.TextField({
+		
+	SR.fromDateField = new Ext.form.field.Date({
+		fieldLabel: 'From',
+		labelWidth : 35,
 		emptyText : 'From Date',
-		readOnly : true,
-		width : 90
+		format: dateFormat,
+		width: 150,
+		maxValue: now,
+		listeners: {
+			select: function ( t, value ){
+				smartDateComboBox.reset();
+				t.setValue(value);
+				getSales();
+			}
+		}
 	});
-	var toDateTxt = new Ext.form.TextField({
+	
+	SR.toDateField = new Ext.form.field.Date({
+		fieldLabel: 'To',
+		labelWidth : 20,
 		emptyText : 'To Date',
-		readOnly : true,
-		width : 90
+		format: dateFormat,
+		width: 150,
+		maxValue: now,
+		value: now,
+		listeners: {
+			select: function ( t, value ){
+				smartDateComboBox.reset();
+				t.setValue(value);
+				getSales();
+			}
+		}
 	});
-	var now = new Date();
-	var lastMonDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate() + 1);
-	var search_timeout_id = 0; //timeout for sending request while searching.
-	var dateFormat = 'M d Y';
-
-	fromDateTxt.setValue(Ext.Date.format(lastMonDate, dateFormat));
-	toDateTxt.setValue(Ext.Date.format(now, dateFormat));
+	
+	// to limit Lite version to available days
+	SR.checkFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - availableDays);
+	SR.checkToDate   = now;
 
 	var smartDateComboBox = Ext.create('Ext.form.ComboBox', {
 		queryMode: 'local',
@@ -114,29 +135,24 @@ Ext.onReady(function() {
 		listeners: {
 			select: function () {
 				var dateValue = this.value;
-				selectDate(dateValue);
-				
-				var checkFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-				var checkToDate   = now;
-				
 				if(fileExists == 0){
-					if(((SR.fromDate.getTime() >= checkFromDate.getTime())) && ((SR.toDate.getTime() >= checkFromDate.getTime() && SR.toDate.getTime() <= checkToDate.getTime())) ){
-						loadGridStore();
-						lineGraphStoreLoad(0);
+					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'THIS_WEEK'){
+						liteSelectDate(dateValue);
+						getSales();
 					}else{
-						Ext.notification.msg('Info','Go get youself a PRO VERSION now');
+						Ext.notification.msg('Smart Reporter',"Available only in Pro version" );
 					}
 				}else{
-					loadGridStore();
-					lineGraphStoreLoad(0);
+					proSelectDate(dateValue);
+					getSales();
 				}
 			}
 		}
 	});
-		
-	var selectDate = function (dateValue){
+	
+	var liteSelectDate = function (dateValue){
 		var fromDate,toDate;
-		
+
 		switch (dateValue){
 
 			case 'TODAY':
@@ -153,62 +169,26 @@ Ext.onReady(function() {
 			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() - 1));
 			toDate 	 = now;
 			break;
-
-			case 'LAST_WEEK':
-			fromDate = new Date(now.getFullYear(), now.getMonth(), (now.getDate() - (now.getDay() - 1) - 7));
-			toDate   = new Date(now.getFullYear(), now.getMonth(), (now.getDate() - (now.getDay() - 1) - 1));
-			break;
-
-			case 'THIS_MONTH':
-			fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
-			toDate 	 = now;
-			break;
-
-			case 'LAST_MONTH':
-			fromDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
-			toDate   = new Date(now.getFullYear(), now.getMonth(), 0);
-			break;
-
-			case '3_MONTHS':
-			fromDate = new Date(now.getFullYear(), now.getMonth()-2, 1);
-			toDate 	 = now;
-			break;
-
-			case '6_MONTHS':
-			fromDate = new Date(now.getFullYear(), now.getMonth()-5, 1);
-			toDate 	 = now;
-			break;
-
-			case 'THIS_YEAR':
-			fromDate = new Date(now.getFullYear(), 0, 1);
-			toDate 	 = now;
-			break;
-
-			case 'LAST_YEAR':
-			fromDate = new Date(now.getFullYear() - 1, 0, 1);
-			toDate 	 = new Date(now.getFullYear(), 0, 0);
-			break;
-
-			case 'LAST_SEVEN_DAYS':
-			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-			toDate 	 = now;
-			break;
-
+			
 			default:
 			fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
 			toDate 	 = now;
 			break;
 		}
 
-		fromDateTxt.setValue(Ext.Date.format(fromDate, dateFormat));
-		toDateTxt.setValue(Ext.Date.format(toDate, dateFormat));
-		
+		SR.fromDateField.setValue(fromDate);
+		SR.toDateField.setValue(toDate);
+
 		SR.fromDate = fromDate;
 		SR.toDate 	= toDate;
-		
-		return SR;						
+
+		return SR;
 	};
-		
+	
+	var getSales = function(){
+		loadGridStore();
+	}
+			
 	// store for graph
 	var lineGraphStore = Ext.create('Ext.data.Store', {
 		id : 'lineGraphStore',
@@ -223,8 +203,8 @@ Ext.onReady(function() {
 
 		],
 		params : {
-			fromDate : fromDateTxt.getValue(),
-			toDate : toDateTxt.getValue(),
+			fromDate : SR.fromDateField.getValue(),
+			toDate : SR.toDateField.getValue(),
 			start : 0,
 			cmd : 'getData'
 		},
@@ -244,20 +224,12 @@ Ext.onReady(function() {
 		}
 	});
 
-	lineGraphStore.on('load',
-			function() {
-				if (lineGraphStore.getTotalCount() == 0) {
-					Ext.notification.msg('Info','No sales found');
-				} else {
-				}
-			});
-
 	// store for graph function
 	var lineGraphStoreLoad = function(id) {
 		lineGraphStore.load({
 			params : {
-				fromDate  : fromDateTxt.getValue(),
-				toDate    : toDateTxt.getValue(),
+				fromDate  : SR.fromDateField.getValue(),
+				toDate    : SR.toDateField.getValue(),
 				searchText: SR.searchTextField.getValue(),
 				start 	  : 0,
 				id 		  : id,
@@ -266,6 +238,15 @@ Ext.onReady(function() {
 		});
 	};
 
+	lineGraphStore.on('load',
+	function() {
+		if (lineGraphStore.getTotalCount() == 0) {
+			Ext.notification.msg('Info','No sales found');
+		} else {
+		}
+	});
+		
+	
 	// grid store
 	var gridStore = Ext.create('Ext.data.Store', {
 		id : 'gridStore',
@@ -293,8 +274,8 @@ Ext.onReady(function() {
 			}
 		},
 		params : {
-			fromDate : fromDateTxt.getValue(),
-			toDate : toDateTxt.getValue(),
+			fromDate : SR.fromDateField.getValue(),
+			toDate : SR.toDateField.getValue(),
 			start : 0,
 			cmd : 'gridGetData'
 		},
@@ -312,6 +293,26 @@ Ext.onReady(function() {
 		}
 	});
 
+	var loadGridStore = function() {
+		gridStore.load({
+			params : {
+				fromDate : SR.fromDateField.getValue(),
+				toDate : SR.toDateField.getValue(),
+				start : 0,
+				searchText: SR.searchTextField.getValue(),
+				cmd : 'gridGetData'
+			}
+		});
+	};
+	
+	gridStore.on('load',
+	function() {
+		if (gridStore.getTotalCount() == 0) {
+			Ext.notification.msg('Info','No sales found');
+		} else {
+		}
+	});
+	
 	// create a grid that will list the dataset items.
 	var gridPanel = Ext.create('Ext.grid.Panel', {
 		autoScroll : true,
@@ -343,6 +344,7 @@ Ext.onReady(function() {
 		} ],
 
 		listeners : {
+			// Fires when the selected nodes change.
 			selectionchange : function(model, records) {
 				if (records[0] != undefined) {
 					var selectedId = records[0].data.id;
@@ -351,27 +353,7 @@ Ext.onReady(function() {
 			}
 		}
 	});
-
-	var fromDateMenu = new Ext.menu.DatePicker({
-		handler : function(dp, date) {
-			smartDateComboBox.reset();
-			fromDateTxt.setValue(Ext.Date.format(date, dateFormat));
-			loadGridStore();
-			lineGraphStoreLoad(0);
-		},
-		maxDate : now
-	});
-
-	var toDateMenu = new Ext.menu.DatePicker({
-		handler : function(dp, date) {
-			smartDateComboBox.reset();
-			toDateTxt.setValue(Ext.Date.format(date, dateFormat));
-			loadGridStore();
-			lineGraphStoreLoad(0);
-		},
-		maxDate : now
-	});	
-	
+			
 	var gridPanelSearchLogic = function () {
 		var o = {
 			url : jsonURL,
@@ -391,7 +373,7 @@ Ext.onReady(function() {
 
 					loadGridStore();
 					lineGraphStoreLoad(0);
-					
+
 				} catch (e) {
 					return;
 				}
@@ -400,26 +382,14 @@ Ext.onReady(function() {
 			params: {
 				cmd: 'gridGetData',
 				searchText: SR.searchTextField.getValue(),
-				fromDate: fromDateTxt.getValue(),
-				toDate: toDateTxt.getValue(),
+				fromDate: SR.fromDateField.getValue(),
+				toDate: SR.toDateField.getValue(),
 				start: 0
 			}
 		};
 		Ext.Ajax.request(o);
 	};	
 	
-	var loadGridStore = function() {
-		gridStore.load({
-			params : {
-				fromDate : fromDateTxt.getValue(),
-				toDate : toDateTxt.getValue(),
-				start : 0,
-				searchText: SR.searchTextField.getValue(),
-				cmd : 'gridGetData'
-			}
-		});
-	};
-
 	// create a bar series to be at the top of the panel.
 	var barChart = Ext.create('Ext.chart.Chart', {
 		id : 'barchart',
@@ -434,8 +404,8 @@ Ext.onReady(function() {
 		resize : false,
 		store : lineGraphStore,
 		params : {
-			fromDate : fromDateTxt.getValue(),
-			toDate : toDateTxt.getValue(),
+			fromDate : SR.fromDateField.getValue(),
+			toDate : SR.toDateField.getValue(),
 			start : 0,
 			cmd : 'getData'
 		},
@@ -496,21 +466,17 @@ Ext.onReady(function() {
 	});
 	// disable highlighting by default.
 	barChart.series.get(0).highlight = true;
-	
+		
 	var gridForm = Ext.create('Ext.form.Panel', {
-		tbar : [ '<b>Sales</b>', {
-			xtype : 'tbspacer'
-		}, {
-			text : 'From:'
-		}, fromDateTxt, {
-			icon : imgURL + 'calendar.gif',
-			menu : fromDateMenu
-		}, {
-			text : 'To:'
-		}, toDateTxt, {
-			icon : imgURL + 'calendar.gif',
-			menu : toDateMenu
-		},smartDateComboBox, '',SR.searchTextField,{ icon: imgURL + 'search.png' },
+		tbar : [ '<b>Sales</b>', 
+		
+		{ xtype : 'tbspacer' },
+		SR.fromDateField,
+		{ xtype : 'tbspacer'},
+		SR.toDateField,
+		{ xtype : 'tbspacer'},
+
+		smartDateComboBox, '',SR.searchTextField,{ icon: imgURL + 'search.png' },
 		'->', {
 			text : '',
 			icon : imgURL + 'refresh.gif',
@@ -550,8 +516,14 @@ Ext.onReady(function() {
 		renderTo : 'smart-reporter'
 	});
 	
-	selectDate(selectDateValue);
-	smartDateComboBox.setValue(selectDateValue);
-	loadGridStore();
-	lineGraphStoreLoad(0);
+	smartDateComboBox.setValue(selectedDateValue);
+	if(fileExists == 0){
+		SR.fromDateField.setValue(SR.checkFromDate);
+
+		SR.fromDateField.setMinValue(SR.checkFromDate);
+		SR.toDateField.setMinValue(SR.checkFromDate);
+	}else{
+		proSelectDate(selectedDateValue);
+	}
+	getSales();
 });

@@ -1,7 +1,7 @@
 <?php 
 // to set javascript variable of file exists
 $fileExists = (SRPRO === true) ? 1 : 0;
-$selectDateValue = (SRPRO === true) ? 'THIS_MONTH' : 'LAST_SEVEN_DAYS';
+$selectedDateValue = (SRPRO === true) ? 'THIS_MONTH' : 'LAST_SEVEN_DAYS';
 
 if ($fileExists){
 	if(file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' )){
@@ -10,10 +10,12 @@ if ($fileExists){
 }
 
 echo "<script type='text/javascript'>
-var jsonURL    = '" .SR_JSON_URL. "';
-var imgURL     = '" .SR_IMG_URL . "';
-var fileExists = '" .$fileExists. "';
-var selectDateValue = '" .$selectDateValue. "';
+SR 			   		  =  new Object;
+var jsonURL    		  = '" .SR_JSON_URL. "';
+var imgURL     		  = '" .SR_IMG_URL . "';
+var fileExists 		  = '" .$fileExists. "';
+var availableDays     = '" .SR_AVAIL_DAYS. "';
+var selectedDateValue = '" .$selectedDateValue. "';
 </script>";
 ?>
 <br>

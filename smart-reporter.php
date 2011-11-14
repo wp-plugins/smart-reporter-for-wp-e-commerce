@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 1.5
+Version: 1.6
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -82,11 +82,12 @@ if (is_admin ()) {
 			wp_register_style  ( 'sr_main', plugins_url    ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 		}
 		
-		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.php' )) {
+		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
+			wp_register_script ( 'sr_functions', plugins_url ( '/pro/sr.js', __FILE__ ), array ('sr_main' ), $sr_plugin_info ['Version'] );
 			define ( 'SRPRO', true );
 		} else {
 			define ( 'SRPRO', false );
-		}		
+		}
 		
 		if (SRPRO === true) {
 			include ('pro/upgrade.php');
@@ -104,6 +105,9 @@ if (is_admin ()) {
 	}
 	
 	function sr_admin_scripts() {		
+		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
+			wp_enqueue_script ( 'sr_functions' );
+		}
 		wp_enqueue_script ( 'sr_main' );
 	}
 	
@@ -122,6 +126,10 @@ if (is_admin ()) {
 	add_filter ( 'wpsc_additional_pages', 'wpsc_add_modules_sr_admin_pages', 10, 2 );
 	
 	function sr_show_console() {
+		
+		//set the number of days data to show in lite version.
+		define ( 'SR_AVAIL_DAYS', 6);
+		
 		$latest_version = get_latest_version (SR_PLUGIN_FILE );
 		$is_pro_updated = is_pro_updated ();
 		
@@ -177,6 +185,18 @@ if (is_admin ()) {
 	?>
 </h2>
 </div>
+
+<?php
+if (SRPRO === false) {
+				?>
+<div id="message" class="updated fade">
+<p><?php
+printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 7 days upgrade to Pro . Take a <a href='%2s' target=_livedemo> Live Demo here </a>." ), 'http://demo.storeapps.org/' );
+				?></p>
+</div>
+<?php
+}
+			?>
 <?php
 			if (file_exists ( WPSC_FILE_PATH . '/wp-shopping-cart.php' )) {
 				if (is_plugin_active ( WPSC_FOLDER.'/wp-shopping-cart.php' )) {
