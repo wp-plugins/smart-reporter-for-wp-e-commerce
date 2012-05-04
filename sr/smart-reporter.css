@@ -9,6 +9,7 @@ h1 {
     margin-bottom:20px;
 }
 h2 {
+	
     font-size:14px;
     color:#333;
     font-weight:bold;
@@ -37,11 +38,10 @@ pre.code{
     font-size:14px;
 }
 #msg-div {
-    position:absolute;
-    left:35%;
-    top:10px;
-    width:300px;
-    z-index:20000;
+    position: fixed;
+    right: 33%;
+    width: 34%;
+    z-index: 20000;
 }
 #msg-div .msg {
     border-radius: 8px;
@@ -73,7 +73,9 @@ pre.code{
     margin-bottom: 4px;
 }
 
-
+#icon-smart-reporter {
+	background: url("../resources/themes/images/logo.png") no-repeat scroll transparent;
+}
 
 /* Summary / Other rows */
 .row {
@@ -102,9 +104,8 @@ pre.code{
 	-webkit-border-radius: 10px;
 	-moz-border-radius: 10px;
 	border-radius: 10px;
-	background-color:#D9E5F3;
-	padding-left:10px;
-	padding-top:5px;
+	background-color: #D9E5F3;	/* previous value: #D9E5F3 */
+	padding:5px 10px;
 }
 
 .one_half {	
@@ -115,4 +116,88 @@ pre.code{
 /* Current Summary & KPIs*/
 #current_summary .block .value {
 	font-size : 1.8em;	
+}
+
+.price {
+	text-align: right;
+}
+
+.last-few-orders {
+	width: 99%;
+	height: 100%;
+	background: #D9E5F3;
+	border-style: solid;
+	border-width: 1px;
+	border-radius: 12px;
+	border-color: white;
+}
+
+.last-few-orders table {
+	width: 95%;
+	margin: 0px 5px;
+}
+
+.last-few-orders tr {
+	line-height: 2.1em;
+	font-size: 0.9em;
+}
+
+.last-few-orders tr h3 {
+	font-size: 13px;
+	line-height: 1.3em;
+	font-weight: 100;
+	padding: 3px;
+}
+
+.x-grid-view {
+	cursor: pointer;
+}
+
+#sales-details-wrapper {
+	height: 100%;
+	padding: 0px 20px 5px 10px;
+	border-style: solid;
+	border-width: 1px;
+	border-radius: 12px;
+	background: #D9E5F3;
+	width: 98%;
+	border-color: white;
+}
+
+#sales-image {
+	height: 100%;
+	width: 20%;
+}
+
+#sales-image-product-name {
+	margin: 8px 5px;
+	height: 35%;
+}
+
+#sales-product-name {
+	float: right;
+	width: 75%;
+	font-size: 1.3em;
+	font-weight: 100;
+}
+
+#remaining-sales-detail td {
+	padding: 0px 3px;
+}
+
+#remaining-sales-detail {
+	height: 60%;
+	font-size: 0.9em;
+}
+
+#remaining-sales-detail b {
+	font-size: 1.4em;
+}
+
+.product-name-block {
+
+}
+
+.product-name-block div {
+
 }
