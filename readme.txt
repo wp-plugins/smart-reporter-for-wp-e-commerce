@@ -1,27 +1,31 @@
 === Smart Reporter for WP e-Commerce ===
-Contributors: niravmehta, rohankamble, angelin.deboral, malayladu
+Contributors: niravmehta, rohankamble, angelin.deboral, malayladu, ratnakar.dubey
 Donate link: http://www.storeapps.org/
 Tags: administration, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 3.2.1
-Stable tag: 1.6
+Tested up to: 3.3.1
+Stable tag: 1.7
 
-Store analysis like never before.
+Business analysis for e-commerce like never before.
 
 == Description ==
 
-Smart Reporter shows you product wise sales in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
+Smart Reporter shows you product wise sales trends in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
 
-This is the initial version. We will enhance both features and this description as we move along.
+It also shows you key performance indicators (total sales, average sales, velocity etc) so you can quickly guage performance of your business.
 
-Compatible with WPeC 3.8+. Will not work with WPeC 3.7.
+You can filter reports by date range and can also search and view sales trends of specific products.
+
+Smart Reporter works with WooCommerce latest versions and WP e-Commerce 3.8+.
+
+The Lite version is limited to showing data of past 7 days only. It also does not show key performance indicators. Purchase the paid versions for full access. 
 
 == Installation ==
 
-1. Ensure you have [WP e-Commerce](http://www.getshopped.org) plugin installed
+1. Ensure you have latest version of [WP e-Commerce](http://www.getshopped.org) or [WooCommerce](http://www.woothemes.com/woocommerce/) plugin installed
 2. Unzip and upload contents of the plugin to your '/wp-content/plugins/' directory
 3. Activate the plugin through the 'Plugins' menu in WordPress
-4. Click on 'Smart Reporter' option within WP e-Commerce sidebar menu
+4. Click on 'Smart Reporter' option within WordPress admin sidebar menu
 
 == Frequently Asked Questions ==
 
@@ -29,14 +33,25 @@ Compatible with WPeC 3.8+. Will not work with WPeC 3.7.
 
 Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7.
 
+= Can I export data from Smart Reporter? =
+
+No. Currently you can only see these reports. We are planning for CSV export in future.
+
+
+
 == Screenshots ==
 
-1. Products Report
+1. Smart Reporter Products Report Dashboard (some features only in paid versions)
 
 == Changelog ==
 
+= 1.7 =
+* New: Smart Reporter for WooCommerce 1.4
+* New: Additional info in Details - Total Sales, Total quantity sold, Percentage contribution, average sale per day, frequency of selling etc.
+* New: Last few orders for each product added to Details pane
+
 = 1.6 =
-* Fixed: Minor issues in date picker.
+* Fixed: Bugs of from and to date picker.
 
 = 1.5 =
 * Fixed: Grid not visible on plugin activation.
@@ -62,8 +77,11 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 == Upgrade Notice ==
 
+= 1.7 =
+WooCommerce support, major new features added.
+
 = 1.6 =
-Important date picker fix.
+Important date filter bug fix.
 
 = 1.5 =
 Important bug fix. 
