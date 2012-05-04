@@ -303,7 +303,7 @@ Ext.onReady(function() {
 		var sales = Ext.util.Format.round((records[0].data.sales),2);
 		var quantity = records[0].data.quantity;
 		var selectedId = records[0].data.id;
-		var total = ( product_name == 'All Products' ) ? totalSales : totalSales + totalDiscount;
+		var total = totalSales;
 		percent_sales_contribution = Ext.util.Format.round((sales/total) *100,2);
 		var sales_per_day = Ext.util.Format.round((sales/diff_days),2);
 		var velocity = Ext.util.Format.round((diff_days/quantity),4);
@@ -429,7 +429,7 @@ Ext.onReady(function() {
 	    '</table></div>'
 	);
 
-	this.openWindow = function(recordId){
+	this.openWindow = function(pid){
 		 Ext.create('Ext.window.Window', {
 		    title: 'Order Details',
 		    height: 500,
@@ -449,12 +449,12 @@ Ext.onReady(function() {
 					this.setPosition( 0, 30, false );
 				}
 			},
-		    html: '<iframe src='+ ordersDetailsLink + '' + recordId +' style="width:100%;height:100%;border:none;"><p>Your browser does not support iframes.</p></iframe>'
+		    html: '<iframe src="post.php?post=' + pid + '&action=edit" style="width:100%;height:100%;border:none;"><p>Your browser does not support iframes.</p></iframe>'
 		}).show();
 	}; 
 	
-	
 	var plural = function ( number ) {
+		var number = parseInt(number);
 		var str = ( number > 1 ) ? 's' : '';
 		return str;
 	};
