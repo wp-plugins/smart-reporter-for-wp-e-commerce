@@ -3,9 +3,6 @@ include_once ('../../../../wp-load.php');
 include_once ('../../../../wp-includes/wp-db.php');
 include_once (ABSPATH . WPINC . '/functions.php');
 
-// for delete logs.
-//require_once ('../../' . WPSC_FOLDER . '/wpsc-includes/purchaselogs.class.php');
-
 $del = 3;
 $result  = array ();
 $encoded = array ();
@@ -29,49 +26,6 @@ if (file_exists ( '../pro/sr-woo.php' )){
 	define ( 'SRPRO', false );
 }
 
-if ( ! function_exists( 'get_total_sales_and_discounts_woo' ) ) {
-	function get_total_sales_and_discounts_woo ( $where_date = '' ) {
-		global $wpdb;
-		$total = array();
-		// Query used by woocommerce
-		$order_totals = $wpdb->get_row("
-			SELECT SUM(meta.meta_value) AS total_sales FROM {$wpdb->posts} AS posts
-			
-			LEFT JOIN {$wpdb->postmeta} AS meta ON posts.ID = meta.post_id
-			LEFT JOIN {$wpdb->term_relationships} AS rel ON posts.ID=rel.object_ID
-			LEFT JOIN {$wpdb->term_taxonomy} AS tax USING( term_taxonomy_id )
-			LEFT JOIN {$wpdb->terms} AS term USING( term_id )
-	
-			WHERE 	meta.meta_key 		= '_order_total'
-			AND 	posts.post_type 	= 'shop_order'
-			AND 	posts.post_status 	= 'publish'
-			$where_date
-			AND 	tax.taxonomy		= 'shop_order_status'
-			AND		term.slug			IN ('completed', 'processing', 'on-hold')
-		");
-		$total ['sales'] = $order_totals->total_sales;
-		
-		// Query used by woocommerce
-		$total ['discount'] = $wpdb->get_var("
-			SELECT SUM(meta.meta_value) AS total_sales FROM {$wpdb->posts} AS posts
-			
-			LEFT JOIN {$wpdb->postmeta} AS meta ON posts.ID = meta.post_id
-			LEFT JOIN {$wpdb->term_relationships} AS rel ON posts.ID=rel.object_ID
-			LEFT JOIN {$wpdb->term_taxonomy} AS tax USING( term_taxonomy_id )
-			LEFT JOIN {$wpdb->terms} AS term USING( term_id )
-	
-			WHERE 	meta.meta_key 		IN ('_order_discount','_cart_discount')
-			AND 	posts.post_type 	= 'shop_order'
-			AND 	posts.post_status 	= 'publish'
-			$where_date
-			AND 	tax.taxonomy		= 'shop_order_status'
-			AND		term.slug			IN ('completed', 'processing', 'on-hold')
-		");
-		
-		return $total;
-	}
-}
-
 function arr_init($arr_start, $arr_end, $category = '') {
 	global $cat_rev, $months, $order_arr;
 
@@ -86,8 +40,8 @@ function get_grid_data( $select, $from, $where, $where_date, $group_by, $search_
 		
 		$woo_default_image = WP_PLUGIN_URL . '/smart-reporter-for-wp-e-commerce/resources/themes/images/woo_default_image.png';
 		$query = "$select $from $where $where_date $group_by $search_condn $order_by ";
-
 		$results 	= $wpdb->get_results ( $query, 'ARRAY_A' );
+		
 		$num_rows   = $wpdb->num_rows;
 		$no_records = $num_rows;
 
@@ -98,10 +52,8 @@ function get_grid_data( $select, $from, $where, $where_date, $group_by, $search_
 		} else {
 			$count = 0 ;
 			$grid_data = array();
-			$total = get_total_sales_and_discounts_woo( $where_date );
-			if ($_GET ['searchText'] == '') {
-				$grid_data [$count] ['sales']    = $total['sales'];
-				$grid_data [$count] ['discount'] = $total['discount'];
+				$grid_data [$count] ['sales']    = '';
+				$grid_data [$count] ['discount'] = '';
 				$grid_data [$count] ['products'] = 'All Products';
 				$grid_data [$count] ['period']   = 'selected period';
 				$grid_data [$count] ['category'] = 'All Categories';
@@ -111,9 +63,10 @@ function get_grid_data( $select, $from, $where, $where_date, $group_by, $search_
 
 				foreach ( $results as $result ) {
 					$grid_data [$count] ['quantity'] = $grid_data[$count] ['quantity'] + $result ['quantity'];
+					$grid_data [$count] ['sales'] = $grid_data[$count] ['sales'] + $result ['sales'];
+					$grid_data [$count] ['discount'] = $grid_data[$count] ['discount'] + $result ['discount'];
 				}
 				$count++;
-			}
 			
 			foreach ( $results as $result ) {
 				$grid_data [$count] ['products'] = $result ['products'];
@@ -123,8 +76,8 @@ function get_grid_data( $select, $from, $where, $where_date, $group_by, $search_
 				$grid_data [$count] ['category'] = $result ['category'];
 				$grid_data [$count] ['id'] 	 	 = $result ['id'];
 				$grid_data [$count] ['quantity'] = $result ['quantity'];
-				$grid_data [$count] ['image']    = isset( $result ['thumbnail'] ) ? $result ['thumbnail'] : $result ['alt_thumbnail'];
-				if ( $grid_data [$count] ['image'] == '' ) $grid_data [$count] ['image'] = $woo_default_image;
+				$thumbnail = isset( $result ['thumbnail'] ) ? wp_get_attachment_image_src( $result ['thumbnail'], 'admin-product-thumbnails' ) : '';
+				$grid_data [$count] ['image']    = ( $thumbnail[0] != '' ) ? $thumbnail[0] : $woo_default_image;
 				$count++;
 			}
 				
@@ -229,7 +182,7 @@ function get_last_few_order_details( $product_id, $where_date ) {
 				$order_data [$cnt] ['purchaseid'] = $result ['order_id'];
 				$order_data [$cnt] ['date']       = date( "d-M-Y",strtotime( $result ['date'] ) ); 
 				$order_data [$cnt] ['totalprice'] = woocommerce_price( $result ['totalprice'] );
-				$order_data [$cnt] ['cname']      = $result ['cname'];	
+				$order_data [$cnt] ['cname']      = $result ['cname'];
 				$orders [] = $order_data [$cnt];				
 				$cnt++;
 			}	
@@ -333,14 +286,12 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 					 SUM( order_item.quantity ) AS quantity,
 					 SUM( order_item.sales ) AS sales,
 					 SUM( order_item.discount ) AS discount,
-					 (SELECT products_guid.guid FROM {$wpdb->prefix}posts AS products_guid WHERE products.ID = products_guid.post_parent 
-										AND products_guid.post_status = 'inherit' AND products_guid.post_type = 'attachment' LIMIT 1) AS alt_thumbnail,
-					 (SELECT guid FROM {$wpdb->prefix}posts WHERE ID = image_postmeta.meta_value) AS thumbnail
+					 image_postmeta.meta_value AS thumbnail
 					";
 		
 	$from = " FROM {$wpdb->prefix}sr_woo_order_items AS order_item
 			  LEFT JOIN {$wpdb->prefix}posts AS products ON ( products.id = order_item.product_id )
-			  LEFT JOIN ( SELECT GROUP_CONCAT(wt.name) AS category, wtr.object_id
+			  LEFT JOIN ( SELECT GROUP_CONCAT(wt.name SEPARATOR ', ') AS category, wtr.object_id
 					FROM  {$wpdb->prefix}term_relationships AS wtr  	 
 					JOIN {$wpdb->prefix}term_taxonomy AS wtt ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id and taxonomy = 'product_cat')
 					JOIN {$wpdb->prefix}terms AS wt ON (wtt.term_id = wt.term_id)
@@ -358,10 +309,23 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 	
 	if (isset ( $_GET ['searchText'] ) && $_GET ['searchText'] != '') {
 		$search_on = $wpdb->_real_escape ( trim ( $_GET ['searchText'] ) );
-		$search_condn = " HAVING order_item.product_name LIKE '%$search_on%' 
+		$search_ons = explode( ' ', $search_on );
+		if ( is_array( $search_ons ) ) {	
+			$search_condn = " HAVING ";
+			foreach ( $search_ons as $search_on ) {
+				$search_condn .= " order_item.product_name LIKE '%$search_on%' 
+								   OR prod_categories.category LIKE '%$search_on%' 
+								   OR order_item.product_id LIKE '%$search_on%'
+								   OR";
+			}
+			$search_condn = substr( $search_condn, 0, -2 );
+		} else {
+			$search_condn = " HAVING order_item.product_name LIKE '%$search_on%' 
 								   OR prod_categories.category LIKE '%$search_on%' 
 								   OR order_item.product_id LIKE '%$search_on%'
 						";
+		}
+		
 	}
 	
 	if ($_GET ['cmd'] == 'gridGetData') {

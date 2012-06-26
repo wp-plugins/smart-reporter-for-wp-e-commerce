@@ -33,6 +33,7 @@ Ext.notification = function(){
 Ext.onReady(function() {
 	
 	SR.searchTextField 	  = '';
+	var monthTitle		  = new Array( "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" );
 	var salesDetailsDataObject = {};
 	var ydata			  = new Array();
 	var now 		      = new Date();
@@ -74,6 +75,7 @@ Ext.onReady(function() {
 		width: 150,
 		editable: false,
 		maxValue: now,
+		value: new Date(now.getFullYear(), now.getMonth(), 1),
 		listeners: {
 			select: function ( t, value ){
 				smartDateComboBox.reset();
@@ -102,7 +104,7 @@ Ext.onReady(function() {
 	});
 	
 	// to limit Lite version to available days
-	SR.checkFromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - availableDays);
+	SR.checkFromDate = new Date(now.getFullYear(), now.getMonth(), 1);
 	SR.checkToDate   = now;
 
 	var smartDateComboBox = Ext.create('Ext.form.ComboBox', {
@@ -139,7 +141,7 @@ Ext.onReady(function() {
 			select: function () {
 				var dateValue = this.value;
 				if(fileExists == 0){
-					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'THIS_WEEK'){
+					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'THIS_WEEK' || smartDateComboBox.getValue() == 'LAST_WEEK' || smartDateComboBox.getValue() == 'THIS_MONTH'){
 						liteSelectDate(dateValue);
 						loadGridStore();
 					}else{
@@ -172,6 +174,11 @@ Ext.onReady(function() {
 			case 'THIS_WEEK':
 			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() - 1));
 			toDate 	 = now;
+			break;
+			
+			case 'LAST_WEEK':
+			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 7));
+			toDate 	 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay()));
 			break;
 			
 			default:
@@ -255,15 +262,6 @@ Ext.onReady(function() {
 				root : 'gridItems'
 			}
 		},
-		params : {
-			fromDate : SR.fromDateField.getValue(),
-			toDate : SR.toDateField.getValue(),
-			start : 0,
-			cmd : 'gridGetData'
-		},
-		extraParams :{
-			searchText: SR.searchTextField.getValue()
-		},
 		listeners : {
 			load : function() {
 				var model = gridPanel.getSelectionModel();
@@ -281,7 +279,7 @@ Ext.onReady(function() {
 			}
 		}
 	});
-	
+
 	var loadGridStore = function() {
 		gridStore.load({
 			params : {
@@ -303,7 +301,7 @@ Ext.onReady(function() {
 		var sales = Ext.util.Format.round((records[0].data.sales),2);
 		var quantity = records[0].data.quantity;
 		var selectedId = records[0].data.id;
-		var total = totalSales;
+		var total = records[0].store.data.items[0].data.sales;							//totalSales
 		percent_sales_contribution = Ext.util.Format.round((sales/total) *100,2);
 		var sales_per_day = Ext.util.Format.round((sales/diff_days),2);
 		var velocity = Ext.util.Format.round((diff_days/quantity),4);
@@ -364,7 +362,7 @@ Ext.onReady(function() {
 			// Fires when the selected nodes change.
 			selectionchange : function(model, records) {
 				if (records[0] != undefined) {
-					
+					detailsLoadMask.show();
 					getRawData( records );
 					
 					var object = {
@@ -378,6 +376,7 @@ Ext.onReady(function() {
 								Ext.notification.msg('Failed',response.responseText);
 								return;
 							}
+							detailsLoadMask.hide();
 						},
 						scope: this,
 						params : {
@@ -401,9 +400,9 @@ Ext.onReady(function() {
 				'<div id="sales-product-name" class="product-name-block">',
 					'<div id="product-name"><b>{product_name}</b></div>',
 				'</div>',
-				'<div id="sales-image">',
-					'<img width="100%" height="100%" src={image} />',
-				'</div>',
+				'<div id="sales-image"><center>',
+					'<img src="{image}" />',
+				'</center></div>',
 			'</div>',
 			'<div id="remaining-sales-detail">',
 				'<table width="100%" height="100%">',
@@ -422,9 +421,9 @@ Ext.onReady(function() {
 	);
 
 	var ordersDetails = new Ext.XTemplate(
-		'<div class="last-few-orders"><table width="100%"><tr><td colspan="3" align="center"><h3>Last Few Orders</h3></td></tr>',
+		'<div class="last-few-orders"><table width="100%"><tr><td colspan="3"><h3>Last Few Orders</h3></td></tr>',
 		'<tpl for=".">',      
-	    '<tr><td>{date}</td><td><div class="customer-name"><a href="#" onClick="openWindow({purchaseid});">{cname}</a></div></td><td><div class="price">{totalprice}</div></td></tr>',  // use current array index to autonumber
+	    '<tr><td style="width: 30%;"><div class="order-date">{date}</div></td><td style="width: 40%;"><div class="order-customer-name"><a href="#" onClick="openWindow({purchaseid});">{cname}</a></div></td><td style="width: 30%;"><div class="price order-total-amount">{totalprice}</div></td></tr>',  // use current array index to autonumber
 	    '</tpl>',
 	    '</table></div>'
 	);
@@ -566,15 +565,17 @@ Ext.onReady(function() {
 			position : 'left',
 			fields : [ 'sales' ],
 			label : {
-				font : '10px Lucida Grande'
+				font : '17px Lucida Grande'
 			},
+			title: 'Sales',
 			minimum : 0
 		}, {
 			type : 'Category',
 			position : 'bottom',
 			label : {
-				font : '10px Lucida Grande'
+				font : '17px Lucida Grande'
 			},
+			title: 'Timeline',
 			fields : [ 'period' ]
 		} ],
 		series : [ {
@@ -600,11 +601,29 @@ Ext.onReady(function() {
 			},
 			tips : {
 				trackMouse : true,
-				width : 100,
+				width : 125,
 				constrainPosition: true,
 				renderer : function(storeItem, item) {
+					var period = '';
+					var periodValue = storeItem.data['period'];
+					var fromDate = new Date( SR.fromDateField.getValue() );
+					var monthIndex = fromDate.getMonth();
+					var year = fromDate.getFullYear();
+					switch ( periodValue.length ) {
+						case 1:
+						case 2:
+							period = monthTitle[monthIndex] + ' ' + periodValue + ', ' + year;
+							break;
+						case 3:
+							period = periodValue + ' ' + year;
+							break;
+						case 4:
+							period = periodValue;
+							break;
+					}
+					
 					var toolTipText = '';
-						toolTipText = 'Sales : '+SR.defaultCurrencySymbol + storeItem.data['sales'] + '<br\> ' + storeItem.data['period'];
+						toolTipText = 'Sales: '+SR.defaultCurrencySymbol + storeItem.data['sales'] + '<br\> ' + period;
 					this.setTitle(toolTipText);
 				}
 			},
@@ -612,6 +631,7 @@ Ext.onReady(function() {
 				'itemmouseup' : function(item) {
 					// code to select the grid data on click of the graph.
 				}
+				
 			},
 			xField : [ 'period' ],
 			yField : [ 'sales' ]
@@ -650,6 +670,7 @@ Ext.onReady(function() {
 
 		items : [ gridPanel,
 		 {
+		 	xtype: 'panel',
 			layout : {	
 				type : 'vbox',
 				align : 'stretch'
@@ -679,10 +700,17 @@ Ext.onReady(function() {
 						   }]
 			          	},
 			            barChart ]
-		 		 }],  
+		 		 }],
+		 	listeners : {
+		 		afterrender : function() {
+		 			loadGridStore();
+		 		}
+		 	},
 			renderTo : 'smart-reporter'
 		  });
 	
+	var detailsLoadMask = new Ext.LoadMask(Ext.getCmp('details').el, {msg:"Loading..."});		  
+		  
 	smartDateComboBox.setValue(selectedDateValue);
 	if(fileExists == 0){
 		SR.fromDateField.setValue(SR.checkFromDate);

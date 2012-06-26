@@ -29,20 +29,6 @@ if (file_exists ( '../pro/sr.php' )){
 	define ( 'SRPRO', false );
 }
 
-if ( ! function_exists( 'get_total_sales_and_discounts_wpsc' ) ) {
-	function get_total_sales_and_discounts_wpsc () {
-		global $wpdb;
-		$total = array();
-		$query = "SELECT sum(totalprice) as actual_total_sales,
-						 ( SELECT sum( price * quantity ) FROM {$wpdb->prefix}wpsc_cart_contents ) as total_sales_including_discounts 
-						 FROM {$wpdb->prefix}wpsc_purchase_logs";
-		$results = $wpdb->get_results ( $query );
-		$total ['sales'] = (double)$results[0]->actual_total_sales;
-		$total ['discount'] = (double)$results[0]->total_sales_including_discounts - (double)$results[0]->actual_total_sales;
-		return $total;
-	}
-}
-
 function arr_init($arr_start, $arr_end, $category = '') {
 	global $cat_rev, $months, $order_arr;
 
@@ -70,8 +56,6 @@ function get_grid_data( $select, $from, $where, $order_by ) {
 		} else {
 			$count = 0 ;
 			$grid_data = array();
-			$total = get_total_sales_and_discounts_wpsc();
-			if ($_GET ['searchText'] == '') {
 				$grid_data [$count] ['sales']    = '';
 				$grid_data [$count] ['products'] = 'All Products';
 				$grid_data [$count] ['period']   = 'selected period';
@@ -85,7 +69,6 @@ function get_grid_data( $select, $from, $where, $order_by ) {
 					$grid_data [$count] ['quantity'] = $grid_data[$count] ['quantity'] + $result ['quantity'];
 				}
 				$count++;
-			}
 			
 			foreach ( $results as $result ) {
 				$grid_data [$count] ['products'] = $result ['products'];
@@ -94,7 +77,8 @@ function get_grid_data( $select, $from, $where, $order_by ) {
 				$grid_data [$count] ['category'] = $result ['category'];
 				$grid_data [$count] ['id'] 	 	 = $result ['id'];
 				$grid_data [$count] ['quantity'] = $result ['quantity'];
-				$grid_data [$count] ['image']    = isset( $result ['image'] ) ? $result ['image'] : $wpsc_default_image;
+				$thumbnail = isset( $result ['image'] ) ? wp_get_attachment_image_src( $result ['image'], 'admin-product-thumbnails' ) : '';
+				$grid_data [$count] ['image']    = ( $thumbnail[0] != '' ) ? $thumbnail[0] : $wpsc_default_image;
 				$count++;
 			}			
 			
@@ -181,7 +165,7 @@ function get_last_few_order_details( $product_id, $select, $from, $group_by, $wh
 				$order_data [$cnt] ['purchaseid'] = $result ['PurchaseID'];
 				$order_data [$cnt] ['date']       = date("d-M-Y",$result ['date']); 
 				$order_data [$cnt] ['totalprice'] = wpsc_currency_display($result ['totalprice']);
-				$order_data [$cnt] ['cname']      = $result ['cname'];	
+				$order_data [$cnt] ['cname']      = $result ['cname'];
 				$orders [] = $order_data [$cnt];				
 				$cnt++;
 			}	
@@ -219,7 +203,9 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 			if ( (( $from ['date'] - $to ['date'] ) <= $diff ) )
 			$where = "WHERE (wtpl.`date` between '{$from ['date']}' AND '{$to['date']}')";
 		}
-
+		
+		$where .= " AND wtpl.processed IN (3,4,5) ";
+	
 		//BOF bar graph calc
 
 		$frm ['yr'] = date ( "Y", $from ['date'] );
@@ -282,12 +268,12 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 	$static_select  = " SELECT prodid as id, sum(quantity) as quantity, sum(price * quantity) as sales, wtcc.name as products";	
 	$from   = "  FROM 		{$wpdb->prefix}wpsc_cart_contents AS wtcc
                  	   JOIN {$wpdb->prefix}wpsc_purchase_logs AS wtpl ON (wtcc.`purchaseid` = wtpl.`id`)
-                  LEFT JOIN {$wpdb->prefix}posts              AS p    ON (p.ID = prodid)";
+                 LEFT JOIN {$wpdb->prefix}postmeta              AS postmeta    ON (postmeta.post_id = prodid AND postmeta.meta_key = '_thumbnail_id')";
 		
 	$order_by = "ORDER BY sales DESC";
 	
 	//To get categories
-	$static_select .= " , (   SELECT GROUP_CONCAT( DISTINCT wt.name)
+	$static_select .= " , (   SELECT GROUP_CONCAT( DISTINCT wt.name SEPARATOR ', ')
 	                   FROM 		 	{$wpdb->prefix}posts
 			                  LEFT JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(post_parent = 0,ID,post_parent) = wtr.object_id)
 			                  LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
@@ -295,13 +281,30 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 	                   WHERE ID = prodid
 	                   GROUP BY ID
                   	) AS category";
-	$static_select .= ", (select rp.guid from {$wpdb->prefix}posts rp, {$wpdb->prefix}posts rp1
-					where rp.post_parent=rp1.ID and rp.post_mime_type!='' and rp1.ID=prodid
-				  ) as image";
+	
+	$static_select .= ", postmeta.meta_value as image";
 	
 	if (isset ( $_GET ['searchText'] ) && $_GET ['searchText'] != '') {
 		$search_on = $wpdb->_real_escape ( trim ( $_GET ['searchText'] ) );
-		$where .= " AND (wtcc.name LIKE '%$search_on%' 
+		$search_ons = explode( ' ', $search_on );
+		if ( is_array( $search_ons ) ) {	
+			$where .= " AND (";
+			foreach ( $search_ons as $search_on ) {
+				$where .= " (wtcc.name LIKE '%$search_on%' 
+	            			 OR prodid in (                         
+	                         SELECT prodid 
+	                         FROM 	   {$wpdb->prefix}wpsc_cart_contents
+	                              JOIN {$wpdb->prefix}posts              AS p    ON (p.ID = prodid)
+	                         LEFT JOIN {$wpdb->prefix}term_relationships AS wtr  ON (if(p.post_parent = 0,prodid,post_parent) = wtr.object_id)
+	                         LEFT JOIN {$wpdb->prefix}term_taxonomy      AS wtt  ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id AND taxonomy = 'wpsc_product_category')
+	                         LEFT JOIN {$wpdb->prefix}terms              AS wt   ON (wtt.term_id = wt.term_id)
+	                         WHERE wt.name LIKE '%$search_on%'
+	              						)
+			             	) OR";
+			}
+			$where = substr( $where, 0, -3 ) . ') ';
+		} else {
+			$where .= " AND (wtcc.name LIKE '%$search_on%' 
             			 OR prodid in (                         
                          SELECT prodid 
                          FROM 	   {$wpdb->prefix}wpsc_cart_contents
@@ -312,6 +315,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
                          WHERE wt.name LIKE '%$search_on%'
               						)
 		             	)";
+		}
 	}
 
 	if ($_GET ['cmd'] == 'gridGetData') {
