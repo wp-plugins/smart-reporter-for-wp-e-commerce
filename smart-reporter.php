@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for WP e-Commerce
 Plugin URI: http://www.storeapps.org/smart-reporter-for-wp-e-commerce/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 1.7
+Version: 1.8
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011 Store Apps All rights reserved.
@@ -17,25 +17,36 @@ register_deactivation_hook ( __FILE__, 'sr_deactivate' );
  * Registers a plugin function to be run when the plugin is activated.
  */
 function sr_activate() {
-	global $wpdb;
-	if ( ( file_exists ( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ) ) && ( is_plugin_active ( 'woocommerce/woocommerce.php' ) ) ) {
-		$create_table_query = "
-			CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}sr_woo_order_items` (
-			  `product_id` bigint(20) unsigned NOT NULL default '0',
-			  `order_id` bigint(20) unsigned NOT NULL default '0',
-			  `product_name` text NOT NULL,
-			  `quantity` int(10) unsigned NOT NULL default '0',
-			  `sales` decimal(11,2) NOT NULL default '0.00',
-			  `discount` decimal(11,2) NOT NULL default '0.00',
-			  KEY `product_id` (`product_id`),
-			  KEY `order_id` (`order_id`)
-			) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
-		";
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-   		dbDelta( $create_table_query );
-   		
-		add_action( 'load_sr_woo_order_items', 'load_sr_woo_order_items' );
-   		do_action( 'load_sr_woo_order_items' );
+	global $wpdb, $blog_id;
+	if ( is_multisite() ) {
+		$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}", 0 );
+	} else {
+		$blog_ids = array( $blog_id );
+	}
+	foreach ( $blog_ids as $blog_id ) {
+		if ( ( file_exists ( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ) ) && ( is_plugin_active ( 'woocommerce/woocommerce.php' ) ) ) {
+			$wpdb_obj = clone $wpdb;
+			$wpdb->blogid = $blog_id;
+			$wpdb->set_prefix( $wpdb->base_prefix );
+			$create_table_query = "
+				CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}sr_woo_order_items` (
+				  `product_id` bigint(20) unsigned NOT NULL default '0',
+				  `order_id` bigint(20) unsigned NOT NULL default '0',
+				  `product_name` text NOT NULL,
+				  `quantity` int(10) unsigned NOT NULL default '0',
+				  `sales` decimal(11,2) NOT NULL default '0.00',
+				  `discount` decimal(11,2) NOT NULL default '0.00',
+				  KEY `product_id` (`product_id`),
+				  KEY `order_id` (`order_id`)
+				) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
+			";
+			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	   		dbDelta( $create_table_query );
+	   		
+			add_action( 'load_sr_woo_order_items', 'load_sr_woo_order_items' );
+	   		do_action( 'load_sr_woo_order_items', $wpdb );
+	   		$wpdb = clone $wpdb_obj;
+		}
 	}
 }
 
@@ -44,7 +55,18 @@ function sr_activate() {
  */
 function sr_deactivate() {
 	global $wpdb;
-	$wpdb->query( "DROP TABLE {$wpdb->prefix}sr_woo_order_items" );
+	if ( is_multisite() ) {
+		$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}", 0 );
+	} else {
+		$blog_ids = array( $blog_id );
+	}
+	foreach ( $blog_ids as $blog_id ) {
+		$wpdb_obj = clone $wpdb;
+		$wpdb->blogid = $blog_id;
+		$wpdb->set_prefix( $wpdb->base_prefix );
+		$wpdb->query( "DROP TABLE {$wpdb->prefix}sr_woo_order_items" );
+		$wpdb = clone $wpdb_obj;
+	}
 }
 
 function get_latest_version($plugin_file) {
@@ -152,7 +174,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	function sr_admin_notices() {
 		if (! is_plugin_active ( 'woocommerce/woocommerce.php' ) && ! is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
 			echo '<div id="notice" class="error"><p>';
-			_e ( '<b>Smart Reporter</b> add-on requires <a href="http://getshopped.org/">WP e-Commerce</a> plugin or <a href="http://www.woothemes.com/woocommerce/">WooCommerce</a> plugin. Please install and activate it.' );
+			_e ( '<b>Smart Reporter</b> add-on requires <a href="http://www.storeapps.org/wpec/">WP e-Commerce</a> plugin or <a href="http://www.storeapps.org/woocommerce/">WooCommerce</a> plugin. Please install and activate it.' );
 			echo '</p></div>', "\n";
 		}
 	}
@@ -169,7 +191,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	}
 	
 	function woo_add_modules_sr_admin_pages() {
-		$page = add_submenu_page ('edit.php?post_type=product', 'Smart Reporter', 'Smart Reporter', 'manage_options', 'smart-reporter-woo', 'sr_show_console' );
+		$page = add_submenu_page ('woocommerce', 'Smart Reporter', 'Smart Reporter', 'manage_options', 'smart-reporter-woo', 'sr_show_console' );
 	    
 		if ($_GET ['action'] != 'sr-settings') { // not be include for settings page
 			add_action ( 'admin_print_scripts-' . $page, 'sr_admin_scripts' );
@@ -242,8 +264,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	}
 	
 	// Function to load table sr_woo_order_items
-	function load_sr_woo_order_items() {
-		global $wpdb;
+	function load_sr_woo_order_items( $wpdb ) {
+//		global $wpdb;
 	
 		// WC's code to get all order items
 		$results = $wpdb->get_results ("
@@ -303,7 +325,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/$json_filename.php" );
 		
 		//set the number of days data to show in lite version.
-		define ( 'SR_AVAIL_DAYS', 6);
+		define ( 'SR_AVAIL_DAYS', 30);
 		
 		$latest_version = get_latest_version (SR_PLUGIN_FILE );
 		$is_pro_updated = is_pro_updated ();
@@ -381,7 +403,7 @@ if (SRPRO === false) {
 				?>
 <div id="message" class="updated fade">
 <p><?php
-printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 7 days upgrade to Pro . Take a <a href='%2s' target=_livedemo> Live Demo here </a>." ), 'http://demo.storeapps.org/' );
+printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 30 days upgrade to Pro . Take a <a href='%2s' target=_livedemo> Live Demo here </a>." ), 'http://demo.storeapps.org/' );
 				?></p>
 </div>
 <?php
@@ -423,7 +445,7 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 					}
 				}
 			} else {
-				$error_message = '<b>Smart Reporter</b> add-on requires <a href="http://getshopped.org/">WP e-Commerce</a> plugin or <a href="http://www.woothemes.com/woocommerce/">WooCommerce</a> plugin. Please install and activate it.';
+				$error_message = '<b>Smart Reporter</b> add-on requires <a href="http://www.storeapps.org/wpec/">WP e-Commerce</a> plugin or <a href="http://www.storeapps.org/woocommerce/">WooCommerce</a> plugin. Please install and activate it.';
 			}
 
 			if ($error_message != '') {
