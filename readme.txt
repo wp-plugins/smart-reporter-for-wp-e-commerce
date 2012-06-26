@@ -1,10 +1,10 @@
 === Smart Reporter for WP e-Commerce ===
-Contributors: niravmehta, rohankamble, angelin.deboral, malayladu, ratnakar.dubey
+Contributors: niravmehta, malayladu, ratnakar.dubey
 Donate link: http://www.storeapps.org/
-Tags: administration, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
+Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.3.1
-Stable tag: 1.7
+Stable tag: 1.8
 
 Business analysis for e-commerce like never before.
 
@@ -22,7 +22,7 @@ The Lite version is limited to showing data of past 7 days only. It also does no
 
 == Installation ==
 
-1. Ensure you have latest version of [WP e-Commerce](http://www.getshopped.org) or [WooCommerce](http://www.woothemes.com/woocommerce/) plugin installed
+1. Ensure you have latest version of [WP e-Commerce](http://www.storeapps.org/wpec/) or [WooCommerce](http://www.storeapps.org/woocommerce/) plugin installed
 2. Unzip and upload contents of the plugin to your '/wp-content/plugins/' directory
 3. Activate the plugin through the 'Plugins' menu in WordPress
 4. Click on 'Smart Reporter' option within WordPress admin sidebar menu
@@ -44,6 +44,22 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 1. Smart Reporter Products Report Dashboard (some features only in paid versions)
 
 == Changelog ==
+
+= 1.8 =
+* Fixed: WordPress MultiSite - Data visible only in primary site
+* Fixed: Autoloading of records when page is refreshed
+* Fixed: Actual image is now relaced by thumbnail images
+* Fixed: Nothing displayed in Smart Reporter for WP e-Commerce
+* Fixed: Thumbnails for products not visible for WP e-Commerce
+* Fixed: Product's name overflow
+* Updated: Smart Reporter link moved from "Products" to "WooCommerce" in Sidebar menu for WooCommerce
+* Updated: Show total sales even when filtered through search text
+* Updated: Graph tooltip now shows formated time period
+* Updated: Percent contribution based on all result visible in table
+* Updated: Displaying message 'Loading...' while loading records in right panel
+* Updated: Search based on multiple keywords
+* Updated: Lite version - date limit increased from 7 Days to 30 days
+* Updated: Other minor changes - Space for Category delimiter, background color removed for product's & order's details, position of "Last Few Orders", height of Sales KPI increased
 
 = 1.7 =
 * New: Smart Reporter for WooCommerce 1.4
@@ -76,6 +92,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 1.8 =
+Important fixes for WPeC and Wordpress Multisite, recommended upgrade.
 
 = 1.7 =
 WooCommerce support, major new features added.
