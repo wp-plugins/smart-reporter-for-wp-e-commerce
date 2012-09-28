@@ -104,7 +104,7 @@ Ext.onReady(function() {
 	});
 	
 	// to limit Lite version to available days
-	SR.checkFromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+	SR.checkFromDate = new Date( now.getFullYear(), now.getMonth(), ( now.getDate() - 29 ) ); //for exactly 30 days limit
 	SR.checkToDate   = now;
 
 	var smartDateComboBox = Ext.create('Ext.form.ComboBox', {
@@ -177,8 +177,8 @@ Ext.onReady(function() {
 			break;
 			
 			case 'LAST_WEEK':
-			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 7));
-			toDate 	 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay()));
+			fromDate = new Date(now.getFullYear(), now.getMonth(), (now.getDate() - (now.getDay() - 1) - 7));
+                        toDate   = new Date(now.getFullYear(), now.getMonth(), (now.getDate() - (now.getDay() - 1) - 1));
 			break;
 			
 			default:
