@@ -204,7 +204,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 			$where = "WHERE (wtpl.`date` between '{$from ['date']}' AND '{$to['date']}')";
 		}
 		
-		$where .= " AND wtpl.processed IN (3,4,5) ";
+		$where .= " AND wtpl.processed IN (2,3,4,5) ";
 	
 		//BOF bar graph calc
 
