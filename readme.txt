@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.4.1
-Stable tag: 1.8.2
+Stable tag: 1.8.3
 
 Business analysis for e-commerce like never before.
 
@@ -44,6 +44,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 1. Smart Reporter Products Report Dashboard (some features only in paid versions)
 
 == Changelog ==
+
+= 1.8.3 =
+* Fixed: "Remote Connection Error" message on WordPress admin pages
 
 = 1.8.2 =
 * Updated: Date range to 30 days for Lite version
@@ -98,6 +101,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 1.8.3 =
+Must have upgrade. Fixes "Remote Connection Error" messages in WordPress admin.
 
 = 1.8.2 =
 Date range expanded to 30 days for Lite version
