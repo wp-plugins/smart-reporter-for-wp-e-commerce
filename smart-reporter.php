@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/products/smart-reporter-for-e-commerce/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 1.8.2
+Version: 1.8.3
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012 Store Apps All rights reserved.
@@ -135,18 +135,18 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		
 		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
 		if ($_GET['post_type'] == 'wpsc-product' || $_GET['page'] == 'smart-reporter-wpsc') {
-			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sm_plugin_info ['Version'] );
+			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 			define('WPSC_RUNNING', true);
 			define('WOO_RUNNING', false);
 			// checking the version for WPSC plugin
 			define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
 			define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
 			if ( IS_WPSC38 ) {		// WPEC 3.8.7 OR 3.8.8
-				define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.8', '<' ));
-				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
+				define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.7', '<=' ));
+				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.7', '>' ));
 			}
 		} else if ($_GET['post_type'] == 'product' || $_GET['page'] == 'smart-reporter-woo') {
-			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sm_plugin_info ['Version'] );
+			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 			define('WPSC_RUNNING', false);
 			define('WOO_RUNNING', true);
 			// checking the version for WooCommerce plugin
@@ -165,9 +165,10 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		if (SRPRO === true) {
 			include ('pro/upgrade.php');
 			add_action ( 'after_plugin_row_' . plugin_basename ( __FILE__ ), 'sr_plugin_row', '', 1 );
-			do_action ( 'after_plugin_row_' . plugin_basename ( __FILE__ ));			// Fix: For automatic upgrade issue
+//			do_action ( 'after_plugin_row_' . plugin_basename ( __FILE__ ));			// Fix: For automatic upgrade issue
 			add_action ( 'after_plugin_row_' . plugin_basename ( __FILE__ ), 'sr_show_registration_upgrade');
 			add_action ( 'in_plugin_update_message-' . plugin_basename ( __FILE__ ), 'sr_update_notice' );
+                        add_action ( 'all_admin_notices', 'sr_update_overwrite' );
 		}
 	}
 	
@@ -457,11 +458,17 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 	}
 	
 	function sr_update_notice() {
-		$plugins = get_site_transient ( 'update_plugins' );
-		$link = $plugins->response [SR_PLUGIN_FILE]->package;
+		if ( !function_exists( 'sr_get_download_url_from_db' ) ) return;
+                $download_details = sr_get_download_url_from_db();
+//                $plugins = get_site_transient ( 'update_plugins' );
+		$link = $download_details['results'][0]->option_value;                                //$plugins->response [SR_PLUGIN_FILE]->package;
 		
-		echo $man_download_link = " Or <a href='$link'>click here to download the latest version.</a>";
-	
+                if ( !empty( $link ) ) {
+                    $current  = get_site_transient ( 'update_plugins' );
+                    $r1       = sr_plugin_reset_upgrade_link ( $current, $link );
+                    set_site_transient ( 'update_plugins', $r1 );
+                    echo $man_download_link = " Or <a href='$link'>click here to download the latest version.</a>";
+                }
 	}
 		
 	if (! function_exists ( 'sr_display_err' )) {
