@@ -96,6 +96,22 @@ function get_graph_data( $product_id, $select, $from, $group_by, $where, $parts 
 	$encoded = get_last_few_order_details( $product_id, $select, $from, $group_by, $where );
 	
 		$select  .= " ,FROM_UNIXTIME(wtpl.`date`, '{$parts ['abbr']}') AS period";
+        
+                if(isset($parts['day']) && $parts['day'] == 'today' ) {
+                    if ($product_id > 0) {
+                        $select .= ",FROM_UNIXTIME(wtpl.`date`, '%H:%i:%s') AS time ";
+                    }
+                    else {
+                        $select .= ",FROM_UNIXTIME(max(wtpl.`date`), '%H:%i:%s') AS time ";
+                    }
+                    
+                    for ($i=0;$i<24;$i++) {
+                        $cat_rev1[$i] = 1;
+                    }
+                }
+                
+		
+                
 		$group_by = " GROUP BY period";
 	
 		if (isset ( $product_id ) && $product_id != 0) {
@@ -111,11 +127,21 @@ function get_graph_data( $product_id, $select, $from, $group_by, $where, $parts 
 		if ($no_records != 0) {
 			foreach ( $results as $result ) { // put within condition
 				$cat_rev [$result['period']]  = $result ['sales'];
+                                if(isset($parts['day']) && $parts['day'] == 'today' ) {
+                                    $cat_rev1 [$result['period']]  = $result ['time'];
+			}
 			}
 			
+                        $i = 0;
+                        
 			foreach ( $cat_rev as $mon => $rev ) {
 				$record ['period'] = $mon;
 				$record ['sales'] = $rev;
+                                
+                                if(isset($parts['day']) && $parts['day'] == 'today' ) {
+                                    $record ['time'] = $cat_rev1[$i];
+                                }
+                                $i++;
 				$records [] = $record;
 			}
 		}
@@ -232,6 +258,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 						$parts ['category'] = 'hr';
 						$parts ['no'] = 23;
 						$parts ['abbr'] = '%k';
+                                                $parts ['day'] = 'today';
 
 						arr_init ( 0, $parts ['no'],'hr' );
 					} else {

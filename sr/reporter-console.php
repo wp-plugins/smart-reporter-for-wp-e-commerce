@@ -18,13 +18,57 @@ if (WPSC_RUNNING === true) {
 }
 
 if ($fileExists){
-	if ( WPSC_RUNNING === true ) {
-		if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' ) ) include_once( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' );
-	} else {
-		if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php' ) ) include_once( SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php' );
-	}
-}
 
+    if ( WPSC_RUNNING === true ) {
+        $file_name =  SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php';
+        $file_url =  WP_PLUGIN_URL.'/smart-reporter-for-wp-e-commerce/pro/sr.php';
+    } else {
+        $file_name =  SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php';
+        $file_url =  WP_PLUGIN_URL. '/smart-reporter-for-wp-e-commerce/pro/sr-woo.php';
+    }
+
+    if ( !function_exists( 'update_site_option' ) ) {
+        if ( ! defined('ABSPATH') ) {
+            include_once ('../../../../wp-load.php');
+        }
+        include_once ABSPATH . 'wp-includes/option.php';
+    }
+        
+    $sr_is_auto_refresh = get_site_option('sr_is_auto_refresh');
+    $sr_what_to_refresh = get_site_option('sr_what_to_refresh');
+    $sr_refresh_duration = get_site_option('sr_refresh_duration');
+    
+?>
+<input type="hidden" id="sr_is_auto_refresh" value="<?php echo $sr_is_auto_refresh; ?>" />
+<input type="hidden" id="sr_what_to_refresh" value="<?php echo $sr_what_to_refresh; ?>" />
+<input type="hidden" id="sr_refresh_duration" value="<?php echo $sr_refresh_duration; ?>" />
+<script type="text/javascript"> 
+    jQuery(function(){
+        if ( jQuery('input#sr_is_auto_refresh').val() == 'yes' && jQuery('input#sr_what_to_refresh').val() != 'select' ) {
+            var refresh_time = Number('<?php echo $sr_refresh_duration; ?>');
+            var auto_refresh = setInterval(
+                function() {
+                    jQuery.ajax({
+                        url: '<?php echo $file_url; ?>',
+                        dataType: 'html',
+                        success: function( response ){
+                            if ( jQuery('input#sr_what_to_refresh').val() == 'dashboard' || jQuery('input#sr_what_to_refresh').val() == 'all' ) {
+                                jQuery('#reload').trigger('click');
+                            }
+                            if ( jQuery('input#sr_what_to_refresh').val() == 'kpi' || jQuery('input#sr_what_to_refresh').val() == 'all' ) {
+                                jQuery('#wrap_sr_kpi').fadeOut('slow', function(){jQuery('#wrap_sr_kpi').html(response).fadeIn("slow");});
+                            }
+                        }
+                    });
+            }, Number(refresh_time * 60 * 1000));
+        }
+    });
+</script>
+<div id="wrap_sr_kpi">
+<?php if ( file_exists ( $file_name ) ) include_once( $file_name ); ?>
+</div>
+<?php
+}
 echo "<script type='text/javascript'>
 var adminUrl	      	 = '" .ADMIN_URL. "';
 SR 			   		  	 =  new Object;";
@@ -42,6 +86,7 @@ var fileExists 		  	 = '" .$fileExists. "';
 var ordersDetailsLink   = '" . $orders_details_url . "';
 var availableDays    	 = '" .SR_AVAIL_DAYS. "';
 var selectedDateValue 	 = '" .$selectedDateValue. "';
+var fileUrl 	 = '" .$file_url. "';
 </script>";
 ?>
 <br>

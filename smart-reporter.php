@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/products/smart-reporter-for-e-commerce/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 1.8.3
+Version: 1.9
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012 Store Apps All rights reserved.
@@ -18,7 +18,14 @@ register_deactivation_hook ( __FILE__, 'sr_deactivate' );
  */
 function sr_activate() {
 	global $wpdb, $blog_id;
-	if ( is_multisite() ) {
+	
+        if ( false === get_site_option( 'sr_is_auto_refresh' ) ) {
+            update_site_option( 'sr_is_auto_refresh', 'no' );
+            update_site_option( 'sr_what_to_refresh', 'all' );
+            update_site_option( 'sr_refresh_duration', '5' );
+        }
+        
+        if ( is_multisite() ) {
 		$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}", 0 );
 	} else {
 		$blog_ids = array( $blog_id );
@@ -142,8 +149,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
 			define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
 			if ( IS_WPSC38 ) {		// WPEC 3.8.7 OR 3.8.8
-				define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.7', '<=' ));
-				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.7', '>' ));
+				define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.7.6.2', '<=' ));
+				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.7.6.2', '>' ));
 			}
 		} else if ($_GET['post_type'] == 'product' || $_GET['page'] == 'smart-reporter-woo') {
 			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
@@ -350,7 +357,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		?>
    	<p class="wrap" style="font-size: 12px">
 	   	<span style="float: right"> <?php
-				if ( SRPRO === true && ! is_multisite() ) {
+			if ( SRPRO === true && ! is_multisite() ) {
 				$before_plug_page = '<a href="admin.php?page=smart-reporter-';
 				$after_plug_page = '&action=sr-settings">Settings</a> | ';
 				if (WPSC_RUNNING == true) {

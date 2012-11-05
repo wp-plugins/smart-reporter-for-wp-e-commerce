@@ -612,7 +612,18 @@ Ext.onReady(function() {
 					switch ( periodValue.length ) {
 						case 1:
 						case 2:
+                                                        //If statement to handle the display of the time when Today is selected
+                                                        if (storeItem.data['time'] != "" && storeItem.data['time'] != null) {
+                                                            if (storeItem.data['sales'] > 0) {
+                                                                period = 'Last Order: ' + storeItem.data['time'];
+                                                            }
+                                                            else {
+                                                                period = 'Last Order: -';
+                                                            }
+                                                        }
+                                                        else {
 							period = monthTitle[monthIndex] + ' ' + periodValue + ', ' + year;
+                                                        }
 							break;
 						case 3:
 							period = periodValue + ' ' + year;
@@ -658,6 +669,14 @@ Ext.onReady(function() {
 			listeners : {
 				click : function() {
 						loadGridStore();
+                                                jQuery('#wrap_sr_kpi').fadeTo('fast', 0.5);
+                                                jQuery.ajax({
+                                                    url: fileUrl,
+                                                    dataType: 'html',
+                                                    success: function( response ){
+                                                        jQuery('#wrap_sr_kpi').html(response).fadeTo('fast', 1);
+                                                    }
+                                                });
 					}
 				}
 			}],

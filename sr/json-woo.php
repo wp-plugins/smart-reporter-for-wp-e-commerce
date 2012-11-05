@@ -92,10 +92,22 @@ function get_grid_data( $select, $from, $where, $where_date, $group_by, $search_
 function get_graph_data( $product_id, $where_date, $parts ) {
 	global $wpdb, $cat_rev, $months, $order_arr;
 	
+        $cat_rev1 = array();
+	
 	$encoded = get_last_few_order_details( $product_id, $where_date );
 
+                $time = '';
+                if(isset($parts['day']) && $parts['day'] == 'today' ) {
+                    $time = ",DATE_FORMAT(max(posts.`post_date`), '%H:%i:%s') AS time";
+                    for ($i=0;$i<24;$i++) {
+                        $cat_rev1[$i] = 1;
+                    }
+                }
+        
+                
 		$select  = "SELECT SUM( order_item.sales ) AS sales,
 					DATE_FORMAT(posts.`post_date`, '{$parts ['abbr']}') AS period
+                                        $time    
 				   ";
 		
 		$from = " FROM {$wpdb->prefix}sr_woo_order_items AS order_item
@@ -119,12 +131,22 @@ function get_graph_data( $product_id, $where_date, $parts ) {
 		if ($no_records != 0) {
 			foreach ( $results as $result ) { // put within condition
 				$cat_rev [$result['period']]  = $result ['sales'];
+                                if(isset($parts['day']) && $parts['day'] == 'today' ) {
+                                    $cat_rev1 [$result['period']]  = $result ['time'];
 			}
+                        }
 			
+                        $i = 0;
+                        
 			foreach ( $cat_rev as $mon => $rev ) {
 				$record ['period'] = $mon;
 				$record ['sales'] = $rev;
+                                
+                                if(isset($parts['day']) && $parts['day'] == 'today' ) {
+                                    $record ['time'] = $cat_rev1[$i];
+                                }
 				$records [] = $record;
+                                $i++;
 			}
 		}
 		
@@ -196,6 +218,14 @@ function get_last_few_order_details( $product_id, $where_date ) {
 
 if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
 	
+        if (SRPRO == true) {
+            if ( WPSC_RUNNING === true ) {
+		if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' ) ) include( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' );
+            } else {
+                if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php' ) ) include_once( SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php' );
+            }
+        }
+    
 	if (isset ( $_GET ['fromDate'] )) {
 		$from ['date'] = strtotime ( $_GET ['fromDate'] );
 		$to ['date'] = strtotime ( $_GET ['toDate'] );
@@ -247,6 +277,7 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 						$parts ['category'] = 'hr';
 						$parts ['no'] = 23;
 						$parts ['abbr'] = '%k';
+                                                $parts ['day'] = 'today';
 
 						arr_init ( 0, $parts ['no'],'hr' );
 					} else {
