@@ -10,9 +10,9 @@ if (WPSC_RUNNING === true) {
 	$wpsc_currency_data = $wpdb->get_row( "SELECT `symbol`, `symbol_html`, `code` FROM `" . WPSC_TABLE_CURRENCY_LIST . "` WHERE `id` = '" . $currency_type . "' LIMIT 1", ARRAY_A );
 	$currency_sign = $wpsc_currency_data['symbol'];   //Currency Symbol in Html
 	if ( IS_WPSC388 )	
-		$orders_details_url = ADMIN_URL . "/index.php?page=wpsc-purchase-logs&c=item_details&id=";
+		$orders_details_url = ADMIN_URL . "index.php?page=wpsc-purchase-logs&c=item_details&id=";
 	else
-		$orders_details_url = ADMIN_URL . "/index.php?page=wpsc-sales-logs&purchaselog_id=";
+		$orders_details_url = ADMIN_URL . "index.php?page=wpsc-sales-logs&purchaselog_id=";
 } else {
 	$currency_sign = get_woocommerce_currency_symbol();
 }
