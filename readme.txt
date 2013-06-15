@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.5.1
-Stable tag: 1.9.1
+Stable tag: 2.0
 
 Business analysis for e-commerce like never before.
 
@@ -44,6 +44,12 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 1. Smart Reporter Products Report Dashboard (some features only in paid versions)
 
 == Changelog ==
+
+= 2.0 =
+* New: Beta Version of Smart Reporter [Smart Reporter Beta] (Woocommerce)
+* New: Create Support Ticket From Plugin
+* New: Update Code Modified
+
 
 = 1.9.1 =
 * Update: Compatible version for WooCommerce 2.0 & higher
