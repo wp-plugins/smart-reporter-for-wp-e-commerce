@@ -15,6 +15,13 @@ h2 {
     font-weight:bold;
     margin:10px 0;
 }
+
+td {
+  padding-left: 3px;
+  padding-right: 3px;
+  padding-top: 3px; 
+};
+
 .example-info{
     width:150px;
     border:1px solid #c3daf9;
@@ -224,3 +231,465 @@ pre.code{
 #barchart tspan {
 	font-size: 0.6em;
 }
+
+/*==============================*/
+/*BETA Version CSS
+/*==============================*/
+
+.cumm_header {
+	border-color : #368ee0;
+	background-color : #368ee0;
+	font-size : 1.5em;
+	font-weight: 900;
+	font-family: Helvetica, Arial, sans-serif;
+	color: white;
+	padding: 7px 0 7px 7px;
+}
+
+.average_order_total_header {
+	font-size : 1.0em;
+}
+
+.average_order_items_header {
+	font-size : 0.7em;
+}
+
+.average_order_items_price {
+	font-size : 2.5em;
+	font-family: Helvetica, Arial, sans-serif;
+    color: #666;
+    margin-top: 1.15em;
+    margin-left: 0.4em;
+}
+
+.average_order_items_text {
+    color: #7C7C86;
+    font-size: 0.41em;
+    font-weight: 500;
+    margin-top: 0.15em;
+}
+
+.daily_header {
+	border-color : #368ee0;
+	background-color : #368ee0;
+	font-size : 1.2em;
+	font-weight: 900;
+	font-family: Helvetica, Arial, sans-serif;
+	color: white;
+	padding: 7px 0 7px 7px;
+}
+
+.Hover {
+	border: 0.2em solid #368ee0;
+}
+
+.daily_widget {	
+	float: left;
+	width: 18em;
+	height: 7em;
+	border: 0.2em solid #e8e8e8;
+	/*border-radius: 0.7em;*/
+	/*background-image: url("../resources/themes/images/orders_stats.png");*/
+	margin-right: 1.8em;
+	margin-bottom: 2em;
+  margin-top: 0.29em;
+}
+
+.daily_widgets_icon {
+	width: 3.45em;
+    height: 5.5em;
+    margin-top: 0.8em;
+    border-right: 1px solid #ededed;
+}
+
+.daily_widgets_icon1 {
+	margin-left: 0.36em;
+	color: #4083D8;
+	height: 5.5em;
+	font-size: 2.0em;
+	line-height: 2.7em;
+}
+
+.daily_widgets_data {
+	width: 19.3em;
+	margin-top: -4.25em;
+}
+
+.daily_widgets_text {
+
+    margin-top: 0.4em;
+    margin-left: 3.8em;
+    color: #727277;
+    font-weight: 500;
+    font-size: 1.1em;
+
+}
+
+.daily_widgets_price {
+	font-size : 2.2em;
+	font-family: Helvetica, Arial, sans-serif;
+    color: #4083D8;
+    font-weight: 500;
+    margin-top: 0.9em;
+    margin-left: 1.7em;
+    /*float: right*/
+}
+
+.daily_widgets_comp_price {
+	margin-left:-0.5em;
+	font-size: 0.37em;
+	font-family: Helvetica, Arial, sans-serif;
+    color: #4083D8;
+    font-weight: 500;
+    margin-top: 0.9em;
+}
+
+.daily_widget_order_fulfill {	
+	margin-right: 0em;
+}
+
+.daily_widget_today_sales {
+  margin-left: 0.25em;
+}
+
+.daily_widget_1_color {
+	color: #12B41F;
+}
+
+.daily_widget_2_color {
+	color: #12ADC2;
+}
+
+.daily_widget_3_color {
+	/*color: #3eb157;*/
+	color: #f26645;
+}
+
+.daily_widget_4_color {
+	color: #15295c;
+	/*color: #A38250;*/
+}
+
+.sr_cumm_date {
+  height: 2.0em;
+  /*float: right;*/
+  width: 21.5em;
+  margin-left: 57.5em;
+  margin-right: 0.2em;
+  border-bottom: 0.2em solid #368ee0;
+}
+
+.sr_cumm_date_picker {
+  float: right;
+  height: 1.8em;
+  width:  7.0em;
+  /*text-align: center;*/
+}
+
+.sr_cumm_date_label {
+  float: right;
+  color: #727277;
+  font-size: 1.5em;
+  margin-top: 0.25em;
+  margin-right: 0.5em;
+}
+
+.sr_cumm_date_icon {
+  height: 1.5em;
+  width: 1.5em;
+  float: right;
+  margin-top: 0.2em;
+  margin-right: 0.5em;
+  cursor: pointer;
+}
+
+/* Current Summary & KPIs*/
+
+#daily_summary {
+	font-size : 1.8em;
+	font-family: Helvetica, Arial, sans-serif;
+	color: #666666;
+	font-weight:700;
+}
+
+.cumm_widget {
+	float: left;
+	/*margin-left: 2%;*/
+	margin-right: 1.8em;
+	/*margin-bottom: 1.7em;*/
+	margin-top: 1.7em;
+	width: 24.7em;
+	border: 0.2em solid #368ee0;
+	height: 23em;
+  margin-left: 0.35em;
+}
+
+.no_data_text {
+    text-align: center;
+    font-size: 3.5em;
+    font-weight: 700;
+    color: #DBDBDB;
+    margin-top: 2.37em;
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+.cumm_top_5_prod {
+	margin-right: 0%;
+  margin-top: 1.7em;
+}
+
+.average_order_total_count {
+	float: left;
+	margin-left: -24.85em;
+	margin-right: 1em;
+	margin-right: 1.5em;
+	margin-top: 17.5em;
+	width: 24.46em;
+	border: 0.2em solid #368ee0;
+	height: 7.2em;
+
+}
+
+.average_order_total {
+	width: 50%;
+	float:	left;
+	height: 100%;
+	border-right: 0.2em solid #E8E8E8;
+}
+
+.sr_cumm_avg_order_value {
+	margin-bottom: 0.1em;
+}
+
+.average_order_total_amt {
+	font-family: Helvetica, Arial, sans-serif;
+    color: #666;
+	font-size: 2.5em;
+	margin-left: 0.4em;
+	margin-top: 0.55em;
+}
+
+.average_order_total_text {
+    color: #7C7C86;
+    font-size: 0.41em;
+    font-weight: 500;
+    margin-top: 0.15em;
+}
+
+.average_order_items_customer {
+    width: 50%;
+    float: right;
+    height: 100%;
+    margin-top: -8.65em;
+}
+
+.cumm_widget_top_cust {
+	float: left;
+	/*margin-left: 2%;*/
+	/*margin-right: 1.6em;*/
+	margin-bottom: 1.7em;
+	margin-top: 1.7em;
+	width: 24.46em;
+	border: 0.2em solid #368ee0;
+	height: 13.7em;	
+}
+
+.top_cust_data_div {
+  margin-left: 0.7em;
+  margin-right: 0.7em;
+}
+
+.cumm_widget_top_cust_table_body {
+	color: #666;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+  padding-right: 0.2em;
+  padding-left: 0.2em;
+  padding-top: 0.2em;
+}
+
+.cumm_widget_top_cust_table_header {
+	font-size: 1.3em;
+  padding: 3px ;
+  font-weight:700;
+}
+
+.icon_cumm_widgets {
+	font-size: 19px;
+}
+
+.icon_cumm_indicator_green {
+	font-size: 20px;
+	color: green;
+	/*margin-left: -0.2em;*/
+}
+
+.icon_cumm_indicator_red {
+	font-size: 20px;
+	color: red;
+	/*margin-left: -0.2em;*/
+}
+
+.cumm_total {
+	font-size : 2.5em;
+	font-family: Helvetica, Arial, sans-serif;
+    color: #666;
+    padding-left:15px;
+	float: right;
+	margin-top: 3%;
+	margin-right: 2%;
+}
+
+/*CSS BUTTON*/
+
+.PriceQtyToggle {
+    width: 2.7em;
+    float: right;
+    margin-top: -1.0em;
+    margin-right: 1.5em;
+    line-height: 1.27em;
+}
+
+.PriceQtyToggle_price {
+    float: left;
+    width: 50%;
+    border-radius: 0.5em 0 0 0.5em;
+}
+
+.PriceQtyToggle_qty {
+    float: right;
+    margin-top: -2.28em;
+    margin-right: -1.8em;
+    margin-left: 0.2em;
+    width:50%;
+    border-radius: 0 0.5em 0.5em 0;
+}
+
+.on{
+    background: #6F6B6B;
+    background-image: gradient(linear, 0% 0%, 0% 100%, from(#777), to(#5A5656));
+    text-shadow:0 -1px 0 #444, 0 0 7px #9AE658;
+    border-right:1px solid #444;
+    border-top:1px solid #444;
+    border-bottom:1px solid #444;
+    box-shadow:0 1px 2px rgba(0, 0, 0, .7) inset, 0 1px 0 #686565;  
+    color: #FFF;
+}
+
+.off {
+	font-size: 0.6em;
+    cursor: pointer;
+    padding: 0.1em 0.5em 0; 
+    background: #E5E5E5;
+    background-image: gradient(linear, 0% 0%, 0% 100%, from(#F3F3F3), to(#E5E5E5));
+    text-shadow:0 1px 0 #FFF;
+    border-left: 1px solid #707676;
+    box-shadow:0 1px 0 #FFF inset, 0 0 5px rgba(0, 0, 0, .1) inset, 0 1px 1px rgba(0, 0, 0, .3);
+    border-radius: 0.5em 0 0 0.5em;
+    color: #757272;
+}
+
+.PriceQtyToggle1:not(.on):active{
+    background-image:-webkit-gradient(linear, 0% 0%, 0% 100%, from(#ddd), to(#f1f1f1));
+}
+
+/*CSS FOR CSS TOGGLE FROM CSS DECK*/
+
+.switch {
+  position: relative;
+  margin-top: -0.28em;
+  margin-right: 0.2em;
+  float: right;
+  height: 1.5em;
+  width: 4.15em;
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 0.2em;
+  -webkit-box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.switch-label {
+  position: relative;
+  z-index: 2;
+  margin-left: 0.1em;
+  float: left;
+  width: 3.2em;
+  line-height: 2.5em;
+  font-size: 0.61em;
+  color: rgba(255, 255, 255, 0.58);
+  text-align: center;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.switch-label_price {
+	font-weight: bold;
+  color: rgba(0, 0, 0, 0.65);
+  text-shadow: 0 1px rgba(255, 255, 255, 0.25);
+  -webkit-transition: 0.15s ease-out;
+  -moz-transition: 0.15s ease-out;
+  -o-transition: 0.15s ease-out;
+  transition: 0.15s ease-out;
+}
+
+.switch-label:active {
+  font-weight: bold;
+}
+
+.switch-label-off {
+  /*padding-left: 0.1em;*/
+}
+
+.switch-label-on {
+  /*padding-right: 0.1em;*/
+}
+
+.switch-input {
+  display: none;
+}
+
+.switch-input:checked + .switch-label {
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.65);
+  text-shadow: 0 1px rgba(255, 255, 255, 0.25);
+  -webkit-transition: 0.15s ease-out;
+  -moz-transition: 0.15s ease-out;
+  -o-transition: 0.15s ease-out;
+  transition: 0.15s ease-out;
+}
+
+.switch-input:checked + .switch-label-on ~ .switch-selection {
+  /* Note: left: 50% doesn't transition in WebKit */
+  left: 2.0em;
+}
+
+.switch-selection {
+  display: block;
+  position: relative;
+  z-index: 1;
+  margin-left: 0.1em;
+  top: 0.1em;
+  width: 1.9em;
+  height: 1.3em;
+  background: #65bd63;
+  border-radius: 0.25em;
+  background-image: -webkit-linear-gradient(top, #9dd993, #65bd63);
+  background-image: -moz-linear-gradient(top, #9dd993, #65bd63);
+  background-image: -o-linear-gradient(top, #9dd993, #65bd63);
+  background-image: linear-gradient(to bottom, #9dd993, #65bd63);
+  -webkit-box-shadow: inset 0 1px rgba(255, 255, 255, 0.5), 0 0 2px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.5), 0 0 2px rgba(0, 0, 0, 0.2);
+  -webkit-transition: left 0.15s ease-out;
+  -moz-transition: left 0.15s ease-out;
+  -o-transition: left 0.15s ease-out;
+  transition: left 0.15s ease-out;
+}
+
+.switch-blue .switch-selection {
+  background: #3aa2d0;
+  background-image: -webkit-linear-gradient(top, #4fc9ee, #3aa2d0);
+  background-image: -moz-linear-gradient(top, #4fc9ee, #3aa2d0);
+  background-image: -o-linear-gradient(top, #4fc9ee, #3aa2d0);
+  background-image: linear-gradient(to bottom, #B3BAC0, #85888A);
+}
+

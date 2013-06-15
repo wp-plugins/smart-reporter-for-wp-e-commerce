@@ -32,6 +32,8 @@ Ext.notification = function(){
 
 Ext.onReady(function() {
 	
+	
+	
 	SR.searchTextField 	  = '';
 	var monthTitle		  = new Array( "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" );
 	var salesDetailsDataObject = {};
@@ -42,6 +44,7 @@ Ext.onReady(function() {
 	var dateFormat        = 'M d Y';
 	var ordersDetailsDataObject = {};
 	var from, to, percent_sales_contribution;
+
 
 	SR.searchTextField = new Ext.form.field.Text({
 		id: 'tf',
