@@ -32,6 +32,8 @@ Ext.notification = function(){
 
 Ext.onReady(function() {
 	
+	
+	
 	SR.searchTextField 	  = '';
 	var monthTitle		  = new Array( "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" );
 	var salesDetailsDataObject = {};
@@ -42,6 +44,7 @@ Ext.onReady(function() {
 	var dateFormat        = 'M d Y';
 	var ordersDetailsDataObject = {};
 	var from, to, percent_sales_contribution;
+
 
 	SR.searchTextField = new Ext.form.field.Text({
 		id: 'tf',
@@ -168,7 +171,7 @@ Ext.onReady(function() {
 
 			case 'YESTERDAY':
 			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-			toDate 	 = now;
+			toDate 	 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 			break;
 
 			case 'THIS_WEEK':
@@ -669,14 +672,16 @@ Ext.onReady(function() {
 			listeners : {
 				click : function() {
 						loadGridStore();
-                                                jQuery('#wrap_sr_kpi').fadeTo('fast', 0.5);
-                                                jQuery.ajax({
-                                                    url: fileUrl,
-                                                    dataType: 'html',
-                                                    success: function( response ){
-                                                        jQuery('#wrap_sr_kpi').html(response).fadeTo('fast', 1);
-                                                    }
-                                                });
+                                                if ( fileExists == 1 ) {
+                                                    jQuery('#wrap_sr_kpi').fadeTo('fast', 0.5);
+                                                    jQuery.ajax({
+                                                        url: fileUrl,
+                                                        dataType: 'html',
+                                                        success: function( response ){
+                                                            jQuery('#wrap_sr_kpi').html(response).fadeTo('fast', 1);
+                                                        }
+                                                    });
+                                                }
 					}
 				}
 			}],
