@@ -1,10 +1,10 @@
 === Smart Reporter for e-commerce ===
-Contributors: niravmehta, malayladu, ratnakar.dubey, naresh.vachhani
+Contributors: niravmehta, malayladu, ratnakar.dubey, naresh.vachhani, tarunparswani
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.5.1
-Stable tag: 2.0
+Stable tag: 2.0.1
 
 Business analysis for e-commerce like never before.
 
@@ -45,11 +45,13 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 == Changelog ==
 
+= 2.0.1 =
+* Fix: Minor fixes related to widgets in Smart Reporter Beta (Woocommerce)
+
 = 2.0 =
 * New: Beta Version of Smart Reporter [Smart Reporter Beta] (Woocommerce)
 * New: Create Support Ticket From Plugin
 * New: Update Code Modified
-
 
 = 1.9.1 =
 * Update: Compatible version for WooCommerce 2.0 & higher
@@ -114,6 +116,12 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 2.0.1 =
+Important update for minor fixes related to widgets in Smart Reporter Beta (Woocommerce), recommended upgrade.
+
+= 2.0 =
+Smart Reporter Beta version released.
 
 = 1.9.1 =
 Important update for compatibility with WooCommerce 1.6.6 & 2.0+, recommended upgrade.
