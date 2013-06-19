@@ -89,6 +89,23 @@ $yesterday = date('Y-m-d', strtotime($today .' -1 day'));
 // DAILY WIDGETS
 // ================================================
 
+//Query to get the relevant order ids
+$query_terms     = "SELECT id FROM {$wpdb->prefix}posts AS posts
+                        JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+                                                    ON term_relationships.object_id = posts.ID 
+                                    JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+                                                    ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+                                    JOIN {$wpdb->prefix}terms AS terms 
+                                                    ON term_taxonomy.term_id = terms.term_id
+                    WHERE terms.name IN ('completed','processing','on-hold','pending')
+                        AND posts.post_status IN ('publish')";
+          
+$terms_post      = $wpdb->get_col($query_terms);
+$rows_terms_post = $wpdb->num_rows;
+
+if ($rows_terms_post > 0) {
+    $terms_post = implode(",",$terms_post);
+}
 
 // ================================================
 // Todays Sales
@@ -98,7 +115,8 @@ $query_today        = "SELECT SUM( postmeta.meta_value ) AS todays_sales
                     FROM `{$wpdb->prefix}postmeta` AS postmeta
                     LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
                     WHERE postmeta.meta_key IN ('_order_total')
-                        AND posts.post_date LIKE '$today%'";
+                        AND posts.post_date LIKE '$today%'
+                        AND posts.ID IN ($terms_post)";
 $results_today      = $wpdb->get_col ( $query_today );
 $rows_results_today = $wpdb->num_rows;
 
@@ -113,7 +131,8 @@ $query_yest        = "SELECT SUM( postmeta.meta_value ) AS yesterdays_sales
                     FROM `{$wpdb->prefix}postmeta` AS postmeta
                     LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
                     WHERE postmeta.meta_key IN ('_order_total')
-                        AND posts.post_date LIKE '$yesterday%'";
+                        AND posts.post_date LIKE '$yesterday%'
+                        AND posts.ID IN ($terms_post)";
 $results_yest       = $wpdb->get_col ( $query_yest );
 $rows_results_yest  = $wpdb->num_rows;
 
@@ -150,23 +169,12 @@ $imgurl_daily_sales = "";
 // Todays Customers
 // ================================================
 
-//Query to get the relevant order ids
-$query_terms     = "SELECT id FROM {$wpdb->prefix}posts AS posts
-                        JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-                                                    ON term_relationships.object_id = posts.ID 
-                                    JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-                                                    ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-                                    JOIN {$wpdb->prefix}terms AS terms 
-                                                    ON term_taxonomy.term_id = terms.term_id
-                    WHERE terms.name IN ('completed','processing','on-hold','pending')
-                        AND posts.post_status IN ('publish')";
-          
-$terms_post      = $wpdb->get_col($query_terms);
-$rows_terms_post = $wpdb->num_rows;
 
-if ($rows_terms_post > 0) {
-$terms_post = implode(",",$terms_post);
-}
+$result_guest_today_email1 = array();
+$result_guest_yest_email1 = array();
+$reg_today_count = 0;
+$reg_yest_count = 0;
+
 
 //Reg Customers
 $query_reg_today    = "SELECT ID FROM `$wpdb->users` 
@@ -175,17 +183,21 @@ $reg_today_ids      = $wpdb->get_col ( $query_reg_today );
 $rows_reg_today_ids = $wpdb->num_rows;
 
 if ($rows_reg_today_ids > 0) {
-$query_reg_today_count  ="SELECT COUNT(*)
-                           FROM {$wpdb->prefix}postmeta AS postmeta
-                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
-                           WHERE postmeta.meta_key IN ('_customer_user')
-                                 AND postmeta.meta_value IN (".implode(",",$reg_today_ids).")
-                                 AND posts.post_date LIKE  '$today%'
-                                 AND posts.ID IN ($terms_post)
-                           GROUP BY postmeta.meta_value";
+    $query_reg_today_count  ="SELECT COUNT(*)
+                               FROM {$wpdb->prefix}postmeta AS postmeta
+                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+                               WHERE postmeta.meta_key IN ('_customer_user')
+                                     AND postmeta.meta_value IN (".implode(",",$reg_today_ids).")
+                                     AND posts.post_date LIKE  '$today%'
+                                     AND posts.ID IN ($terms_post)
+                               GROUP BY postmeta.meta_value";
 
-$reg_today              = $wpdb->get_col ( $query_reg_today_count ); 
-$rows_reg_today         = $wpdb->num_rows;   
+    $reg_today              = $wpdb->get_col ( $query_reg_today_count ); 
+    $rows_reg_today         = $wpdb->num_rows;   
+
+    if($rows_reg_today > 0) {
+        $reg_today_count = $reg_today[0];
+    }
 }
 
 
@@ -195,17 +207,22 @@ $reg_yest_ids        = $wpdb->get_col ( $query_reg_yest );
 $rows_reg_yest_ids   = $wpdb->num_rows;
 
 if ($rows_reg_yest_ids > 0) {
-$query_reg_today_count  ="SELECT COUNT(*)
-                           FROM {$wpdb->prefix}postmeta AS postmeta
-                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
-                           WHERE postmeta.meta_key IN ('_customer_user')
-                                 AND postmeta.meta_value IN (".implode(",",$reg_yest_ids).")
-                                 AND posts.post_date LIKE  '$yesterday%'
-                                 AND posts.ID IN ($terms_post)
-                           GROUP BY postmeta.meta_value";
+    $query_reg_today_count  ="SELECT COUNT(*)
+                               FROM {$wpdb->prefix}postmeta AS postmeta
+                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+                               WHERE postmeta.meta_key IN ('_customer_user')
+                                     AND postmeta.meta_value IN (".implode(",",$reg_yest_ids).")
+                                     AND posts.post_date LIKE  '$yesterday%'
+                                     AND posts.ID IN ($terms_post)
+                               GROUP BY postmeta.meta_value";
 
-$reg_yest               = $wpdb->get_col ( $query_reg_today_count );  
-$rows_reg_yest          = $wpdb->num_rows;   
+    $reg_yest               = $wpdb->get_col ( $query_reg_today_count );  
+    $rows_reg_yest          = $wpdb->num_rows;   
+
+    if($rows_reg_yest > 0) {
+        $reg_yest_count = $reg_yest[0];
+    }
+
 }
 
 //Guest Customers
@@ -225,9 +242,9 @@ $result_guest_today_email   = $wpdb->get_col ( $query_guest_today_email );
 $rows_guest_today_email     = $wpdb->num_rows;
 
 if ($rows_guest_today_email > 0) {
-$result_guest_today_email1   = array_flip($result_guest_today_email);    
+    $result_guest_today_email1   = array_flip($result_guest_today_email);    
 
-$query_guest_today          = "SELECT DISTINCT postmeta.meta_value
+    $query_guest_today          = "SELECT DISTINCT postmeta.meta_value
                                FROM {$wpdb->prefix}postmeta AS postmeta
                                         JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
                                WHERE postmeta.meta_key IN ('_billing_email')
@@ -235,21 +252,21 @@ $query_guest_today          = "SELECT DISTINCT postmeta.meta_value
                                          AND posts.post_date NOT LIKE  '$today%'
                                GROUP BY posts.ID";
 
-$result_guest_today         = $wpdb->get_col ( $query_guest_today );
+    $result_guest_today         = $wpdb->get_col ( $query_guest_today );
 
-for($i=0; $i<sizeof($result_guest_today);$i++) {
-    if (isset($result_guest_today_email1[$result_guest_today[$i]])) {
-        unset($result_guest_today_email1[$result_guest_today[$i]]);
+    for($i=0; $i<sizeof($result_guest_today);$i++) {
+        if (isset($result_guest_today_email1[$result_guest_today[$i]])) {
+            unset($result_guest_today_email1[$result_guest_today[$i]]);
+        }        
     }
-        
-}
+
+
+
 }
 
 $today_count_cust = 0;
 
-if ($rows_reg_today > 0) {
-$today_count_cust = sizeof($result_guest_today_email1) + $reg_today[0];    
-}
+$today_count_cust = sizeof($result_guest_today_email1) + $reg_today_count;    
 
 $query_guest_yest_email    ="SELECT postmeta1.meta_value
                            FROM {$wpdb->prefix}postmeta AS postmeta1
@@ -288,9 +305,7 @@ for($i=0; $i<sizeof($result_guest_yest);$i++) {
 
 $yest_count_cust = 0;
 
-if ($rows_reg_yest > 0) {
-$yest_count_cust = sizeof($result_guest_yest_email1) + $reg_yest[0];    
-}
+$yest_count_cust = sizeof($result_guest_yest_email1) + $reg_yest_count;    
 
 $diff_daily_cust = abs($today_count_cust - $yest_count_cust);
 
@@ -1035,7 +1050,7 @@ $imgurl_order_fulfillment = "";
             highlighter: {
                 show: true,
                 sizeAdjust: 0.8,
-                tooltipLocation: 'se'
+                tooltipLocation: 'ne'
             },
             cursor: {
               show: false
@@ -1241,7 +1256,7 @@ $imgurl_order_fulfillment = "";
                           show: true,
                           sizeAdjust: 0.01,
                           lineWidthAdjust : 0.1,
-                          tooltipLocation: 'se'
+                          tooltipLocation: 'ne'
                       },
                       cursor: {
                         show: false
@@ -1928,7 +1943,7 @@ else {
     <?php
     }
 
-    if(isset($_GET['page']) && ($_GET['page'] == "smart-reporter-woo" || $_GET['page'] == "smart-reporter-wpsc")) {
+    if(($_GET['post_type'] == 'wpsc-product' || $_GET['page'] == 'smart-reporter-wpsc') || (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") ) {
 
         echo "<script type='text/javascript'>
         var adminUrl             = '" .ADMIN_URL. "';

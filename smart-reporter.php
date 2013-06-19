@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.0
+Version: 2.0.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013 Store Apps All rights reserved.
@@ -155,7 +155,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
 			}
 		} else if ($_GET['post_type'] == 'product' || $_GET['page'] == 'smart-reporter-woo') {
-			if (!(isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_beta")) {
+			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
 				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
 			}
 
@@ -244,24 +244,25 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	function admin_page(){
         global $woocommerce;
         
-        $tab = ( !empty($_GET['tab'] )  ? ( $_GET['tab'] == 'smart_reporter_beta'  ) : 'smart_reporter_old' )   ;
+
+        $tab = ( !empty($_GET['tab'] )  ? ( $_GET['tab'] ) : 'smart_reporter_beta' )   ;
 
         ?>
 
         <div style = "margin:0.7em 0.5em 0 0" class="wrap woocommerce">
 
             <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
-                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_beta') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter <sup style="vertical-align: super;color:red; font-size:15px">Beta</sub></a>
-                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab != 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter</a>
+                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter <sup style="vertical-align: super;color:red; font-size:15px">Beta</sub></a>
+                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_old') ? 'nav-tab-active' : ''; ?>">Smart Reporter</a>
             </h2>
 
             <?php
                 switch ($tab) {
-                    case "smart_reporter_beta" :
-                        sr_beta_show_console();
+                    case "smart_reporter_old" :
+                        sr_show_console();
                     break;
                     default :
-                    	sr_show_console();
+                    	sr_beta_show_console();
                     break;
                 }
 

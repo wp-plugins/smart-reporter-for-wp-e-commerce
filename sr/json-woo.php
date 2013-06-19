@@ -65,6 +65,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
 		                        WHERE postmeta.meta_key IN ('_order_total')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+		                            AND posts.ID IN ($terms_post)
 	                            GROUP BY $group_by";
         $results_monthly_sales    = $wpdb->get_results ( $query_monthly_sales, 'ARRAY_A' );
 	    $rows_monthly_sales 	  =  $wpdb->num_rows;
@@ -503,7 +504,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 				                                    SUM( order_item.quantity ) AS cumm_quantity
 			                                    FROM `{$wpdb->prefix}sr_woo_order_items` AS order_item
 			                                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
-			                                    WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'";
+			                                    WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+			                                    	AND posts.ID IN ($terms_post)";
 	    $results_cumm_avg_order_tot_items    = $wpdb->get_results ( $query_cumm_avg_order_tot_items, 'ARRAY_A' );
 	    $rows_cumm_avg_order_tot_items 	     = $wpdb->num_rows;
 
