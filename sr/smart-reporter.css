@@ -22,6 +22,54 @@ td {
   padding-top: 3px; 
 };
 
+body {
+  font-size: small;
+}
+
+@media (min-width: 1501px) and (max-width: 2000px) {
+  body { font-size: 136%; }
+  .cumm_widget {
+    font-size: 1em;
+  }
+  .cumm_header, .cumm_total {
+    font-size: 0.2em; 
+  }
+}
+
+@media only screen and (min-width: 1301px) and (max-width: 1500px) {
+  body { font-size: 91.8%; }  
+}
+
+@media only screen and (min-device-width: 1152px) and (max-device-width: 1300px) {
+  body { font-size: 79.26%; }
+}
+
+@media only screen and (min-device-width: 1151px) and (max-device-width: 1151px) {
+  body { font-size: 76.83%; }
+}
+
+@media only screen and (min-width: 1001px) and (max-width: 1150px) {
+  /*body { font-size: 76.83%; }*/
+  body { font-size: 65.57%; }
+}
+
+@media only screen and (min-width: 501px) and (max-width: 1000px) {
+  body { font-size: 76%; }
+}
+@media (min-width: 0px) and (max-width: 500px) {
+  body {
+    font-size:100%;
+  }
+  .cumm_widget {
+    font-size: 1em;
+  }
+  .cumm_header, .cumm_total {
+    font-size: 0.2em; 
+  }
+
+}
+
+
 .example-info{
     width:150px;
     border:1px solid #c3daf9;
@@ -246,6 +294,17 @@ pre.code{
 	padding: 7px 0 7px 7px;
 }
 
+.cumm_header_top_cust_coupons {
+  border-bottom : 0.16em solid #368ee0;
+  font-size : 1.45em;
+  font-weight: 900;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #368ee0;
+  width: 50%;
+  margin-left: 0.68em;
+  padding: 7px 0 2px 0;
+}
+
 .average_order_total_header {
 	font-size : 1.0em;
 }
@@ -285,7 +344,7 @@ pre.code{
 
 .daily_widget {	
 	float: left;
-	width: 18em;
+  width: 17.862em;
 	height: 7em;
 	border: 0.2em solid #e8e8e8;
 	/*border-radius: 0.7em;*/
@@ -373,7 +432,7 @@ pre.code{
 .sr_cumm_date {
   height: 2.0em;
   /*float: right;*/
-  width: 21.5em;
+  width: 21em;
   margin-left: 57.5em;
   margin-right: 0.2em;
   border-bottom: 0.2em solid #368ee0;
@@ -415,14 +474,50 @@ pre.code{
 .cumm_widget {
 	float: left;
 	/*margin-left: 2%;*/
-	margin-right: 1.8em;
+	margin-right: 1.45em;
 	/*margin-bottom: 1.7em;*/
 	margin-top: 1.7em;
 	width: 24.7em;
 	border: 0.2em solid #368ee0;
 	height: 23em;
-  margin-left: 0.35em;
+  margin-left: 0.1em;
 }
+
+.sr_cumm_sales_graph_collapsed {
+  height: 104.5%;
+  width: 110%;
+  margin-top: -1.9em;
+}
+
+.sr_cumm_sales_graph_not_collapsed {
+  height: 100.5%;
+  width: 109.8%;
+  margin-top: -1.8em;
+}
+
+.sr_cumm_sales_graph {
+  margin-left: -1.35em;
+  position: relative;
+}
+
+
+.sr_cumm_top_prod_graph {
+  height: 40px;
+  position: relative;
+  margin-left: -0.7em;
+}
+
+/*.sr_cumm_top_prod_collapsed {
+  height: 104.5%;
+  width: 109.8%;
+  margin-top: -1.9em;
+}
+
+.sr_cumm_top_prod_not_collapsed {
+  height: 100.5%;
+  width: 109%;
+  margin-top: -1.8em;   
+}*/
 
 .no_data_text {
     text-align: center;
@@ -433,7 +528,7 @@ pre.code{
     font-family: Helvetica, Arial, sans-serif;
 }
 
-.cumm_top_5_prod {
+.cumm_right_align_widget {
 	margin-right: 0%;
   margin-top: 1.7em;
 }
@@ -457,6 +552,34 @@ pre.code{
 	border-right: 0.2em solid #E8E8E8;
 }
 
+.sr_cumm_small_widget {
+    width: 24.7em;
+    height: 6.4em;
+    border: 0.2em solid #368ee0;
+    float: left;
+    margin-top: 1.7em;
+    margin-right: 1.45em;
+    margin-left: 0.1em;
+    text-align: center;
+}
+
+.sr_cumm_small_widget_content {
+  margin-top: 0.65em;
+  margin-bottom: 0.3em;
+}
+
+.sr_cumm_small_widget_margin {
+  margin-left: -26.5em;
+}
+
+.sr_cumm_avg_order_count {
+  margin-top: 18.3em;
+}
+
+.sr_cumm_order_coupons_count {
+  margin-top: 10em;
+}
+
 .sr_cumm_avg_order_value {
 	margin-bottom: 0.1em;
 }
@@ -466,7 +589,7 @@ pre.code{
     color: #666;
 	font-size: 2.5em;
 	margin-left: 0.4em;
-	margin-top: 0.55em;
+	margin-top: 0.35em;
 }
 
 .average_order_total_text {
@@ -494,13 +617,14 @@ pre.code{
 	height: 13.7em;	
 }
 
-.top_cust_data_div {
+.cumm_widget_table_data {
   margin-left: 0.7em;
   margin-right: 0.7em;
+  margin-top: 0.7em;
 }
 
-.cumm_widget_top_cust_table_body {
-	color: #666;
+.cumm_widget_table_body {
+	/*color: #666;*/
   font-family: Helvetica, Arial, sans-serif;
   font-size: 1.0em;
   padding-right: 0.2em;
@@ -508,14 +632,14 @@ pre.code{
   padding-top: 0.2em;
 }
 
-.cumm_widget_top_cust_table_header {
+.cumm_widget_table_header {
 	font-size: 1.3em;
   padding: 3px ;
   font-weight:700;
 }
 
 .icon_cumm_widgets {
-	font-size: 19px;
+	font-size: 1.2em;
 }
 
 .icon_cumm_indicator_green {
@@ -533,11 +657,11 @@ pre.code{
 .cumm_total {
 	font-size : 2.5em;
 	font-family: Helvetica, Arial, sans-serif;
-    color: #666;
-    padding-left:15px;
+  color: #666;
+  padding-left:15px;
 	float: right;
-	margin-top: 3%;
-	margin-right: 2%;
+	margin-top: 0.48em;
+	margin-right: 0.38em;
 }
 
 /*CSS BUTTON*/
@@ -692,4 +816,6 @@ pre.code{
   background-image: -o-linear-gradient(top, #4fc9ee, #3aa2d0);
   background-image: linear-gradient(to bottom, #B3BAC0, #85888A);
 }
+
+
 
