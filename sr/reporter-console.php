@@ -40,15 +40,8 @@ if(defined(SR_BETA) && SR_BETA == "true") {
 
 ?>
 
-<div id="smart_reporter_beta">
+<div id="smart_reporter_beta" syle="width:99%;">
 <script type="text/javascript">
-
-if ( !$(document.body).hasClass('folded') ) {
-    $('body').css('font-size','10.58px');
-}
-else {
-    $('body').css('font-size','12px');
-}
 
 </script>
 
@@ -486,7 +479,6 @@ $imgurl_order_fulfillment = "";
 // Display Part Of Daily Widgets
 // ================================================
 -->
-
 <div>
     <div class="row">
     <div>
@@ -560,7 +552,7 @@ $imgurl_order_fulfillment = "";
                     );
                 </script>
                 <div class="daily_widgets_icon">
-                  <i class = "icon-asterisk daily_widgets_icon1 daily_widget_4_color"> </i>   
+                  <i class = "icon-truck daily_widgets_icon1 daily_widget_4_color"> </i>   
                 </div>
                 <div class="daily_widgets_data">
                   <span class = "daily_widgets_price daily_widget_4_color"> <?php echo sr_number_format($count_order_fulfillment_today[0],$sr_decimal_places); ?>   <i class="<?php echo $imgurl_order_fulfillment; ?>"></i>   <span class = "daily_widgets_comp_price daily_widget_4_color"> <?php $diff = (!empty($diff_order_fulfillment)) ? sr_number_format($diff_order_fulfillment,$sr_decimal_places) : ""; echo $diff;?> </span> </span>
@@ -584,6 +576,23 @@ $imgurl_order_fulfillment = "";
 // ================================================
  -->
 
+ <div id="sr_cumm_total_discount" class="cumm_widget">
+
+    <div id="sr_cumm_total_discount_value" style="height:60px;width:100%;">
+          <div class="cumm_header">
+              <i class="icon-location-arrow icon_cumm_widgets" ></i>
+              <!-- <i class="icon-rocket icon_cumm_widgets" ></i> -->
+              Total Discounts
+          </div>
+          <div id="sr_cumm_total_discount_total" class="cumm_total">
+              <span id ="sr_cumm_total_discount_actual"> </span>  <i id="sr_cumm_total_discount_indicator" ></i> <span id ="diff_cumm_total_discount" style="font-size : 0.5em;"></span>
+          </div>    
+    </div>
+    
+    <div id="sr_cumm_total_discount_graph" class="sr_cumm_sales_graph ">  </div>   
+
+</div>
+
  <div id="sr_cumm_sales" class="cumm_widget">
 
     <div id="sr_cumm_sales_value" style="height:60px;width:100%;">
@@ -596,7 +605,7 @@ $imgurl_order_fulfillment = "";
           </div>    
     </div>
     
-    <div id="sr_cumm_sales_graph" style="height:190px;width:100%;">
+    <div id="sr_cumm_sales_graph" class="sr_cumm_sales_graph ">
     <script type="text/javascript"> 
         
         // ================================================================================
@@ -907,28 +916,100 @@ $imgurl_order_fulfillment = "";
     };
 
 
-    $(window).resize(function() {
-        // widget_resize();
+    var jqplot_flag = 0; // Flag to handle jqplot margin settings
+
+    $(document).ready(function() {
+        jqplot_flag = 1;
     });
 
-
-
-
     var font_size_default = $('body').css('font-size');
+
+    if ( !$(document.body).hasClass('folded') ) {
+
+        jqplot_flag = 2;
+
+        $('#sr_cumm_date1').css('width','21em');
+        $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
+        $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
+
+        if(screen.width >= 1001 && screen.width <= 1150) {
+            $('body').css('font-size','0.655em');    
+        }
+        else if(screen.width >= 1151 && screen.width <= 1300) {
+
+        }
+        else if(screen.width >= 1301) {
+            $('body').css('font-size','1.1em');       
+        }
+    }
+    else {
+
+        jqplot_flag = 2;
+
+        $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-0.95em");
+        $('#sr_cumm_date1').css('width','20.8em');
+        $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
+        $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
+
+        if(screen.width >= 1001 && screen.width <= 1150) {
+            $('body').css('font-size','0.745em');
+        }
+        else if(screen.width >= 1151 && screen.width <= 1300) {
+            $('body').css('font-size','0.88em');
+        }
+        else if(screen.width >= 1301) {
+            $('body').css('font-size','1.2em');       
+        }
+    }
 
     //Code to handle the resizing of the widgets on folding and unfolding of the wordpress menu
     $('#collapse-menu').click(function(){
 
-        if ( !$(document.body).hasClass('folded') ) {
-            $('body').css('font-size','12px');
+        jqplot_flag = 0;
+
+        if ( $(document.body).hasClass('folded') ) {
+
+            // $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('folded_height');
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-2.75em");
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
+            $('#sr_cumm_date1').css('width','21em');
+
+            if(screen.width >= 1001 && screen.width <= 1150) {
+                $('body').css('font-size','0.655em');    
+            }
+            else if(screen.width >= 1151 && screen.width <= 1300) {
+
+            }
+            else if(screen.width >= 1301) {
+                $('body').css('font-size','1.1em');       
+            }
+            
         }
-        else {
-            $('body').css('font-size','10.58px');
+        else {            
+
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
+            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
+            $('#sr_cumm_date1').css('width','20.8em');
+
+            if(screen.width >= 1001 && screen.width <= 1150) {
+                $('body').css('font-size','0.745em');
+            }
+            else if(screen.width >= 1151 && screen.width <= 1300) {
+                $('body').css('font-size','0.88em');
+            }
+            else if(screen.width >= 1301) {
+                $('body').css('font-size','1.2em');       
+            }
+            
         }
 
         //Code to replot the jqPlot graphs
         monthly_display(myJsonObj);
         top_prod_display(myJsonObj);
+        sr_cumm_total_discount_display(myJsonObj);
     });
        
 
@@ -1005,7 +1086,15 @@ $imgurl_order_fulfillment = "";
 
         if(resp['result_monthly_sales'].length > 0) {
 
-            $('#sr_cumm_sales_graph').removeClass('no_data_text');
+            if ( (!$(document.body).hasClass('folded')) && jqplot_flag == 1) {                
+                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-2.75em");
+            }
+            else if (($(document.body).hasClass('folded')) && jqplot_flag == 1) {
+                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+            }
+
+            $('#sr_cumm_sales_graph').removeClass().addClass('sr_cumm_sales_graph_not_collapsed sr_cumm_sales_graph');
 
             for(var i = 0, len = resp['result_monthly_sales'].length; i < len; i++) {
                 sales_trend[i] = new Array();
@@ -1078,12 +1167,12 @@ $imgurl_order_fulfillment = "";
         }
 
         else {
+            $('#sr_cumm_sales_graph').removeClass();            
             $('#sr_cumm_sales_graph').text('NO DATA');
             $('#sr_cumm_sales_graph').addClass('no_data_text');
             $('#sr_cumm_sales_graph').css('margin-top','1.83em');
         }
     }
-
 
     //Code to handle the display of the tooltips
     $('#sr_cumm_sales_graph').live('jqplotMouseMove', 
@@ -1117,89 +1206,164 @@ $imgurl_order_fulfillment = "";
 
 <!-- 
 // ================================================
-// Top Customer Widget
+// Top Customer & Coupons Widget
 // ================================================
  -->
 
-<div id="sr_cumm_top_cust" class="cumm_widget_top_cust">    
-      <script type="text/javascript">
+<div id="sr_cumm_top_cust_coupons" class="cumm_widget">
+
+    <!-- 
+    // ================================================
+    // Top Customer Widget
+    // ================================================
+     -->
+
+    <!-- <div id="sr_cumm_top_cust" class="cumm_widget_top_cust">     -->
+
+
+    <div id="sr_cumm_top_cust" style="height:50%">    
+          <div class="cumm_header_top_cust_coupons" style="width: 55%; margin-top: 0.25em" >
+            
+              <i class = "icon-group icon_cumm_widgets"> </i>     
+
+              Top Customers
+          
+          </div>
+
+          <div id = "top_cust_data" class= "cumm_widget_table_data" > </div>
+
+        <script type="text/javascript">
+
+        var display_orders = function (ids) {
+            // var post_ids = ids.split(",");
+            document.cookie = "post_ids=" + ids;
+        }
+
+
+        var top_cust_display = function(resp) {
+            var table_html = '<tr><th style="text-align:left;width:70%;"></th><th style="text-align:right;width:30%;"></th></tr> ';
+            // var table_html = "";
+            for (var i = 0; i < resp['top_cust_data'].length; i++) {
+              var span_id = "span_top_cust_" + i;
+              var link_id = "link_" + i;
+              var cust_name = '';
+              var cust_name_trimmed = "";
+              var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_cust_data'][i].billing_email+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+
+              if (resp['top_cust_data'][i].name) {
+                 cust_name = resp['top_cust_data'][i].name;
+                 cust_name = cust_name.replace(/^\s+|\s+$/g,""); // Code for trimming the name  
+              }
+              
+              if( cust_name ) {
+                    cust_name = resp['top_cust_data'][i].name;
+              }
+              else {
+                    cust_name = resp['top_cust_data'][i].billing_email;
+              }
+
+              if (cust_name.length >= 35) {
+                  cust_name_trimmed = cust_name.substring(0,34) + "...";
+              }
+              else {
+                  cust_name_trimmed = cust_name;
+              }
+
+              if (resp['top_cust_data'][i].name != " ") {
+                  table_html += '<tr><td title = "'+ resp['top_cust_data'][i].name +'\n('+ resp['top_cust_data'][i].billing_email +')">'+ cust_name_trimmed +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_cust_data'][i].post_ids+')>'+resp['top_cust_data'][i].total+'</a></td></tr>';  
+              }
+              else {
+                  table_html += '<tr><td title = "'+ resp['top_cust_data'][i].name +'('+ resp['top_cust_data'][i].billing_email +')">'+ cust_name_trimmed +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_cust_data'][i].post_ids+')>'+resp['top_cust_data'][i].total+'</a></td></tr>';  
+              }
+
+            };
+
+
+            if(resp['top_cust_data'].length > 0 ) {
+                $('#top_cust_data').removeAttr('style');
+                $('#top_cust_data').removeClass('no_data_text');
+                $('#top_cust_data').addClass('cumm_widget_table_data');
+                $('#top_cust_data').html('<table id = "top_cust_table"  class = "cumm_widget_table_body" width = "100%">');
+                jQuery('#top_cust_table').html(table_html);
+
+            }
+            else {
+                $('#top_cust_data').text('NO DATA');
+                $('#top_cust_data').removeClass('cumm_widget_table_data');
+                $('#top_cust_data').addClass('no_data_text');
+                $('#top_cust_data').css('margin-top','1.22em');
+            }
+
+          }
 
       </script>
+    </div>
 
-      <div class="cumm_header">
-        
-          <i class = "icon-group icon_cumm_widgets"> </i>     
+    <!-- 
+    // ================================================
+    // Top Coupons Widget
+    // ================================================
+     -->
 
-          Top Customers
-      
-      </div>
+    <div id="sr_cumm_top_coupons" style="height:50%">
+        <div class="cumm_header_top_cust_coupons">
+          <i class = "icon-tags icon_cumm_widgets"> </i>     
+          Top Coupons
+        </div>
+        <div id = "sr_cumm_top_coupons_data" class= "cumm_widget_table_data" > </div>
+    </div> 
 
-      <div id = "top_cust_data" class= "top_cust_data_div" >
-      </div> 
+    <script type = "text/javascript">
 
-    <script type="text/javascript">
-
-    var display_orders = function (ids) {
-        var post_ids = ids.split(",");
-        document.cookie = "post_ids=" + post_ids;
-
-    }
-
-
-    var top_cust_display = function(resp) {
-        var table_html = '<tr><th class="cumm_widget_top_cust_table_header" style="text-align:left;width:70%;"></th><th class="cumm_widget_top_cust_table_header" style="text-align:right;width:30%;"></th></tr> ';
-        for (var i = 0; i < resp['top_cust_data'].length; i++) {
-          var span_id = "span_top_cust_" + i;
+    var sr_top_coupons_display = function(resp) {
+        var table_html = '<tr><th style="text-align:left;width:60%;"></th><th style="text-align:right;width:20%;"></th><th style="text-align:right;width:20%;"></th></tr> ';
+        for (var i = 0; i < resp['top_coupon_data'].length; i++) {
+          var span_id = "span_top_coupon_" + i;
           var link_id = "link_" + i;
-          var cust_name = '';
-          var cust_name_trimmed = "";
-          var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_cust_data'][i].billing_email+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+          var coupon_name = '';
+          var coupon_name_trimmed = "";
+          var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_coupon_data'][i].coupon_name+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
 
-          if (resp['top_cust_data'][i].name) {
-             cust_name = resp['top_cust_data'][i].name;
-             cust_name = cust_name.replace(/^\s+|\s+$/g,""); // Code for trimming the name  
+          if (resp['top_coupon_data'][i].coupon_name) {
+             coupon_name = resp['top_coupon_data'][i].coupon_name;
+             coupon_name = coupon_name.replace(/^\s+|\s+$/g,""); // Code for trimming the name  
           }
           
-          if( cust_name ) {
-                cust_name = resp['top_cust_data'][i].name;
+          if (coupon_name.length >= 35) {
+              coupon_name_trimmed = coupon_name.substring(0,34) + "...";
           }
           else {
-                cust_name = resp['top_cust_data'][i].billing_email;
+              coupon_name_trimmed = coupon_name;
           }
 
-          if (cust_name.length >= 35) {
-              cust_name_trimmed = cust_name.substring(0,34) + "...";
+          if (resp['top_coupon_data'][i].coupon_name != " ") {
+              table_html += '<tr><td title = "'+ resp['top_coupon_data'][i].coupon_name +'">'+ coupon_name_trimmed +'</td><td align="right">'+ resp['top_coupon_data'][i].coupon_amount +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_coupon_data'][i].order_ids+')>'+resp['top_coupon_data'][i].coupon_count+'</a></td></tr>';  
           }
           else {
-              cust_name_trimmed = cust_name;
-          }
-
-          if (resp['top_cust_data'][i].name != " ") {
-              table_html += '<tr><td title = "'+ resp['top_cust_data'][i].name +'\n('+ resp['top_cust_data'][i].billing_email +')">'+ cust_name_trimmed +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_cust_data'][i].post_ids+')>'+resp['top_cust_data'][i].total+'</a></td></tr>';  
-          }
-          else {
-              table_html += '<tr><td title = "'+ resp['top_cust_data'][i].name +'('+ resp['top_cust_data'][i].billing_email +')">'+ cust_name_trimmed +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_cust_data'][i].post_ids+')>'+resp['top_cust_data'][i].total+'</a></td></tr>';  
+              table_html += '<tr><td title = "'+ resp['top_coupon_data'][i].coupon_name +'">'+ coupon_name_trimmed +'</td><td align="right">'+ resp['top_coupon_data'][i].coupon_amount +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_coupon_data'][i].order_ids+')>'+resp['top_coupon_data'][i].coupon_count+'</a></td></tr>';  
           }
 
         };
 
 
-        if(resp['top_cust_data'].length > 0 ) {
-            $('#top_cust_data').removeAttr('style');
-            $('#top_cust_data').removeClass('no_data_text');
-            $('#top_cust_data').html('<table id = "top_cust_table"  class = "cumm_widget_top_cust_table_body" width = "100%">');
-            jQuery('#top_cust_table').html(table_html);
+        if(resp['top_coupon_data'].length > 0 ) {
+            $('#sr_cumm_top_coupons_data').removeAttr('style');
+            $('#sr_cumm_top_coupons_data').removeClass('no_data_text');
+            $('#sr_cumm_top_coupons_data').addClass('cumm_widget_table_data');
+            $('#sr_cumm_top_coupons_data').html('<table id = "top_coupon_table"  class = "cumm_widget_table_body" width="100%">');
+            jQuery('#top_coupon_table').html(table_html);
 
         }
         else {
-            $('#top_cust_data').text('NO DATA');
-            $('#top_cust_data').addClass('no_data_text');
-            $('#top_cust_data').css('margin-top','1.34em');
+            $('#sr_cumm_top_coupons_data').text('NO DATA');
+            $('#sr_cumm_top_coupons_data').removeClass('cumm_widget_table_data');
+            $('#sr_cumm_top_coupons_data').addClass('no_data_text');
+            $('#sr_cumm_top_coupons_data').css('margin-top','1em');
         }
 
       }
 
-  </script>
+    </script>
 </div>
 
 <!-- 
@@ -1208,7 +1372,7 @@ $imgurl_order_fulfillment = "";
 // ================================================
  -->
 
-<div id="sr_cumm_top_prod" class="cumm_widget cumm_top_5_prod">    
+<div id="sr_cumm_top_prod" class="cumm_widget">    
     <div id="sr_cumm_top_prod_check" style="height:100%;width:100%;">
       <script type="text/javascript">
 
@@ -1486,8 +1650,6 @@ $imgurl_order_fulfillment = "";
 
   <script type="text/javascript">
 
-    // var flag_graph = 1;
-
     //Function to handle the display part of the Top Products Widget
     var top_prod_display = function(resp) {
         var table_html = '<tr><th width=45%></th><th width=55%></th></tr> ';
@@ -1519,7 +1681,7 @@ $imgurl_order_fulfillment = "";
               prod_name_trimmed = prod_name;
           }
 
-          table_html += '<tr><td><div id="'+span_id+'" style="height:40px"></div></td><td title = "'+prod_name+'"><b>'+prod_name_trimmed+'</b><br>'+resp['top_prod_data'][i].product_sales_display+'</td></tr> ';
+          table_html += '<tr><td><div id="'+span_id+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+prod_name+'"><b>'+prod_name_trimmed+'</b><br>'+resp['top_prod_data'][i].product_sales_display+'</td></tr> ';
 
           var graph_data = new Array();
           var len = resp['top_prod_data'][i].graph_data.length;
@@ -1535,9 +1697,10 @@ $imgurl_order_fulfillment = "";
 
         };
 
+
         if(top_prod_graph_data.length > 0) {
             $('#top_prod_data').removeClass('no_data_text');
-            $('#top_prod_data').html('<table id="top_prod_table" width="100%"> </table>');
+            $('#top_prod_data').html('<table id="top_prod_table" style="margin-top: 0.05em; width: 100%"> </table>');
             jQuery('#top_prod_table').html(table_html);
             top_prod_graph_display(top_prod_graph_data,tick_format,tick_format_yaxis,top_prod_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date']);    
         }
@@ -1554,24 +1717,217 @@ $imgurl_order_fulfillment = "";
 
 <!-- 
 // ================================================
-// Cumm Avg. Order Total & Avg. Order Items Widget
+// Avg. Order Total & Avg. Order Items Widget
 // ================================================
  -->
-
-<div id="sr_cumm_avg_order_tot_items" class="average_order_total_count">
     
-    <div id="sr_cumm_avg_order_tot" class = "average_order_total">
+    <div id="sr_cumm_avg_order_tot" class = "sr_cumm_small_widget">
         <div id="sr_cumm_avg_order_tot_value" class="average_order_total_amt">
-            <div id="sr_cumm_avg_order_tot_content"></div>
+            <div id="sr_cumm_avg_order_tot_content" class="sr_cumm_small_widget_content"></div>
             <p id="average_order_tot_title" class="average_order_total_text"> Avg Order Total </p>
         </div>
     </div>
 
-    <div id="sr_cumm_avg_order_count" class = "average_order_items_customer">
-        <div id="sr_cumm_avg_order_items_value" class="average_order_items_price">
-            <div id="sr_cumm_avg_order_items_content"></div>
+
+    <div id="sr_cumm_avg_order_count" class = "sr_cumm_small_widget sr_cumm_small_widget_margin sr_cumm_avg_order_count">
+        <div id="sr_cumm_avg_order_items_value" class="average_order_total_amt">
+            <div id="sr_cumm_avg_order_items_content" class="sr_cumm_small_widget_content"> </div>
             <p id="average_order_items_title" class="average_order_items_text"> Avg Items Per Customer </p>
         </div>
+    </div>
+
+<!-- 
+// ================================================
+// Total Discount Widget
+// ================================================
+ -->
+
+<script type="text/javascript">
+
+    var sr_cumm_total_discount_display = function(resp) {
+
+        var discount_trend = new Array();
+        
+        var tick_format = resp['tick_format'];
+        var currency_symbol = resp['currency_symbol'];
+
+        jQuery('#sr_cumm_total_discount_graph').empty();
+
+        if(resp['graph_cumm_discount_sales'].length > 0) {
+
+            if ( (!$(document.body).hasClass('folded')) && jqplot_flag == 1) {
+                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-2.75em");
+            }
+            else if (($(document.body).hasClass('folded')) && jqplot_flag == 1) {
+                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+            }
+            else if(jqplot_flag != 2) {
+                jqplot_flag = 1;
+            }
+
+            $('#sr_cumm_total_discount_graph').removeClass().addClass('sr_cumm_sales_graph_not_collapsed sr_cumm_sales_graph');
+
+            for(var i = 0, len = resp['graph_cumm_discount_sales'].length; i < len; i++) {
+                discount_trend[i] = new Array();
+                discount_trend[i][0] = resp['graph_cumm_discount_sales'][i].post_date;
+                discount_trend[i][1] = resp['graph_cumm_discount_sales'][i].sales;
+            }
+
+            jQuery.jqplot('sr_cumm_total_discount_graph',  [discount_trend], {
+            axes: {
+                 yaxis: {  
+                      tickOptions: {
+                      formatter: tickFormatter,
+                    },
+                     showTicks: false,
+                     min:-resp['cumm_max_discount_total']/4,
+                     max: resp['cumm_max_discount_total'] + resp['cumm_max_discount_total']/4
+                 } ,
+                xaxis: {                    
+                    renderer:$.jqplot.DateAxisRenderer, 
+                    tickOptions:{formatString:tick_format},
+                    showTicks: false,
+                    min: resp['cumm_sales_min_date'],
+                    max: resp['cumm_sales_max_date']
+                }
+            },
+            axesDefaults: {
+                rendererOptions: {
+                    baselineWidth: 1.5,
+                    drawBaseline: false // property to hide the axes from the graph
+                }
+                  
+            },
+            // actual grid outside the graph
+            grid: {
+                drawGridlines: false,
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                shadow: false
+
+            },
+            
+            highlighter: {
+                show: true,
+                sizeAdjust: 0.8,
+                tooltipLocation: 'ne'
+            },
+            cursor: {
+              show: false
+            },
+            series: [
+                    { markerOptions: { style:"filledCircle" } },
+
+            ],
+            animate: true,
+            animateReplot : true,
+            seriesDefaults: {
+                showTooltip:true,
+                rendererOptions: {smooth: true},
+                lineWidth: 2,
+                color : '#368ee0',
+                fillToZero: true,
+                useNegativeColors: false,
+                fillAndStroke: true,
+                fillColor: '#85D1F9',
+                showMarker:true,
+                showLine: true // shows the graph trend line
+            }
+        }
+        );
+        }
+
+        else {
+            $('#sr_cumm_total_discount_graph').removeClass();            
+            $('#sr_cumm_total_discount_graph').text('NO DATA');
+            $('#sr_cumm_total_discount_graph').addClass('no_data_text');
+            $('#sr_cumm_total_discount_graph').css('margin-top','1.83em');
+        }
+    }
+
+</script>
+
+<!-- 
+// ================================================
+// % Of Orders Containing Coupons
+// ================================================
+ -->
+
+<div id="sr_cumm_order_coupons_count" class = "sr_cumm_small_widget sr_cumm_small_widget_margin sr_cumm_order_coupons_count">
+    <div id="sr_cumm_order_coupons_value" class="average_order_total_amt">
+        <div id="sr_cumm_order_coupons_content" class="sr_cumm_small_widget_content"></div>
+        <p id="average_order_items_title" class="average_order_items_text"> Orders Containing Coupons </p>
+    </div>
+</div>
+
+
+<!-- 
+// ================================================
+// Top Products Widget
+// ================================================
+ -->
+
+<div id="sr_cumm_order_by_gateways" class="cumm_widget">    
+    <div class="cumm_header">
+      <i class="icon-credit-card icon_cumm_widgets" ></i>
+      Payment Gateways
+    </div>
+
+    <div id="sr_cumm_order_by_gateways_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;">
+        Coming Soon
+    </div>
+</div>
+
+<!-- 
+// ================================================
+// Taxes Widget
+// ================================================
+ -->
+
+<div id="sr_cumm_taxes" class="cumm_widget">    
+    <div class="cumm_header">
+      <i class="icon-bolt icon_cumm_widgets" ></i>
+      Taxes
+    </div>
+
+    <div id="sr_cumm_taxes_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;">
+        Coming Soon
+    </div>
+</div>
+
+<!-- 
+// ================================================
+// Sales Funnel Widget
+// ================================================
+ -->
+
+<div id="sr_cumm_sales_funnel" class="cumm_widget">    
+    <div class="cumm_header">
+      <i class="icon-filter icon_cumm_widgets" ></i>
+      Sales Funnel
+    </div>
+
+    <div id="sr_cumm_sales_funnel_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;">
+        Coming Soon
+    </div>
+</div>
+
+<!-- 
+// ================================================
+// Top Abandoned Products Widget
+// ================================================
+ -->
+
+<div id="sr_cumm_top_abandoned_products" class="cumm_widget">    
+    <div class="cumm_header" style="padding:4px 0 8px 6px;">
+      <i class="icon-shopping-cart"></i>
+      <i class="icon-share-alt" style="vertical-align: super;margin-left:-0.7em"></i>
+      Abandoned Products
+    </div>
+
+    <div id="sr_cumm_top_abandoned_products_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;">
+        Coming Soon
     </div>
 </div>
 
@@ -1605,7 +1961,6 @@ $imgurl_order_fulfillment = "";
               var get_data = function () {
                   var opt_id;
 
-                  // if (jQuery('#sr_opt_top_prod_price').is(':checked') === true) {
                   if ($('#sr_opt_top_prod_price_label').hasClass('switch-label-on')) {
                       opt_id = "sr_opt_top_prod_price";
                   }
@@ -1637,6 +1992,8 @@ $imgurl_order_fulfillment = "";
                             monthly_display(myJsonObj);
                             top_prod_display(myJsonObj);
                             top_cust_display(myJsonObj);
+                            sr_cumm_total_discount_display(myJsonObj);
+                            sr_top_coupons_display(myJsonObj);
 
                             if(myJsonObj['result_monthly_sales'].length > 0) {
                                 $('#sr_cumm_sales_actual').html(myJsonObj['total_monthly_sales']);
@@ -1644,18 +2001,39 @@ $imgurl_order_fulfillment = "";
                                 $('#sr_cumm_sales_indicator').addClass(myJsonObj['img_cumm_sales']);
                                 $('#diff_cumm_sales').text(myJsonObj['diff_cumm_sales']+'%');    
 
-                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content').removeClass();
-                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content').removeAttr('style');
-                                $('#average_order_tot_title, #average_order_items_title').css({'margin-top':'0em'});
+                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').removeClass().addClass('sr_cumm_small_widget_content');
+                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').removeAttr('style');
+                                $('#average_order_tot_title, #average_order_items_title, #average_order_items_title').css({'margin-top':'0em'});
 
 
-                                $('#sr_cumm_avg_order_tot_content').html('<div id ="sr_cumm_avg_order_tot_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_total'] + '</div>'+
-                                    '<i id="sr_cumm_avg_order_tot_img" class="'+ myJsonObj['img_cumm_avg_order_tot'] +'" > </i>'+
-                                    '<span id ="sr_cumm_avg_order_tot_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_avg_order_tot']+'%' +'</span>');
+                                if(myJsonObj['diff_cumm_avg_order_tot'] != 0) {
+                                    $('#sr_cumm_avg_order_tot_content').html('<span id ="sr_cumm_avg_order_tot_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_total'] + '</span>'+
+                                    '  <i id="sr_cumm_avg_order_tot_img" class="'+ myJsonObj['img_cumm_avg_order_tot'] +'" > </i>'+
+                                    ' <span id ="sr_cumm_avg_order_tot_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_avg_order_tot']+'%' +'</span>');
+                                }
+                                else {
+                                    $('#sr_cumm_avg_order_tot_content').html('<span id ="sr_cumm_avg_order_tot_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_total'] + '</span>');   
+                                }
 
-                                $('#sr_cumm_avg_order_items_content').html('<div id ="sr_cumm_avg_order_items_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_items'] + '</div>'+
-                                    '<i id="sr_cumm_avg_order_items_img" class="'+ myJsonObj['img_cumm_avg_order_items'] +'" > </i>'+
-                                    '<span id ="sr_cumm_avg_order_items_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_avg_order_items'] +'</span>');
+                                
+                                if(myJsonObj['diff_cumm_avg_order_items'] != 0) {
+                                    $('#sr_cumm_avg_order_items_content').html('<span id ="sr_cumm_avg_order_items_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_items'] + '</span>'+
+                                    '  <i id="sr_cumm_avg_order_items_img" class="'+ myJsonObj['img_cumm_avg_order_items'] +'" > </i>'+
+                                    ' <span id ="sr_cumm_avg_order_items_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_avg_order_items'] +'</span>');
+                                }
+                                else {
+                                    $('#sr_cumm_avg_order_items_content').html('<span id ="sr_cumm_avg_order_items_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_items'] + '</span>');     
+                                }
+                                
+
+                                if(myJsonObj['diff_cumm_per_order_coupons'] != 0) {
+                                    $('#sr_cumm_order_coupons_content').html('<span id ="sr_cumm_order_coupons_count_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['cumm_per_order_coupons'] + '%</span>'+
+                                    '  <i id="sr_cumm_order_coupons_count_img" class="'+ myJsonObj['img_cumm_per_order_coupons'] +'" > </i>'+
+                                    ' <span id ="sr_cumm_order_coupons_count_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_per_order_coupons']+'%' +'</span>');
+                                }
+                                else {
+                                    $('#sr_cumm_order_coupons_content').html('<span id ="sr_cumm_order_coupons_count_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['cumm_per_order_coupons'] + '%</span>');
+                                }
 
                             }
                             else {
@@ -1663,21 +2041,30 @@ $imgurl_order_fulfillment = "";
                                 $('#sr_cumm_sales_indicator').removeClass();
                                 $('#diff_cumm_sales').text(" "); 
 
-                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content').text('NO DATA');
-                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content').addClass('no_data_text');
-                                $('#sr_cumm_avg_order_tot_content').css({'margin-top':'1.9em','font-size':'0.65em'});
-                                $('#sr_cumm_avg_order_items_content').css({'margin-top':'2.85em','font-size':'0.65em'});
-                                $('#average_order_tot_title, #average_order_items_title').css({'margin-top':'1.5em'});
+                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').text('NO DATA');
+                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').addClass('no_data_text');
+                                $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').css({'margin-top':'0.75em','font-size':'0.65em'});
+                                $('#average_order_tot_title, #average_order_items_title, #average_order_items_title').css({'margin-top':'1.5em'});
 
                             }
 
-                            
+
+                            if(myJsonObj['graph_cumm_discount_sales'].length > 0) {
+                                $('#sr_cumm_total_discount_actual').html(myJsonObj['cumm_discount_sales_total']);
+                                $('#sr_cumm_total_discount_indicator').removeClass();
+                                $('#sr_cumm_total_discount_indicator').addClass(myJsonObj['img_cumm_discount_sales_total']);
+                                $('#diff_cumm_total_discount').text(myJsonObj['diff_cumm_discount_sales_total']+'%');    
+                            }
+                            else {
+                                $('#sr_cumm_total_discount_actual').text(" ");
+                                $('#sr_cumm_total_discount_indicator').removeClass();
+                                $('#diff_cumm_total_discount').text(" "); 
+                            }
 
                         }
                     });
               }
             
-              
             
             var date_format = "<?php echo get_option('date_format'); ?>";
             
@@ -1815,8 +2202,6 @@ $imgurl_order_fulfillment = "";
                     {picker: $.datepick.defaultRenderer.picker. 
                         replace(/\{link:prev\}/, '{link:prevJump}{link:prev}'). 
                         replace(/\{link:next\}/, '{link:next}{link:nextJump}')})});
-            
-
 
                 $("#sr_endcal_icon").click(function() {
                    $("#enddate_display").focus();
@@ -1862,13 +2247,20 @@ $imgurl_order_fulfillment = "";
 
 <!-- Code for rearranging all the Div Elements -->
 <script type="text/javascript">
+    $("#sr_cumm_top_abandoned_products").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_sales_funnel").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_taxes").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_order_by_gateways").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_top_cust_coupons").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_total_discount").insertAfter("#sr_cumm_date");
     $("#sr_cumm_top_prod").insertAfter("#sr_cumm_date");
-    $("#sr_cumm_avg_order_tot_items").insertAfter("#sr_cumm_date");
-    $("#sr_cumm_top_cust").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_avg_order_count").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_order_coupons_count").insertAfter("#sr_cumm_date");
+    $("#sr_cumm_avg_order_tot").insertAfter("#sr_cumm_date");
     $("#sr_cumm_sales").insertAfter("#sr_cumm_date");
 </script>   
 
-</div>
+</div> <!-- Closing the main div i.e. sr_widgets_beta -->
 
 <?php
 }

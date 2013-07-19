@@ -41,7 +41,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	  return ( $a['calc_total'] > $b['calc_total'] ) ? -1 : 1;
 	}
 
-
 	//Cummulative sales Query function
 	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$terms_post,$post) {
 
@@ -52,14 +51,13 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $top_prod_ids = array();
 	    $top_prod_graph_data = array();
 
-	    
-
 	    $sr_currency_symbol = isset($post['SR_CURRENCY_SYMBOL']) ? $post['SR_CURRENCY_SYMBOL'] : '';
 	    $sr_decimal_places = isset($post['SR_DECIMAL_PLACES']) ? $post['SR_DECIMAL_PLACES'] : '';
 
 	    //Query for getting the cumm sales
 
 	    $query_monthly_sales = "SELECT SUM( postmeta.meta_value ) AS todays_sales,
+	    						COUNT(posts.ID) AS total_orders,
 	    						$select
 		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
 		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
@@ -69,7 +67,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP BY $group_by";
         $results_monthly_sales    = $wpdb->get_results ( $query_monthly_sales, 'ARRAY_A' );
 	    $rows_monthly_sales 	  =  $wpdb->num_rows;
-
 
 	    //Query for Top 5 Customers
 
@@ -98,7 +95,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                                            AND post_id IN ($terms_post))
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
-	                                LIMIT 5";
+	                                LIMIT 4";
 
 	    $results_cumm_top_cust_guest   =  $wpdb->get_results ( $query_cumm_top_cust_guest, 'ARRAY_A' );    
 	    $rows_cumm_top_cust_guest    =  $wpdb->num_rows;
@@ -167,7 +164,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                                            AND post_id IN ($terms_post))
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
-	                                LIMIT 5";
+	                                LIMIT 4";
 
 	    $results_cumm_top_cust_reg   =  $wpdb->get_results ( $query_cumm_top_cust_reg, 'ARRAY_A' );    
 	    $rows_cumm_top_cust_reg    =  $wpdb->num_rows;
@@ -220,7 +217,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	    if(!empty($results_cumm_top_cust)) {
 	        usort($results_cumm_top_cust, 'usort_callback');
-	        $results_cumm_top_cust = array_slice($results_cumm_top_cust, 0, 5);    
+	        $results_cumm_top_cust = array_slice($results_cumm_top_cust, 0, 4);    
 	    }
 	    else {
 	        $results_cumm_top_cust = "";
@@ -344,6 +341,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $total_monthly_sales = 0;
 	    $tot_cumm_orders = 0;
 	    $tot_cumm_orders_qty = 0;
+	    $total_orders = 0;
 
 	    if ($rows_monthly_sales > 0) {
 	        foreach ( $results_monthly_sales as $results_monthly_sale ) {
@@ -360,6 +358,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	            }
 
 	            $total_monthly_sales = $total_monthly_sales + $results_monthly_sale['todays_sales'];
+	            $total_orders = $total_orders + $results_monthly_sale['total_orders'];
 	        }
 
 	        foreach ( $monthly_sales_temp as $monthly_sales_temp1 ) {
@@ -518,6 +517,91 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 			$tot_cumm_orders_qty = 0;
 	    }
 
+	    //Total Discount Sales Widget
+
+	    $query_cumm_discount_sales = "SELECT SUM( postmeta.meta_value ) AS discount_sales,
+	    						$select
+		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
+		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        WHERE postmeta.meta_key IN ('_order_discount','_cart_discount')
+		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+		                            AND posts.ID IN ($terms_post)
+	                            GROUP BY $group_by";
+        $results_cumm_discount_sales    = $wpdb->get_results ( $query_cumm_discount_sales, 'ARRAY_A' );
+	    $rows_cumm_discount_sales 	  =  $wpdb->num_rows;
+
+	    $cumm_discount_sales_temp = $date_series;
+	    $cumm_discount_sales = array();
+	    $max_discount_total = 0;
+	    $total_discount_sales = 0;
+
+	    if ($rows_cumm_discount_sales > 0) {
+	        foreach ( $results_cumm_discount_sales as $results_cumm_discount_sale ) {
+	            if($group_by == "display_date_time") {
+	                    $cumm_discount_sales_temp[$results_cumm_discount_sale['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $results_cumm_discount_sale['display_time'];
+	                    $cumm_discount_sales_temp[$results_cumm_discount_sale['comp_time']]['sales'] = floatval($results_cumm_discount_sale['discount_sales']); 
+	            }
+	            else {
+	                $cumm_discount_sales_temp[$results_cumm_discount_sale[$group_by]]['sales'] = floatval($results_cumm_discount_sale['discount_sales']); 
+	            }
+
+	            if ($max_discount_total < $results_cumm_discount_sale['discount_sales']) {
+	                $max_discount_total = $results_cumm_discount_sale['discount_sales'];
+	            }
+
+	            $total_discount_sales = $total_discount_sales + $results_cumm_discount_sale['discount_sales'];
+	        }
+
+	        foreach ( $cumm_discount_sales_temp as $cumm_discount_sales_temp1 ) {
+	            $cumm_discount_sales[] = $cumm_discount_sales_temp1;
+	        }
+	    }
+
+
+	    //Top Coupons Widget
+
+	    $query_cumm_coupon_count = "SELECT COUNT( order_items.order_item_name ) AS coupon_count,
+	    							SUM(order_itemmeta.meta_value) AS coupon_amount,
+	    							order_items.order_item_name AS coupon_name,
+	    							GROUP_CONCAT(DISTINCT order_items.order_id
+	                                                             ORDER BY order_items.order_item_id DESC SEPARATOR ',' ) AS order_ids
+		                        FROM `{$wpdb->prefix}posts` AS posts
+		                        	JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
+		                        	JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
+		                        		ON (order_items.order_item_id = order_itemmeta.order_item_id 
+		                        				AND order_itemmeta.meta_key IN ('discount_amount') )
+		                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+		                            AND posts.ID IN ($terms_post)
+		                            AND order_items.order_item_type IN ('coupon')
+	                            GROUP BY order_items.order_item_name
+	                            ORDER BY coupon_count DESC, coupon_amount DESC
+	                            LIMIT 4";
+
+        $results_cumm_coupon_count    = $wpdb->get_results ( $query_cumm_coupon_count, 'ARRAY_A' );
+	    $rows_cumm_coupon_count	  =  $wpdb->num_rows;
+
+	    foreach ($results_cumm_coupon_count as &$results_cumm_coupon_count1) {
+	    	$results_cumm_coupon_count1['coupon_amount'] = $sr_currency_symbol . sr_number_format($results_cumm_coupon_count1['coupon_amount'],$sr_decimal_places);
+	    	$results_cumm_coupon_count1['coupon_count'] = sr_number_format($results_cumm_coupon_count1['coupon_count'],$sr_decimal_places);
+	    }
+
+
+	    // % Orders Containing Coupons
+
+	    $sr_per_order_containing_coupons = 0;
+
+	    $query_cumm_orders_coupon_count 	= "SELECT COUNT( posts.ID ) AS total_coupon_orders
+		    									FROM `{$wpdb->prefix}posts` AS posts
+			                        				JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
+			                        			WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+						                            AND posts.ID IN ($terms_post)
+					                            	AND order_items.order_item_type IN ('coupon')";
+		$results_cumm_orders_coupon_count 	= $wpdb->get_col ( $query_cumm_orders_coupon_count );
+	    $rows_cumm_orders_coupon_count	  	= $wpdb->num_rows;		
+
+	    if ($rows_cumm_orders_coupon_count > 0 && $total_orders > 0) {
+	    	$sr_per_order_containing_coupons = ($results_cumm_orders_coupon_count[0] / $total_orders) * 100 ;	
+	    }
 
 	    if (isset($post['option'])) { // Condition to get the data when the Top Products Toggle button is clicked
 	        $results [0] = $cumm_top_prod_graph_data;
@@ -552,7 +636,22 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	            }
 	        }
 
-	        $results[6] = floatval($max_sales+100);
+	        $results [6] = floatval($max_sales+100);
+
+	        if($total_discount_sales > 0) {
+	        	$results [7] = $cumm_discount_sales;
+	        	$results [8] = $total_discount_sales;
+	        }
+	        else{
+	        	$results [7] = '';
+	        	$results [8] = '';
+	        }
+	        
+	        $results [9] = $results_cumm_coupon_count;
+	        $results [10] = floatval($max_discount_total+100);
+
+	        $results [11] = $sr_per_order_containing_coupons;
+
 	    }
 
 	    return $results;
@@ -715,8 +814,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $results[2] = $max_date_sales;
 	    }
 	    else {
-	        $results[7] = $min_date_sales;
-	        $results[8] = $max_date_sales;
+	        $results[12] = $min_date_sales;
+	        $results[13] = $max_date_sales;
 	    }
 
 	    return $results;
@@ -818,6 +917,38 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	            $diff_cumm_avg_order_items = $actual_cumm_sales[5] - $comparison_cumm_sales[5];
 	        }
 
+	        //Code for handling the Cumm Discount Sales Widget
+
+	        if ($comparison_cumm_sales[8] < $actual_cumm_sales[8]) {
+	            $imgurl_cumm_discount_sales = $_POST['SR_IMG_UP_GREEN'];
+	        }
+	        else {
+	            $imgurl_cumm_discount_sales = $_POST['SR_IMG_DOWN_RED'];
+	        }
+
+	        if ($comparison_cumm_sales[1] == 0) {
+	            $diff_discount_cumm_sales = round($actual_cumm_sales[8],get_option( 'woocommerce_price_num_decimals' ));
+	        }
+	        else {
+	            $diff_discount_cumm_sales = round(((($actual_cumm_sales[8] - $comparison_cumm_sales[8])/$comparison_cumm_sales[8]) * 100),get_option( 'woocommerce_price_num_decimals' ));
+	        }
+
+
+	        //Code for handling the % Order Containing Coupons Widget
+
+	        if ($comparison_cumm_sales[11] < $actual_cumm_sales[11]) {
+	            $imgurl_cumm_per_order_coupons = $_POST['SR_IMG_UP_GREEN'];
+	        }
+	        else {
+	            $imgurl_cumm_per_order_coupons = $_POST['SR_IMG_DOWN_RED'];
+	        }
+	        if ($comparison_cumm_sales[11] == 0) {
+	            $diff_cumm_per_order_coupons = round($actual_cumm_sales[11],get_option( 'woocommerce_price_num_decimals' ));
+	        }
+	        else {
+	            $diff_cumm_per_order_coupons = $actual_cumm_sales[11] - $comparison_cumm_sales[11];
+	        }
+
 	        $encoded['result_monthly_sales'] = $actual_cumm_sales[0];
 	        $encoded['total_monthly_sales'] = $sr_currency_symbol . sr_number_format($actual_cumm_sales[1],$sr_decimal_places);
 	        $encoded['img_cumm_sales'] = $imgurl_cumm_sales;
@@ -837,8 +968,22 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $encoded['diff_cumm_avg_order_items'] = sr_number_format(abs($diff_cumm_avg_order_items),$sr_decimal_places);
 
 	        $encoded['cumm_max_sales'] = $actual_cumm_sales[6];
-	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[7];
-	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[8];
+
+	        $encoded['graph_cumm_discount_sales'] = $actual_cumm_sales[7];
+	        $encoded['cumm_discount_sales_total'] = $sr_currency_symbol . sr_number_format($actual_cumm_sales[8],$sr_decimal_places);
+	        $encoded['img_cumm_discount_sales_total'] = $imgurl_cumm_avg_order_tot;
+	        $encoded['diff_cumm_discount_sales_total'] = sr_number_format(abs($diff_cumm_avg_order_tot),$sr_decimal_places);
+
+	        $encoded['top_coupon_data'] = $actual_cumm_sales[9];
+
+	        $encoded['cumm_max_discount_total'] = $actual_cumm_sales[10];
+
+	        $encoded['cumm_per_order_coupons'] = sr_number_format($actual_cumm_sales[11],$sr_decimal_places);
+	        $encoded['img_cumm_per_order_coupons'] = $imgurl_cumm_per_order_coupons;
+	        $encoded['diff_cumm_per_order_coupons'] = sr_number_format(abs($diff_cumm_per_order_coupons),$sr_decimal_places);
+
+	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[12];
+	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[13];
 
 	        $encoded['siteurl'] = get_option('siteurl');
 	        
@@ -904,7 +1049,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 			$woo_default_image = WP_PLUGIN_URL . '/smart-reporter-for-wp-e-commerce/resources/themes/images/woo_default_image.png';
 			$query = "$select $from $where $where_date $group_by $search_condn $order_by ";
 			$results 	= $wpdb->get_results ( $query, 'ARRAY_A' );
-			
+
 			$num_rows   = $wpdb->num_rows;
 			$no_records = $num_rows;
 

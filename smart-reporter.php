@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.0.1
+Version: 2.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013 Store Apps All rights reserved.
@@ -393,6 +393,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             $attributes_name_to_slug = sr_get_attributes_name_to_slug();
             $prefix = ( defined( 'IS_WOO16' ) && IS_WOO16 ) ? '' : '_';
 
+
             foreach ( $all_order_items as $order_id => $order_items ) {
                 foreach ( $order_items as $item ) {
                         $order_item = array();
@@ -445,8 +446,10 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         function sr_woo_add_order( $order_id ) {
             	global $wpdb;
 		$order = new WC_Order( $order_id );
+
 		$order_items = array( $order_id => $order->get_items() );
 		
+
 		$insert_query = "INSERT INTO {$wpdb->prefix}sr_woo_order_items 
 							( `product_id`, `order_id`, `product_name`, `quantity`, `sales`, `discount` ) VALUES ";
                 
@@ -613,7 +616,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	                }
 	                add_thickbox();
 	            }
-	            $before_plug_page = '<a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Need Help?</a>';
+	            $before_plug_page = '<a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
 	            
 	            if (SR_BETA != "true") {
 	            	$before_plug_page .= ' | <a href="admin.php?page=smart-reporter-';
