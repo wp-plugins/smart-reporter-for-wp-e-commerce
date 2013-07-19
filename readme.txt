@@ -1,16 +1,16 @@
-=== Smart Reporter for e-commerce ===
-Contributors: niravmehta, malayladu, ratnakar.dubey, naresh.vachhani, tarunparswani
+=== Smart Reporter for WooCommerce and WP eCommerce ===
+Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, naresh.vachhani, Tarun.Parswani
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 3.5.1
-Stable tag: 2.0.1
+Tested up to: 3.5.2
+Stable tag: 2.1
 
-Business analysis for e-commerce like never before.
+Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
 == Description ==
 
-Smart Reporter shows you product wise sales trends in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
+Smart Reporter shows you key performance indicators and product wise sales trends in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
 
 It also shows you key performance indicators (total sales, average sales, velocity etc) so you can quickly guage performance of your business.
 
@@ -18,7 +18,7 @@ You can filter reports by date range and can also search and view sales trends o
 
 Smart Reporter works with WooCommerce latest versions and WP e-Commerce 3.8+.
 
-The Lite version is limited to showing data of past 7 days only. It also does not show key performance indicators. Purchase the paid versions for full access. 
+The Lite version is limited to showing data of past one month only. Purchase the paid versions for full access. 
 
 == Installation ==
 
@@ -45,11 +45,15 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 == Changelog ==
 
+= 2.1 =
+* New: Coupon Related Widgets [Smart Reporter Beta] (WooCommerce)
+* Update: Compatibility with new versions of WordPress, WooCommerce & WP e-Commerce
+
 = 2.0.1 =
-* Fix: Minor fixes related to widgets in Smart Reporter Beta (Woocommerce)
+* Fix: Minor fixes related to widgets in Smart Reporter Beta (WooCommerce)
 
 = 2.0 =
-* New: Beta Version of Smart Reporter [Smart Reporter Beta] (Woocommerce)
+* New: Beta Version of Smart Reporter [Smart Reporter Beta] (WooCommerce)
 * New: Create Support Ticket From Plugin
 * New: Update Code Modified
 
@@ -116,6 +120,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 2.1 =
+New Coupon Related Widgets released for Smart Reporter Beta and compatibility with new versions of WordPress, WooCommerce & WP e-Commerce, recommended upgrade.
 
 = 2.0.1 =
 Important update for minor fixes related to widgets in Smart Reporter Beta (Woocommerce), recommended upgrade.
