@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.1
+Version: 2.2
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013 Store Apps All rights reserved.
@@ -14,6 +14,36 @@ register_activation_hook ( __FILE__, 'sr_activate' );
 register_deactivation_hook ( __FILE__, 'sr_deactivate' );
 
 define ( 'IS_WOO16', version_compare ( WOOCOMMERCE_VERSION, '2.0', '<' ) ); // Flag for Handling Woo 2.0 and above
+
+function woocommerce_shop_order_search_custom_fields1( $wp ) {
+    global $pagenow, $wpdb;
+
+    if(!(isset($_GET['source']) && $_GET['source'] == 'sr'))
+    	return;
+    
+    remove_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields' );
+
+    $post_ids = (isset($_COOKIE['post_ids'])) ? explode(",",$_COOKIE['post_ids']) : 0;
+
+
+
+    // Remove s - we don't want to search order name
+    unset( $wp->query_vars['s'] );
+
+    // Remove the post_ids from $_COOKIE
+    unset($_COOKIE['post_ids']);
+
+    // so we know we're doing this
+    $wp->query_vars['shop_order_search'] = true;
+
+    // Search by found posts
+    $wp->query_vars['post__in'] = $post_ids;
+
+    add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields' );
+
+}
+add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1',5 );
+
 
 /**
  * Registers a plugin function to be run when the plugin is activated.
@@ -758,32 +788,7 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 
 		add_action('wp_ajax_get_monthly_sales','get_monthly_sales');
 
-		function woocommerce_shop_order_search_custom_fields1( $wp ) {
-	        global $pagenow, $wpdb;
-
-	        if(!(isset($_GET['source']) && $_GET['source'] == 'sr'))
-	        	return;
-	        
-	        remove_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields' );
-
-	        $post_ids = (isset($_COOKIE['post_ids'])) ? explode(",",$_COOKIE['post_ids']) : 0;
-
-	        // Remove s - we don't want to search order name
-	        unset( $wp->query_vars['s'] );
-
-	        // Remove the post_ids from $_COOKIE
-	        unset($_COOKIE['post_ids']);
-
-	        // so we know we're doing this
-	        $wp->query_vars['shop_order_search'] = true;
-
-	        // Search by found posts
-	        $wp->query_vars['post__in'] = $post_ids;
-
-	        add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields' );
-
-	    }
-		add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1',5 );
+		
 
 
 	};

@@ -50,6 +50,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $results_top_prod = array();
 	    $top_prod_ids = array();
 	    $top_prod_graph_data = array();
+	    $top_gateway_graph_data = array();
 
 	    $sr_currency_symbol = isset($post['SR_CURRENCY_SYMBOL']) ? $post['SR_CURRENCY_SYMBOL'] : '';
 	    $sr_decimal_places = isset($post['SR_DECIMAL_PLACES']) ? $post['SR_DECIMAL_PLACES'] : '';
@@ -336,6 +337,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	    }
 
+
 	    $monthly_sales_temp = $date_series;
 	    $max_sales = 0;
 	    $total_monthly_sales = 0;
@@ -585,7 +587,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    	$results_cumm_coupon_count1['coupon_count'] = sr_number_format($results_cumm_coupon_count1['coupon_count'],$sr_decimal_places);
 	    }
 
-
 	    // % Orders Containing Coupons
 
 	    $sr_per_order_containing_coupons = 0;
@@ -603,6 +604,204 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    	$sr_per_order_containing_coupons = ($results_cumm_orders_coupon_count[0] / $total_orders) * 100 ;	
 	    }
 
+
+	    //Orders By Payment Gateways
+
+	    $query_top_payment_gateway = "SELECT postmeta1.meta_value AS payment_method,
+		    							SUM(postmeta2.meta_value) AS sales_total,
+		    							COUNT(posts.ID) AS sales_count,
+		    							GROUP_CONCAT(posts.ID ORDER BY posts.ID DESC SEPARATOR ',' ) AS order_ids
+				                        FROM {$wpdb->prefix}posts AS posts 
+				                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( posts.ID = postmeta1.post_id )
+				                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( posts.ID = postmeta2.post_id )
+				                        WHERE postmeta1.meta_key IN ('_payment_method')
+				                        	AND postmeta2.meta_key IN ('_order_total')
+				                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+				                            AND posts.ID IN ($terms_post)
+			                            GROUP BY payment_method
+			                            ORDER BY sales_total DESC
+			                            LIMIT 5";
+        $results_top_payment_gateway  = $wpdb->get_results ( $query_top_payment_gateway, 'ARRAY_A' );
+	    $rows_top_payment_gateway 	  =  $wpdb->num_rows;
+
+	    if ($rows_top_payment_gateway > 0) {
+	    	foreach ($results_top_payment_gateway as &$results_top_payment_gateway1) {
+	            $top_payment_gateway[] = $results_top_payment_gateway1 ['payment_method'];
+	        
+	            if (isset($post['top_prod_option'])) {
+                    $results_top_payment_gateway1 ['gateway_sales_display'] = $sr_currency_symbol . sr_number_format($results_top_payment_gateway1 ['sales_total'],$sr_decimal_places);
+                    $results_top_payment_gateway1 ['gateway_sales_percent'] = sr_number_format((($results_top_payment_gateway1 ['sales_total'] / $total_monthly_sales) * 100),$sr_decimal_places) . '%';
+	            }
+
+	        }
+
+	        if (!empty($top_payment_gateway)) {
+	        	$top_payment_gateway_imploded = "'".implode("','", $top_payment_gateway)."'";
+	        }
+	    }
+
+        //Query to get the Top 5 Products graph related data
+
+        $query_top_gateways_graph   = "SELECT postmeta1.meta_value AS payment_method,
+	    							SUM(postmeta2.meta_value) AS sales_total,
+	    							COUNT(posts.ID) AS sales_count,
+	    							$select
+			                        FROM {$wpdb->prefix}posts AS posts 
+			                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( posts.ID = postmeta1.post_id )
+			                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( posts.ID = postmeta2.post_id )
+			                        WHERE postmeta1.meta_key IN ('_payment_method')
+			                        	AND postmeta2.meta_key IN ('_order_total')
+			                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+			                            AND posts.ID IN ($terms_post)
+			                            AND postmeta1.meta_value IN ($top_payment_gateway_imploded)
+		                            GROUP BY payment_method, $group_by
+		                            ORDER BY FIND_IN_SET(postmeta1.meta_value,'".implode(",",$top_payment_gateway)."')";
+
+        $results_top_gateways_graph = $wpdb->get_results ( $query_top_gateways_graph, 'ARRAY_A' );
+        $rows_top_gateways_graph	= $wpdb->num_rows;
+        
+
+	    $cumm_payment_gateway_temp = $date_series;
+	    $cumm_payment_gateway_sales = array();
+	    $max_discount_total = 0;
+	    $total_discount_sales = 0;
+
+		if($rows_top_gateways_graph > 0) {
+
+	        for ($i=0, $j=0, $k=0; $i<sizeof($results_top_gateways_graph);$i++) {
+
+	            if ($i>0) {
+
+	                if ($results_top_gateways_graph [$i]['payment_method'] == $payment_method) {
+	                    $j++;
+
+	                    $top_gateway_graph_data [$k][$j]['gateway_sales_amt'] = $results_top_gateways_graph [$i]['sales_total'];
+	                    $top_gateway_graph_data [$k][$j]['gateway_sales_count'] = $results_top_gateways_graph [$i]['sales_count'];
+	                    $top_gateway_graph_data [$k][$j][$group_by] = $results_top_gateways_graph [$i][$group_by];    
+
+	                    if($group_by == "display_date_time") {
+	                        $top_gateway_graph_data [$k][$j]['display_time'] = $results_top_gateways_graph [$i]['display_time'];
+	                        $top_gateway_graph_data [$k][$j]['comp_time'] = $results_top_gateways_graph [$i]['comp_time'];
+	                    } 
+
+	                    $payment_method = $results_top_gateways_graph [$i]['payment_method'];
+
+
+	                }
+	                else {
+
+	                    $k++;
+	                    $j=0;
+	                    $top_gateway_graph_data [$k] = array();
+
+	                    $top_gateway_graph_data [$k][$j]['gateway_sales_amt'] = $results_top_gateways_graph [$i]['sales_total'];
+	                    $top_gateway_graph_data [$k][$j]['gateway_sales_count'] = $results_top_gateways_graph [$i]['sales_count'];
+	                    $top_gateway_graph_data [$k][$j][$group_by] = $results_top_gateways_graph [$i][$group_by];
+	                    if($group_by == "display_date_time") {
+	                        $top_gateway_graph_data [$k][$j]['display_time'] = $results_top_gateways_graph [$i]['display_time'];
+	                        $top_gateway_graph_data [$k][$j]['comp_time'] = $results_top_gateways_graph [$i]['comp_time'];
+	                    }
+
+	                    $payment_method = $results_top_gateways_graph [$i]['payment_method'];
+	                }
+	            }
+	            else {
+
+	                $top_gateway_graph_data [$k] = array();
+	                $top_gateway_graph_data [$k][$j]['gateway_sales_amt'] = $results_top_gateways_graph [$i]['sales_total'];
+	                $top_gateway_graph_data [$k][$j]['gateway_sales_count'] = $results_top_gateways_graph [$i]['sales_count'];
+	                $top_gateway_graph_data [$k][$j][$group_by] = $results_top_gateways_graph [$i][$group_by];
+	                if($group_by == "display_date_time") {
+	                    $top_gateway_graph_data [$k][$j]['display_time'] = $results_top_gateways_graph [$i]['display_time'];
+	                    $top_gateway_graph_data [$k][$j]['comp_time'] = $results_top_gateways_graph [$i]['comp_time'];
+	                }
+	                
+	                $payment_method = $results_top_gateways_graph [$i]['payment_method'];
+	            }
+	        }
+        }
+
+        //Query to get the Payment Gateway Title
+
+        $query_gateway_title = "SELECT DISTINCT postmeta1.meta_value as gateway_title,
+        							postmeta2.meta_value as gateway_method
+	    						FROM `{$wpdb->prefix}postmeta` AS postmeta1
+	    							JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( postmeta1.post_id = postmeta2.post_id )
+    							WHERE postmeta1.meta_key IN ('_payment_method_title')
+    								AND postmeta2.meta_key IN ('_payment_method')
+    								AND postmeta2.meta_value IN ($top_payment_gateway_imploded)
+    							ORDER BY FIND_IN_SET(postmeta1.meta_value,'".implode(",",$top_payment_gateway)."')";
+    	$result_gateway_title = $wpdb->get_results ( $query_gateway_title, 'ARRAY_A' );
+
+    	$gateway_title = array();
+
+    	foreach($result_gateway_title as $result_gateway_title1) {
+    		$gateway_title[$result_gateway_title1['gateway_method']] = $result_gateway_title1['gateway_title'];
+    	}
+
+        //Top 5 Products Graph
+
+	    $cumm_top_gateway_graph_data = array();
+
+	    $index = 0;
+	    $max_values = array();
+
+	    if(!empty($top_gateway_graph_data)) {
+	        foreach ( $top_gateway_graph_data as $top_gateway_graph_data1 ) {
+	            $cumm_top_gateway_amt_graph_data[$index] = array();
+	            $temp_gateway_sales_amt = array();
+	            $temp_gateway_sales_count = array();
+	            $cumm_date_amt = $date_series;
+	            $cumm_date_count = $date_series;
+
+	            $max_amt=0;
+	            $max_count=0;
+
+	            for ( $j=0;$j<sizeof($top_gateway_graph_data1);$j++ ) {
+
+	                if($group_by == "display_date_time") {
+	                    $cumm_date_amt[$top_gateway_graph_data1[$j]['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $top_gateway_graph_data1[$j]['display_time'];
+	                    $cumm_date_count[$top_gateway_graph_data1[$j]['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $top_gateway_graph_data1[$j]['display_time'];
+	                }
+
+	                //Payment Gateways Sales Amt
+
+                    if($top_gateway_graph_data1[$j]['gateway_sales_amt'] > $max_amt) {
+                        $max_amt = floatval($top_gateway_graph_data1[$j]['gateway_sales_amt']);
+                    }
+
+                    $cumm_date_amt[$top_gateway_graph_data1[$j][$group_by]]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_amt']);
+
+                   //Payment Gateways Sales Count
+
+                    if($top_gateway_graph_data1[$j]['gateway_sales_count'] > $max_count) {
+                        $max_count = floatval($top_gateway_graph_data1[$j]['gateway_sales_count']);
+                    }
+
+                    $cumm_date_count[$top_gateway_graph_data1[$j][$group_by]]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_count']);
+
+	            }
+
+	            foreach ($cumm_date_amt as $cumm_date_amt1) {
+	                $temp_gateway_sales_amt [] = $cumm_date_amt1;
+	            }
+
+	            foreach ($cumm_date_count as $cumm_date_count1) {
+	                $temp_gateway_sales_count [] = $cumm_date_count1;
+	            }
+
+                $results_top_payment_gateway[$index]['graph_data_sales_amt'] = $temp_gateway_sales_amt;    
+                $results_top_payment_gateway[$index]['max_value_sales_amt'] = $max_amt;
+
+                $results_top_payment_gateway[$index]['graph_data_sales_count'] = $temp_gateway_sales_count;    
+                $results_top_payment_gateway[$index]['max_value_sales_count'] = $max_count;
+
+                $results_top_payment_gateway[$index]['payment_method'] = $gateway_title[$results_top_payment_gateway[$index]['payment_method']];
+
+	            $index++;
+	        }    
+	    }
+	    
 	    if (isset($post['option'])) { // Condition to get the data when the Top Products Toggle button is clicked
 	        $results [0] = $cumm_top_prod_graph_data;
 	    }
@@ -651,6 +850,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $results [10] = floatval($max_discount_total+100);
 
 	        $results [11] = $sr_per_order_containing_coupons;
+
+	        $results [12] = $results_top_payment_gateway;
 
 	    }
 
@@ -781,7 +982,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $select_top_prod = "GROUP_CONCAT(order_item.sales order by order_item.order_id SEPARATOR '###') AS sales_details,
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%b') by posts.id SEPARATOR '###') AS order_dates";
-	         
+
         	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"month_nm",$select_top_prod,$terms_post,$post);
 	    }
 	    else if ($diff_dates > 365) {
@@ -814,14 +1015,16 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $results[2] = $max_date_sales;
 	    }
 	    else {
-	        $results[12] = $min_date_sales;
-	        $results[13] = $max_date_sales;
+	        $results[13] = $min_date_sales;
+	        $results[14] = $max_date_sales;
 	    }
 
 	    return $results;
 	}
 
 	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'monthly') )) {
+
+
 
 	//Sales	    
 	    $sr_currency_symbol = isset($_POST['SR_CURRENCY_SYMBOL']) ? $_POST['SR_CURRENCY_SYMBOL'] : '';
@@ -830,18 +1033,21 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $start_date = date('Y-m-d H:i:s',(int)strtotime($_POST['start_date']));
 	    
 	    if (!empty($_POST['end_date']) || $_POST['end_date'] != "") {
-	        $end_date = $_POST['end_date'];
+	        $end_date = $_POST['end_date'] . " 23:59:59";
 	        $end_date_org = $end_date;
 	    }
 	    else {
-	        $end_date = date('Y-m-d', strtotime($_POST['start_date'] .' +1 month'));
+	        // $end_date = date('Y-m-d', strtotime($_POST['start_date'] .' +1 month'));
+	        $end_date = date('Y-m-d H:i:s');
 	        $_POST['end_date'] = $end_date;
+
+	        $date = date('Y-m-d',(int)strtotime($end_date));
+		    $curr_time_gmt = date('H:i:s',time()- date("Z"));
+		    $new_date = $date ." " . $curr_time_gmt;
+		    $end_date = date('Y-m-d H:i:s',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;
 	    }
+
 	    
-	    $date = date('Y-m-d',(int)strtotime($end_date));
-	    $curr_time_gmt = date('H:i:s',time()- date("Z"));
-	    $new_date = $date ." " . $curr_time_gmt;
-	    $end_date = date('Y-m-d H:i:s',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;
 
 	    $strtotime_start = strtotime($start_date);
 	    $strtotime_end = strtotime($end_date);
@@ -859,7 +1065,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    }
 	    
 	    $comparison_diff_dates = (strtotime($comparison_end_date) - strtotime($comparison_start_date))/(60*60*24);
-	    
 
 	    $actual_cumm_sales = sr_get_sales ($start_date,$end_date,$diff_dates,$_POST);
 
@@ -982,8 +1187,10 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $encoded['img_cumm_per_order_coupons'] = $imgurl_cumm_per_order_coupons;
 	        $encoded['diff_cumm_per_order_coupons'] = sr_number_format(abs($diff_cumm_per_order_coupons),$sr_decimal_places);
 
-	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[12];
-	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[13];
+	        $encoded['top_gateway_data'] = $actual_cumm_sales[12];
+
+	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[13];
+	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[14];
 
 	        $encoded['siteurl'] = get_option('siteurl');
 	        
