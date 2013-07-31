@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.5.2
-Stable tag: 2.1
+Stable tag: 2.2
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -44,6 +44,10 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 1. Smart Reporter Products Report Dashboard (some features only in paid versions)
 
 == Changelog ==
+
+= 2.2 =
+* New: Payment Gateway Widget [Smart Reporter Beta] (WooCommerce)
+* Update: Compatibility with new version of WooCommerce
 
 = 2.1 =
 * New: Coupon Related Widgets [Smart Reporter Beta] (WooCommerce)
@@ -120,6 +124,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 2.2 =
+New Payment Gateway Related Widget released for Smart Reporter Beta and compatibility with new versions of WooCommerce, recommended upgrade.
 
 = 2.1 =
 New Coupon Related Widgets released for Smart Reporter Beta and compatibility with new versions of WordPress, WooCommerce & WP e-Commerce, recommended upgrade.
