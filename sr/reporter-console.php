@@ -1707,6 +1707,7 @@ $imgurl_order_fulfillment = "";
 
         if(top_prod_graph_data.length > 0) {
             $('#top_prod_data').removeClass('no_data_text');
+            $('#top_prod_data').removeAttr('style');
             $('#top_prod_data').html('<table id="top_prod_table" style="margin-top: 0.05em; width: 100%"> </table>');
             jQuery('#top_prod_table').html(table_html);
             top_prod_graph_display(top_prod_graph_data,tick_format,tickFormatter_top_prod,top_prod_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_prod_');    
@@ -1960,6 +1961,7 @@ $imgurl_order_fulfillment = "";
 
         if(top_gateway_graph_sales_amt_data.length > 0 && top_gateway_graph_sales_count_data.length > 0) {
             $('#sr_cumm_order_by_gateways_data').removeClass('no_data_text');
+            $('#sr_cumm_order_by_gateways_data').removeAttr('style');
             $('#sr_cumm_order_by_gateways_data').html('<table id="top_gateway_table" style="margin-top: 0.05em; width: 100%"> </table>');
             jQuery('#top_gateway_table').html(table_html);
             top_prod_graph_display(top_gateway_graph_sales_amt_data,tick_format,tickFormatter,top_gateway_sales_amt_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_gateway_sales_amt_');    

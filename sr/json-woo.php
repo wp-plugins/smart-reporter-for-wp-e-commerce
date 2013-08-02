@@ -257,7 +257,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        }
 	        
 
-
 	        //Query to get the Top 5 Products graph related data
 
 	        $query_top_prod_graph   = "SELECT order_item.product_id as product_id,
@@ -659,7 +658,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
         $results_top_gateways_graph = $wpdb->get_results ( $query_top_gateways_graph, 'ARRAY_A' );
         $rows_top_gateways_graph	= $wpdb->num_rows;
-        
 
 	    $cumm_payment_gateway_temp = $date_series;
 	    $cumm_payment_gateway_sales = array();
@@ -762,6 +760,13 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                if($group_by == "display_date_time") {
 	                    $cumm_date_amt[$top_gateway_graph_data1[$j]['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $top_gateway_graph_data1[$j]['display_time'];
 	                    $cumm_date_count[$top_gateway_graph_data1[$j]['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $top_gateway_graph_data1[$j]['display_time'];
+
+	                    $cumm_date_amt[$top_gateway_graph_data1[$j]['comp_time']]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_amt']);
+	                	$cumm_date_count[$top_gateway_graph_data1[$j]['comp_time']]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_count']);
+	                }
+	                else {
+	                	$cumm_date_amt[$top_gateway_graph_data1[$j][$group_by]]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_amt']);
+	                	$cumm_date_count[$top_gateway_graph_data1[$j][$group_by]]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_count']);
 	                }
 
 	                //Payment Gateways Sales Amt
@@ -770,15 +775,11 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
                         $max_amt = floatval($top_gateway_graph_data1[$j]['gateway_sales_amt']);
                     }
 
-                    $cumm_date_amt[$top_gateway_graph_data1[$j][$group_by]]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_amt']);
-
                    //Payment Gateways Sales Count
 
                     if($top_gateway_graph_data1[$j]['gateway_sales_count'] > $max_count) {
                         $max_count = floatval($top_gateway_graph_data1[$j]['gateway_sales_count']);
                     }
-
-                    $cumm_date_count[$top_gateway_graph_data1[$j][$group_by]]['sales'] = floatval($top_gateway_graph_data1[$j]['gateway_sales_count']);
 
 	            }
 
