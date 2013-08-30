@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.2.1
+Version: 2.3
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013 Store Apps All rights reserved.
@@ -131,7 +131,9 @@ function is_pro_updated() {
  */
 if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	// BOF automatic upgrades
-	include ABSPATH . 'wp-includes/pluggable.php';
+	// if (!function_exists('wp_get_current_user')) {
+ //        require_once (ABSPATH . 'wp-includes/pluggable.php'); // Sometimes conflict with SB-Welcome Email Editor
+ //    }
 	
 	$plugin = plugin_basename ( __FILE__ );
 	define ( 'SR_PLUGIN_DIR',dirname($plugin));
@@ -227,7 +229,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         wp_register_script ( 'sr_jqplot_cur', plugins_url ( 'resources/jqplot/jqplot.cursor.min.js', __FILE__ ), array ('sr_jqplot_high' ));
         wp_register_script ( 'sr_jqplot_render', plugins_url ( 'resources/jqplot/jqplot.categoryAxisRenderer.min.js', __FILE__ ), array ('sr_jqplot_cur' ));
         wp_register_script ( 'sr_jqplot_date_render', plugins_url ( 'resources/jqplot/jqplot.dateAxisRenderer.min.js', __FILE__ ), array ('sr_jqplot_render' ));
-        wp_enqueue_script ( 'sr_datepicker', plugins_url ( 'resources/jquery.datepick.package/jquery.datepick.js', __FILE__ ), array ('sr_jqplot_date_render' ));
+        wp_register_script ( 'sr_jqplot_pie_render', plugins_url ( 'resources/jqplot/jqplot.pieRenderer.min.js', __FILE__ ), array ('sr_jqplot_date_render' ));
+        wp_register_script ( 'sr_jqplot_donout_render', plugins_url ( 'resources/jqplot/jqplot.donutRenderer.min.js', __FILE__ ), array ('sr_jqplot_pie_render' ));
+        wp_enqueue_script ( 'sr_datepicker', plugins_url ( 'resources/jquery.datepick.package/jquery.datepick.js', __FILE__ ), array ('sr_jqplot_donout_render' ));
         wp_register_script ( 'sr_jqplot_all_scripts', plugins_url ( 'resources/jqplot/jqplot.BezierCurveRenderer.min.js', __FILE__ ), array ('sr_datepicker' ), $sr_plugin_info ['Version']);
 
         wp_register_style ( 'font_awesome', plugins_url ( "resources/font-awesome/css/font-awesome.min.css", __FILE__ ), array ());
@@ -474,6 +478,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         }
         
         function sr_woo_add_order( $order_id ) {
+
             	global $wpdb;
 		$order = new WC_Order( $order_id );
 
