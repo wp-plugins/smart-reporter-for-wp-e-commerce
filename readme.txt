@@ -3,8 +3,8 @@ Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, naresh.vachhani,
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 3.5.2
-Stable tag: 2.2.1
+Tested up to: 3.6
+Stable tag: 2.3
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -44,6 +44,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 1. Smart Reporter Products Report Dashboard (some features only in paid versions)
 
 == Changelog ==
+
+= 2.3 =
+* New: Taxes & Shipping Widget [Smart Reporter Beta] (WooCommerce)
 
 = 2.2.1 =
 * Fixed: Minor Fixes [Smart Reporter Beta] (WooCommerce)
@@ -127,6 +130,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 2.3 =
+New Taxes & Shipping Widget released for Smart Reporter Beta and compatibility with new versions of WooCommerce & WordPress, recommended upgrade.
 
 = 2.2.1 =
 Minor Fixes related to Smart Reporter Beta, recommended upgrade.
