@@ -1511,6 +1511,8 @@ $imgurl_order_fulfillment = "";
 
           //Code to handle the display of the tooltips for the Top Products Widget
 
+          // #sr_cumm_taxes_data,
+
           $("div[id^='span_top_prod_'], div[id^='span_top_gateway_sales_amt_'], div[id^='span_top_gateway_sales_count_']").live('jqplotMouseMove', 
               function (ev, seriesIndex, pointIndex, data) {
 
@@ -1985,15 +1987,169 @@ $imgurl_order_fulfillment = "";
 // ================================================
  -->
 
+<div id="chartpseudotooltip"></div>
+
 <div id="sr_cumm_taxes" class="cumm_widget">    
     <div class="cumm_header">
       <i class="icon-bolt icon_cumm_widgets" ></i>
-      Taxes
+      Taxes & Shipping
     </div>
 
-    <div id="sr_cumm_taxes_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;">
-        Coming Soon
+    <!-- style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;" -->
+
+    <!-- style="height:92%;width:100%" -->
+    <!-- class="sr_cumm_sales_graph  -->
+
+
+    <div id="sr_cumm_taxes_data" style="height:87%;width:100%">
+      
+
+
     </div>
+
+    <script type="text/javascript">
+
+    //FUnction to round off the numbers
+    function precise_round(num,decimals){
+        return Math.round(num*Math.pow(10,decimals))/Math.pow(10,decimals);
+    }
+
+    //Function to handle the display part of the Top Gateway Widget
+    var cumm_taxes_display = function(resp) {
+
+        var taxes_data = new Array();
+
+        jQuery('#sr_cumm_taxes_data').empty();
+        
+
+        if(resp['result_monthly_sales'].length > 0) {
+
+            jQuery('#sr_cumm_taxes_data').empty();
+            // jQuery('#sr_cumm_taxes_data').html('');
+            
+            // jQuery('#sr_cumm_taxes_data').css('width','100%');
+            if ($('#sr_cumm_taxes_data').hasClass('no_data_text')) {
+                $('#sr_cumm_taxes_data').removeClass('no_data_text');
+                $('#sr_cumm_taxes_data').removeAttr('style');
+
+                $('#sr_cumm_taxes_data').css('height' ,'87%');
+                $('#sr_cumm_taxes_data').css('width' ,'100%');
+            }
+            
+            // $('#sr_cumm_taxes_data.jqplot-table-legend').removeAttr('style');
+            // $('#sr_cumm_taxes_data').css('margin-top','-6.5px');
+            // $('#sr_cumm_taxes_data').removeAttr('style');
+
+            
+
+
+          taxes_data[0] = new Array();
+          taxes_data[0][0] = 'Tax';
+          taxes_data[0][1] = resp['cumm_taxes']['tax'];
+          taxes_data[0][2] = precise_round((resp['cumm_taxes']['tax']/resp['cumm_taxes']['total_sales'])*100 , resp['decimal_places']) + '%';
+    
+          taxes_data[1] = new Array();
+          taxes_data[1][0] = 'Shipping Tax';
+          taxes_data[1][1] = resp['cumm_taxes']['shipping_tax'];
+          taxes_data[1][2] = precise_round((resp['cumm_taxes']['shipping_tax']/resp['cumm_taxes']['total_sales'])*100 , resp['decimal_places']) + '%';
+
+          taxes_data[2] = new Array();
+          taxes_data[2][0] = 'Shipping';
+          taxes_data[2][1] = resp['cumm_taxes']['shipping'];
+          taxes_data[2][2] = precise_round((resp['cumm_taxes']['shipping']/resp['cumm_taxes']['total_sales'])*100, resp['decimal_places']) + '%';
+
+          taxes_data[3] = new Array();
+          taxes_data[3][0] = 'Net Sales';
+          taxes_data[3][1] = resp['cumm_taxes']['net_sales'];
+          taxes_data[3][2] = precise_round((resp['cumm_taxes']['net_sales']/resp['cumm_taxes']['total_sales'])*100 , resp['decimal_places']) + '%';
+
+
+                jQuery.jqplot('sr_cumm_taxes_data',  [taxes_data], {
+                    
+                    grid: {
+                        backgroundColor: 'transparent',
+                        drawBorder: false,
+                        shadow: false
+
+
+                    },
+
+                    gridPadding: {top:-6.5, bottom:47, left:0, right:0},
+                    // gridPadding: {top:0, bottom:47, left:0, right:0},
+
+                    series:[{startAngle: -90,
+                          dataLabels: 'percent',
+                          padding: 0, 
+                          sliceMargin: 4}],
+
+
+                    cursor: {
+                      show: false
+                    },
+
+                    seriesDefaults: {
+                        shadow: false,
+                        
+                        seriesColors: ['#04c0f0','#a6dba0','#e66101','#5e3c99'], // FINAL
+                        
+                        renderer: jQuery.jqplot.DonutRenderer,
+                        rendererOptions: {
+                            
+                        }
+                    },
+                    legend: { 
+                        show:true,
+                        placement: 'outsideGrid',                      
+                        rendererOptions: {
+                            numberRows: 1
+                        }, 
+                        location: 's',
+                        // marginTop: '-15px',
+                        borderWidth: 0,
+                        marginLeft: '5px'
+                    }
+
+                });
+
+        } else {
+            $('#sr_cumm_taxes_data').removeAttr('style');
+            $('#sr_cumm_taxes_data').text('No Data');
+            $('#sr_cumm_taxes_data').addClass('no_data_text');
+            $('#sr_cumm_taxes_data').css('margin-top','6.25em');
+        }
+        
+        
+
+        $('#sr_cumm_taxes_data').bind('jqplotDataMouseOver', function (ev, seriesIndex, pointIndex, data) {
+
+
+              var mouseX = ev.pageX - 150; //these are going to be how jquery knows where to put the div that will be our tooltip
+              var mouseY = ev.pageY;
+              $('#chartpseudotooltip').html( '<div>' + data[0] +': ' + resp['currency_symbol'] + data[1] + '</div> <div style:"text-align:center"> (' + data[2] + ')</div>'  );
+              var cssObj = {
+                  'position': 'absolute',
+                  'font-weight': 'bold',
+                  'left': mouseX + 'px', //usually needs more offset here
+                  'top': mouseY + 'px',
+                  'border' : '1px solid #6EADE7',
+                  'background-color': 'white',
+                  'font-size': '1.1em',
+                  'font-weight': '500',
+                  'z-index':'1'
+              };
+              $('#chartpseudotooltip').css(cssObj);
+              $('#chartpseudotooltip').show();
+
+          });
+
+          $('#sr_cumm_taxes_data').bind('jqplotDataUnhighlight', function (ev) {
+              $('#chartpseudotooltip').empty().hide();
+          });
+
+
+
+    }
+    </script>
 </div>
 
 <!-- 
@@ -2095,6 +2251,7 @@ $imgurl_order_fulfillment = "";
                             sr_cumm_total_discount_display(myJsonObj);
                             sr_top_coupons_display(myJsonObj);
                             top_gateway_display(myJsonObj);
+                            cumm_taxes_display(myJsonObj);
 
                             if(myJsonObj['result_monthly_sales'].length > 0) {
                                 $('#sr_cumm_sales_actual').html(myJsonObj['total_monthly_sales']);

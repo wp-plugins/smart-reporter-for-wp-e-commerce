@@ -69,6 +69,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
         $results_monthly_sales    = $wpdb->get_results ( $query_monthly_sales, 'ARRAY_A' );
 	    $rows_monthly_sales 	  =  $wpdb->num_rows;
 
+	    
+
 	    //Query for Top 5 Customers
 
 	    //Reg Customers
@@ -518,7 +520,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 			$tot_cumm_orders_qty = 0;
 	    }
 
-	    //Total Discount Sales Widget
+	    //Total Discount Sales Widget 
 
 	    $query_cumm_discount_sales = "SELECT SUM( postmeta.meta_value ) AS discount_sales,
 	    						$select
@@ -803,6 +805,51 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        }    
 	    }
 	    
+
+	    //Query for getting the cumm taxes
+
+	    $query_cumm_taxes = "SELECT GROUP_CONCAT(postmeta.meta_key order by postmeta.meta_id SEPARATOR '###') AS prod_othermeta_key,
+									GROUP_CONCAT(postmeta.meta_value order by postmeta.meta_id SEPARATOR '###') AS prod_othermeta_value
+		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
+		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        WHERE postmeta.meta_key IN ('_order_total','_order_shipping','_order_shipping_tax','_order_tax')
+		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+		                            AND posts.ID IN ($terms_post)
+		                        GROUP BY posts.ID";
+        $results_cumm_taxes    = $wpdb->get_results ( $query_cumm_taxes, 'ARRAY_A' );
+	    $rows_cumm_taxes 	  =  $wpdb->num_rows;
+
+	    if ($rows_cumm_taxes > 0) {
+
+	    	$tax = 0;
+	    	$shipping_tax = 0;
+	    	$shipping = 0;
+	    	$order_total = 0;
+
+	    	foreach($results_cumm_taxes as $results_cumm_tax) {
+	    		$prod_meta_values = explode('###', $results_cumm_tax['prod_othermeta_value']);
+                $prod_meta_key = explode('###', $results_cumm_tax['prod_othermeta_key']);
+
+                if (count($prod_meta_values) != count($prod_meta_key))
+                    continue;
+                // unset($results_cumm_tax['prod_othermeta_value']);
+                // unset($results_cumm_tax['prod_othermeta_key']);
+                $prod_meta_key_values = array_combine($prod_meta_key, $prod_meta_values);
+
+                $tax = $tax + $prod_meta_key_values['_order_tax'];
+                $shipping_tax = $shipping_tax + $prod_meta_key_values['_order_shipping_tax'];
+                $shipping = $shipping + $prod_meta_key_values['_order_shipping'];
+                $order_total = $order_total + $prod_meta_key_values['_order_total'];
+
+	    	}
+
+	    	$tax_data['tax'] = $tax;
+	    	$tax_data['shipping_tax'] = $shipping_tax;
+	    	$tax_data['shipping'] = $shipping;
+	    	$tax_data['net_sales'] = $order_total - ($tax + $shipping_tax + $shipping);
+	    	$tax_data['total_sales'] = $order_total;
+	    }
+
 	    if (isset($post['option'])) { // Condition to get the data when the Top Products Toggle button is clicked
 	        $results [0] = $cumm_top_prod_graph_data;
 	    }
@@ -853,6 +900,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $results [11] = $sr_per_order_containing_coupons;
 
 	        $results [12] = $results_top_payment_gateway;
+
+	        $results [13] = $tax_data;
 
 	    }
 
@@ -1016,8 +1065,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $results[2] = $max_date_sales;
 	    }
 	    else {
-	        $results[13] = $min_date_sales;
-	        $results[14] = $max_date_sales;
+	        $results[14] = $min_date_sales;
+	        $results[15] = $max_date_sales;
 	    }
 
 	    return $results;
@@ -1160,6 +1209,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $encoded['img_cumm_sales'] = $imgurl_cumm_sales;
 	        $encoded['diff_cumm_sales'] = sr_number_format(abs($diff_cumm_sales),$sr_decimal_places);
 	        $encoded['currency_symbol'] = $sr_currency_symbol;
+	        $encoded['decimal_places'] = $sr_decimal_places;
 	        $encoded['top_prod_data'] = $actual_cumm_sales[2];
 	        $encoded['top_cust_data'] = $actual_cumm_sales[3];
 
@@ -1190,8 +1240,10 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	        $encoded['top_gateway_data'] = $actual_cumm_sales[12];
 
-	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[13];
-	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[14];
+	        $encoded['cumm_taxes'] = $actual_cumm_sales[13];
+
+	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[14];
+	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[15];
 
 	        $encoded['siteurl'] = get_option('siteurl');
 	        
