@@ -3,8 +3,8 @@ Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, naresh.vachhani,
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 3.6
-Stable tag: 2.3
+Tested up to: 3.6.1
+Stable tag: 2.4
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -41,9 +41,16 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 == Screenshots ==
 
-1. Smart Reporter Products Report Dashboard (some features only in paid versions)
+1. Smart Reporter Pro for WooCommerce Dashboard (some features only in paid versions)
+
+2. Smart Reporter as seen on an iPhone
+
+3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.4 =
+* New: Cart Abandonment Related Widgets [Smart Reporter Beta] (WooCommerce)
 
 = 2.3 =
 * New: Taxes & Shipping Widget [Smart Reporter Beta] (WooCommerce)
@@ -130,6 +137,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 
 == Upgrade Notice ==
+
+= 2.4 =
+New Cart Abandonment Related Widgets released for Smart Reporter Beta and compatibility with new version of WordPress, recommended upgrade.
 
 = 2.3 =
 New Taxes & Shipping Widget released for Smart Reporter Beta and compatibility with new versions of WooCommerce & WordPress, recommended upgrade.
