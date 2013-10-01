@@ -34,37 +34,89 @@ body {
   .cumm_header, .cumm_total {
     font-size: 0.2em; 
   }
+  
+  .cumm_widget_top_cust_coupons {
+    width: 53.6em;      
+  }
+
+  .sr_cumm_date {
+    margin-left: 57.5em;
+  }
 }
 
 @media only screen and (min-width: 1301px) and (max-width: 1500px) {
   body { font-size: 91.8%; }  
+
 }
 
 @media only screen and (min-device-width: 1152px) and (max-device-width: 1300px) {
   body { font-size: 79.26%; }
+  .cumm_widget_top_cust_coupons {
+    width: 53.6em;      
+  }
+
+  .sr_cumm_date {
+    margin-left: 57.5em;
+  }
+
 }
 
 @media only screen and (min-device-width: 1151px) and (max-device-width: 1151px) {
   body { font-size: 76.83%; }
+
+  .cumm_widget_top_cust_coupons {
+    width: 53.6em;      
+  }
+
+  .sr_cumm_date {
+    margin-left: 57.5em;
+  }
 }
 
 @media only screen and (min-width: 1001px) and (max-width: 1150px) {
   /*body { font-size: 76.83%; }*/
   body { font-size: 65.57%; }
+
+  .cumm_widget_top_cust_coupons {
+    width: 53.6em;     
+  }
+
+  .sr_cumm_date {
+    margin-left: 57.5em;
+  }
 }
 
 @media only screen and (min-width: 501px) and (max-width: 1000px) {
   body { font-size: 76%; }
+
+  .cumm_widget_top_cust_coupons {
+    width: 27em;      
+  }
+
+  .sr_cumm_date {
+    margin-left: 30.9em;
+  }
+
 }
 @media (min-width: 0px) and (max-width: 500px) {
   body {
     font-size:100%;
   }
+
+
   .cumm_widget {
     font-size: 1em;
   }
   .cumm_header, .cumm_total {
     font-size: 0.2em; 
+  }
+
+  .cumm_widget_top_cust_coupons {
+    width: 27em;      
+  }
+
+  .sr_cumm_date {
+    margin-left: 4.2em;
   }
 
 }
@@ -323,7 +375,7 @@ pre.code{
 
 .average_order_items_text {
     color: #7C7C86;
-    font-size: 0.41em;
+    font-size: 0.36em;
     font-weight: 500;
     margin-top: 0.15em;
 }
@@ -357,7 +409,7 @@ pre.code{
 	border: 0.2em solid #e8e8e8;
 	/*border-radius: 0.7em;*/
 	/*background-image: url("../resources/themes/images/orders_stats.png");*/
-	margin-right: 1.8em;
+	margin-right: 1.89em;
 	margin-bottom: 2em;
   margin-top: 0.29em;
 }
@@ -385,7 +437,7 @@ pre.code{
 .daily_widgets_text {
 
     margin-top: 0.4em;
-    margin-left: 3.8em;
+    margin-left: 3.7em;
     color: #727277;
     font-weight: 500;
     font-size: 1.1em;
@@ -398,7 +450,7 @@ pre.code{
     color: #4083D8;
     font-weight: 500;
     margin-top: 0.9em;
-    margin-left: 1.7em;
+    margin-left: 1.8em;
     /*float: right*/
 }
 
@@ -441,7 +493,7 @@ pre.code{
   height: 2.0em;
   /*float: right;*/
   width: 21em;
-  margin-left: 57.5em;
+  /*margin-left: 57.5em;*/
   margin-right: 0.2em;
   border-bottom: 0.2em solid #368ee0;
 }
@@ -482,11 +534,12 @@ pre.code{
 .cumm_widget {
 	float: left;
 	/*margin-left: 2%;*/
-	margin-right: 1.45em;
+	margin-right: 1.65em;
 	/*margin-bottom: 1.7em;*/
 	margin-top: 1.7em;
 	width: 24.7em;
-	border: 0.2em solid #368ee0;
+  /*border: 0.2em solid #368ee0;*/
+	border: 0.2em solid #e8e8e8;
 	height: 23em;
   margin-left: 0.1em;
 }
@@ -562,12 +615,12 @@ pre.code{
 }
 
 .sr_cumm_small_widget {
-    width: 24.7em;
-    height: 6.4em;
-    border: 0.2em solid #368ee0;
+    width: 11.3em;
+    height: 8.5em;
+    border: 0.2em solid #e8e8e8;
     float: left;
     margin-top: 1.7em;
-    margin-right: 1.45em;
+    margin-right: 1.69em;
     margin-left: 0.1em;
     text-align: center;
 }
@@ -586,7 +639,18 @@ pre.code{
 }
 
 .sr_cumm_order_coupons_count {
-  margin-top: 10em;
+  /*margin-top: 10em;*/
+}
+
+.sr_cumm_avg_tot_content {
+  margin-bottom: 0.45em;
+  margin-top: 0.3em;
+}
+
+
+
+.cumm_widget_top_cust_coupons {
+  float:left;
 }
 
 .sr_cumm_avg_order_value {
@@ -597,13 +661,13 @@ pre.code{
 	font-family: Helvetica, Arial, sans-serif;
     color: #666;
 	font-size: 2.5em;
-	margin-left: 0.4em;
+	/*margin-left: 0.4em;*/
 	margin-top: 0.35em;
 }
 
 .average_order_total_text {
     color: #7C7C86;
-    font-size: 0.41em;
+    font-size: 0.36em;
     font-weight: 500;
     margin-top: 0.15em;
 }

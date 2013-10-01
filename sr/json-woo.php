@@ -16,7 +16,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	global $wpdb;
 
-
 	if (isset ( $_GET ['start'] ))
 	    $offset = $_GET ['start'];
 	else
@@ -42,7 +41,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	}
 
 	//Cummulative sales Query function
-	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$terms_post,$post) {
+	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$select_top_abandoned_prod,$terms_post,$post) {
 
 	    global $wpdb;
 	    $monthly_sales = array();
@@ -98,7 +97,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                                            AND post_id IN ($terms_post))
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
-	                                LIMIT 4";
+	                                LIMIT 5";
 
 	    $results_cumm_top_cust_guest   =  $wpdb->get_results ( $query_cumm_top_cust_guest, 'ARRAY_A' );    
 	    $rows_cumm_top_cust_guest    =  $wpdb->num_rows;
@@ -167,7 +166,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                                            AND post_id IN ($terms_post))
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
-	                                LIMIT 4";
+	                                LIMIT 5";
 
 	    $results_cumm_top_cust_reg   =  $wpdb->get_results ( $query_cumm_top_cust_reg, 'ARRAY_A' );    
 	    $rows_cumm_top_cust_reg    =  $wpdb->num_rows;
@@ -220,7 +219,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	    if(!empty($results_cumm_top_cust)) {
 	        usort($results_cumm_top_cust, 'usort_callback');
-	        $results_cumm_top_cust = array_slice($results_cumm_top_cust, 0, 4);    
+	        $results_cumm_top_cust = array_slice($results_cumm_top_cust, 0, 5);    
 	    }
 	    else {
 	        $results_cumm_top_cust = "";
@@ -533,6 +532,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
         $results_cumm_discount_sales    = $wpdb->get_results ( $query_cumm_discount_sales, 'ARRAY_A' );
 	    $rows_cumm_discount_sales 	  =  $wpdb->num_rows;
 
+
+
 	    $cumm_discount_sales_temp = $date_series;
 	    $cumm_discount_sales = array();
 	    $max_discount_total = 0;
@@ -578,7 +579,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                            AND order_items.order_item_type IN ('coupon')
 	                            GROUP BY order_items.order_item_name
 	                            ORDER BY coupon_count DESC, coupon_amount DESC
-	                            LIMIT 4";
+	                            LIMIT 5";
 
         $results_cumm_coupon_count    = $wpdb->get_results ( $query_cumm_coupon_count, 'ARRAY_A' );
 	    $rows_cumm_coupon_count	  =  $wpdb->num_rows;
@@ -663,8 +664,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	    $cumm_payment_gateway_temp = $date_series;
 	    $cumm_payment_gateway_sales = array();
-	    $max_discount_total = 0;
-	    $total_discount_sales = 0;
 
 		if($rows_top_gateways_graph > 0) {
 
@@ -832,8 +831,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
                 if (count($prod_meta_values) != count($prod_meta_key))
                     continue;
-                // unset($results_cumm_tax['prod_othermeta_value']);
-                // unset($results_cumm_tax['prod_othermeta_key']);
+                
                 $prod_meta_key_values = array_combine($prod_meta_key, $prod_meta_values);
 
                 $tax = $tax + $prod_meta_key_values['_order_tax'];
@@ -849,6 +847,290 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    	$tax_data['net_sales'] = $order_total - ($tax + $shipping_tax + $shipping);
 	    	$tax_data['total_sales'] = $order_total;
 	    }
+
+
+
+
+	    //Query to get Top Abandoned Products
+
+	    $current_time = current_time('timestamp');
+		$cut_off_time = (get_option('sr_abandoned_cutoff_time')) ? get_option('sr_abandoned_cutoff_time') : 0;
+		$cart_cut_off_time = $cut_off_time * 60;
+		$compare_time = $current_time - $cart_cut_off_time;
+
+		//Query to update the abandoned product status
+	    $query_abandoned_status = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
+	    							SET product_abandoned = 1
+	    							WHERE order_id IS NULL
+	    								AND abandoned_cart_time < ". $compare_time;
+
+		$wpdb->query ( $query_abandoned_status );
+
+		//Query to get the Top Abandoned Products
+
+		$query_top_abandoned_products = "SELECT SUM(quantity) as abondoned_qty,
+											GROUP_CONCAT(quantity order by id SEPARATOR '###') AS abandoned_quantity,
+											product_id as id,
+											$select_top_abandoned_prod
+										FROM {$wpdb->prefix}sr_woo_abandoned_items
+										WHERE order_id IS NULL                            
+											AND product_abandoned = 1
+											AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'
+										GROUP BY product_id
+										ORDER BY abondoned_qty DESC
+										LIMIT 5";
+
+		$results_top_abandoned_products    = $wpdb->get_results ( $query_top_abandoned_products, 'ARRAY_A' );
+	    $rows_top_abandoned_products 	  =  $wpdb->num_rows;
+
+
+	    if ($rows_top_abandoned_products > 0) {
+
+	    	$prod_id = array();
+
+			foreach ($results_top_abandoned_products as $results_top_abandoned_product) {
+				$prod_id[] = $results_top_abandoned_product['id'];
+			}	    	
+
+			$prod_id = implode(",", $prod_id);
+
+			$query_prod_abandoned_rate = "SELECT SUM(quantity) as abondoned_rate
+											FROM {$wpdb->prefix}sr_woo_abandoned_items
+											WHERE product_abandoned = 1
+												AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'
+												AND product_id IN (". $prod_id .")
+											GROUP BY product_id
+											ORDER BY FIND_IN_SET(product_id,'$prod_id') ";
+
+			$results_prod_abandoned_rate    = $wpdb->get_col ( $query_prod_abandoned_rate );
+		    $rows_prod_abandoned_rate 	  =  $wpdb->num_rows;
+
+		    $j = 0;
+
+		    $total_prod_abandoned_qty = 0;
+		    $total_prod_qty = 0;
+
+
+		    //Query to get the variation Attributes in a formatted manner
+
+		    $query_attributes = "SELECT post_id,
+		    							GROUP_CONCAT(meta_key order by meta_id SEPARATOR '###') AS meta_key,
+		    							GROUP_CONCAT(meta_value order by meta_id SEPARATOR '###') AS meta_value
+				    			FROM {$wpdb->prefix}postmeta
+				    			WHERE meta_key like 'attribute_%'
+				    				AND post_id IN ($prod_id)
+				    			GROUP BY post_id";
+		   	$results_attributes    = $wpdb->get_results ( $query_attributes, 'ARRAY_A' );
+		    $rows_attributes 	  =  $wpdb->num_rows; 
+
+		    $variation_attributes = array();
+
+		    foreach ($results_attributes as $results_attribute) {
+		    	$meta_key = explode('###', $results_attribute['meta_key']);
+                $meta_value = explode('###', $results_attribute['meta_value']);
+
+                if (count($meta_key) != count($meta_value))
+                    continue;
+
+                $variation_attributes[$results_attribute['post_id']] = woocommerce_get_formatted_variation( array_combine($meta_key,$meta_value), true );
+                
+		    }
+
+
+	    	foreach ($results_top_abandoned_products as &$results_top_abandoned_product) {
+	    		$abandoned_quantity = explode('###', $results_top_abandoned_product['abandoned_quantity']);
+                $abandoned_dates = explode('###', $results_top_abandoned_product['abandoned_dates']);
+
+                if ($group_by == "display_date_time") {
+					$abandoned_dates_comp = explode('###', $results_top_abandoned_product['comp_time']);                	
+                }
+
+                if (count($abandoned_quantity) != count($abandoned_dates))
+                    continue;
+
+                unset($results_top_abandoned_product['abandoned_quantity']);
+                unset($results_top_abandoned_product['abandoned_dates']);
+
+                if ($group_by == "display_date_time") {
+                	unset($results_top_abandoned_product['comp_time']);
+                }
+
+                $abandoned_date_series = $date_series;
+
+                if ($group_by == "display_date_time") {
+
+                	for ($i=0; $i<sizeof($abandoned_dates_comp); $i++) {
+                		$abandoned_date_series[$abandoned_dates_comp[$i]]['post_date'] = $abandoned_dates[$i];
+						$abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] = $abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] + $abandoned_quantity[$i];
+	                }
+
+                } else {
+                	for ($i=0; $i<sizeof($abandoned_dates); $i++) {
+						$abandoned_date_series[$abandoned_dates[$i]]['sales'] = $abandoned_date_series[$abandoned_dates[$i]]['sales'] + $abandoned_quantity[$i];
+	                }	
+                }
+
+                $results_top_abandoned_product ['graph_data'] = array();
+
+                foreach ($abandoned_date_series as $abandoned_date_series1) {
+                	$results_top_abandoned_product['graph_data'][] = $abandoned_date_series1;
+                }
+
+                $results_top_abandoned_product['price'] = get_post_meta($results_top_abandoned_product['id'],'_price',true) * $results_top_abandoned_product['abondoned_qty'];
+
+                $results_top_abandoned_product['abondoned_qty'] = floatval($results_top_abandoned_product['abondoned_qty']);
+
+                $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/$results_prod_abandoned_rate[$j])*100;
+
+                $results_top_abandoned_product['abandoned_rate'] = round($abandoned_rate,get_option( 'woocommerce_price_num_decimals' )) . "%";
+
+                //Code for formatting the product name
+
+
+                $post_parent = wp_get_post_parent_id($results_top_abandoned_product['id']);
+
+                if ($post_parent  > 0) {
+                	$results_top_abandoned_product ['prod_name'] = get_the_title($post_parent) . " (". $variation_attributes[$results_top_abandoned_product['id']] .")";
+
+                } else {
+                	$results_top_abandoned_product ['prod_name'] = get_the_title($results_top_abandoned_product['id']);
+                }
+
+                $total_prod_abandoned_qty = $total_prod_abandoned_qty + $results_top_abandoned_product['abondoned_qty'];
+                $total_prod_qty = $total_prod_qty + $results_prod_abandoned_rate[$j];
+
+                $j++; 
+
+	    	}
+
+	    }
+
+	    $query_min_abandoned_date = "SELECT MIN(abandoned_cart_time) AS min_abandoned_date
+	    							FROM {$wpdb->prefix}sr_woo_abandoned_items";
+		$results_min_abandoned_date = $wpdb->get_col ( $query_min_abandoned_date );
+		$rows_min_abandoned_date   = $wpdb->num_rows;
+
+		$min_abandoned_date = '';
+
+		if ($results_min_abandoned_date[0] != '') {
+			$min_abandoned_date = date('Y-m-d',(int)$results_min_abandoned_date[0]);
+		}
+		
+	    //Cumm Cart Abandonment Rate
+
+	    $query_total_cart = "SELECT COUNT(DISTINCT cart_id) as total_cart_count
+			    			FROM {$wpdb->prefix}sr_woo_abandoned_items
+			    			WHERE abandoned_cart_time >= ".strtotime($start_date)." AND abandoned_cart_time <=". strtotime($end_date_query);
+		$total_cart_count    = $wpdb->get_col ( $query_total_cart );
+		$rows_total_cart 	 = $wpdb->num_rows; 
+
+		$query_total_abandoned_cart = "SELECT COUNT(DISTINCT cart_id) as total_cart_abandoned_count
+						    			FROM {$wpdb->prefix}sr_woo_abandoned_items
+						    			WHERE abandoned_cart_time >= ".strtotime($start_date)." AND abandoned_cart_time <=". strtotime($end_date_query)."
+						    				AND product_abandoned = 1
+						    				AND order_id IS NULL";
+		$total_abandoned_cart_count    = $wpdb->get_col ( $query_total_abandoned_cart );
+		$rows_total_abandoned_cart 	 = $wpdb->num_rows; 
+
+	    if ( $rows_total_abandoned_cart > 0) {
+	    	$cumm_cart_abandoned_rate = round(($total_abandoned_cart_count[0]/$total_cart_count[0])*100, get_option( 'woocommerce_price_num_decimals' )); 		
+	    } else {
+	    	$cumm_cart_abandoned_rate = 0;
+	    }
+
+
+	    //Sales Funnel
+
+	    $cumm_sales_funnel = array();
+
+	    //Query to get the total products added to cart
+
+	    if ($rows_total_cart > 0) {
+	    	$query_products_added_cart = "SELECT SUM(quantity) as total_prod_added_cart
+						    			FROM {$wpdb->prefix}sr_woo_abandoned_items
+						    			WHERE abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'";
+			$total_products_added_cart  = $wpdb->get_col ( $query_products_added_cart );
+			
+			$cumm_sales_funnel['total_cart_count'] = floatval($total_cart_count[0]);
+			$cumm_sales_funnel['total_products_added_cart'] = floatval($total_products_added_cart[0]);
+	    } else {
+	    	$cumm_sales_funnel['total_cart_count'] = 0;
+	    	$cumm_sales_funnel['total_products_added_cart'] = 0;
+	    }
+	    
+
+	    //Query to get the placed order ids
+	    $query_orders_placed = "SELECT DISTINCT id as completed_order_ids
+	    							FROM {$wpdb->prefix}posts AS posts
+	                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+	                                                            ON term_relationships.object_id = posts.ID 
+	                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+	                                            JOIN {$wpdb->prefix}terms AS terms 
+	                                                            ON term_taxonomy.term_id = terms.term_id
+		                            WHERE posts.post_status IN ('publish')
+		                                AND posts.post_type IN ('shop_order')
+		                                AND (posts.post_date BETWEEN '$start_date' AND '$end_date_query')";
+	                  
+	    $results_orders_placed = $wpdb->get_col($query_orders_placed);
+	    $rows_orders_placed =  $wpdb->num_rows;	    
+
+	    if ($rows_orders_placed > 0) {
+	    	
+	    	$cumm_sales_funnel['orders_placed_count'] = floatval(sizeof($results_orders_placed));
+
+	    	//Query to get the count of the products purchased
+	    	
+	    	$query_products_purchased = "SELECT SUM(quantity) as query_products_sold
+	    							FROM {$wpdb->prefix}sr_woo_order_items
+	    							WHERE order_id IN (". implode(",",$results_orders_placed) .")";
+			$results_products_purchased = $wpdb->get_col($query_products_purchased);
+	    	$rows_products_purchased =  $wpdb->num_rows;
+
+	    	$cumm_sales_funnel['products_purchased_count'] = floatval($results_products_purchased[0]);
+
+	    } else {
+			$cumm_sales_funnel['orders_placed_count'] = 0;
+			$cumm_sales_funnel['products_purchased_count'] = 0;
+	    }
+
+
+	    //Query to get the completed order ids
+	    $query_orders_completed = "SELECT DISTINCT id as completed_order_ids
+	    							FROM {$wpdb->prefix}posts AS posts
+	                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+	                                                            ON term_relationships.object_id = posts.ID 
+	                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+	                                            JOIN {$wpdb->prefix}terms AS terms 
+	                                                            ON term_taxonomy.term_id = terms.term_id
+		                            WHERE terms.name IN ('completed')
+		                                AND posts.post_status IN ('publish')
+		                                AND posts.post_type IN ('shop_order')
+		                                AND (posts.post_date BETWEEN '$start_date' AND '$end_date_query')";
+	                  
+	    $results_orders_completed = $wpdb->get_col($query_orders_completed);
+	    $rows_orders_completed =  $wpdb->num_rows;	    
+
+	    if ($rows_orders_completed > 0) {
+	    	
+	    	$cumm_sales_funnel['orders_completed_count'] = floatval(sizeof($results_orders_completed));
+
+	    	//Query to get the count of the products sold
+	    	
+	    	$query_products_sold = "SELECT SUM(quantity) as query_products_sold
+	    							FROM {$wpdb->prefix}sr_woo_order_items
+	    							WHERE order_id IN (". implode(",",$results_orders_completed) .")";
+			$results_products_sold = $wpdb->get_col($query_products_sold);
+	    	$rows_products_sold =  $wpdb->num_rows;
+
+	    	$cumm_sales_funnel['products_sold_count'] = floatval($results_products_sold[0]);
+
+	    } else {
+			$cumm_sales_funnel['orders_completed_count'] = 0;
+			$cumm_sales_funnel['products_sold_count'] = 0;
+	    }
+	    
 
 	    if (isset($post['option'])) { // Condition to get the data when the Top Products Toggle button is clicked
 	        $results [0] = $cumm_top_prod_graph_data;
@@ -903,6 +1185,12 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	        $results [13] = $tax_data;
 
+	        $results [14] = $results_top_abandoned_products;
+	        
+	        $results [15] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_cart_abandoned_rate : '';
+
+	        $results [16] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_sales_funnel : '';
+
 	    }
 
 	    return $results;
@@ -912,6 +1200,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	function sr_get_sales($start_date,$end_date,$diff_dates,$post) {
 	    global $wpdb;
+
+
 
 	    $cumm_sales = array();
 
@@ -1015,6 +1305,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    	$terms_post = implode(",",$terms_post);
 	    }
 
+
 	    if ($diff_dates > 0 && $diff_dates <= 30) {
 	        $select = "DATE_FORMAT(posts.`post_date`, '%Y-%m-%d') AS display_date";
 
@@ -1022,7 +1313,9 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%Y-%m-%d') by posts.id SEPARATOR '###') AS order_dates";
 
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date",$select_top_prod,$terms_post,$post);
+	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y-%m-%d') order by id SEPARATOR '###') AS abandoned_dates";
+
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);
 
 	    }
 	    else if ($diff_dates > 30 && $diff_dates <= 365) {
@@ -1033,7 +1326,9 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%b') by posts.id SEPARATOR '###') AS order_dates";
 
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"month_nm",$select_top_prod,$terms_post,$post);
+	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%b') order by id SEPARATOR '###') AS abandoned_dates";
+
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"month_nm",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);
 	    }
 	    else if ($diff_dates > 365) {
 	        $select = "DATE_FORMAT(MAX(posts.`post_date`), '%Y-%m-%d') AS display_date,
@@ -1042,8 +1337,10 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $select_top_prod = "GROUP_CONCAT(order_item.sales order by order_item.order_id SEPARATOR '###') AS sales_details,
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%Y') by posts.id SEPARATOR '###') AS order_dates";
+
+	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y') order by id SEPARATOR '###') AS abandoned_dates";
 	        
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"year_nm",$select_top_prod,$terms_post,$post);  
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"year_nm",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);  
 	    }
 	    else {
 	        $select = "DATE_FORMAT(posts.`post_date`, '%Y/%m/%d') AS display_date_time,
@@ -1054,10 +1351,13 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%H:%i:%s') by posts.id SEPARATOR '###') AS display_time,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%k') by posts.id SEPARATOR '###') AS comp_time";
-	                    
-	        $end_date_query = date('Y-m-d', strtotime($end_date_query .' +1 day'));
 
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date_time",$select_top_prod,$terms_post,$post);  
+	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y/%m/%d %H:%i:%s') order by id SEPARATOR '###') AS abandoned_dates,
+	        							  GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%k') order by id SEPARATOR '###') AS comp_time";
+	                    
+	        // $end_date_query = date('Y-m-d', strtotime($end_date_query .' +1 day'));
+
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date_time",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);  
 	    }
 
 	    if (isset($post['option'])) {
@@ -1065,8 +1365,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        $results[2] = $max_date_sales;
 	    }
 	    else {
-	        $results[14] = $min_date_sales;
-	        $results[15] = $max_date_sales;
+	        $results[17] = $min_date_sales;
+	        $results[18] = $max_date_sales;
 	    }
 
 	    return $results;
@@ -1082,22 +1382,39 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    
 	    $start_date = date('Y-m-d H:i:s',(int)strtotime($_POST['start_date']));
 	    
+	    $date_convert = 0;
+
+
+
 	    if (!empty($_POST['end_date']) || $_POST['end_date'] != "") {
-	        $end_date = $_POST['end_date'] . " 23:59:59";
-	        $end_date_org = $end_date;
+
+	        if ($_POST['end_date'] == date('Y-m-d')) {
+
+	        	$end_date = $_POST['end_date'];
+	        	$date_convert = 1;
+
+	        } else {
+	        	$end_date = $_POST['end_date'] . " 23:59:59";
+	        	$end_date_org = $end_date;
+	        }
+
+
 	    }
 	    else {
 	        // $end_date = date('Y-m-d', strtotime($_POST['start_date'] .' +1 month'));
 	        $end_date = date('Y-m-d H:i:s');
 	        $_POST['end_date'] = $end_date;
-
-	        $date = date('Y-m-d',(int)strtotime($end_date));
-		    $curr_time_gmt = date('H:i:s',time()- date("Z"));
-		    $new_date = $date ." " . $curr_time_gmt;
-		    $end_date = date('Y-m-d H:i:s',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;
+	        $date_convert = 1;
 	    }
 
-	    
+
+	    if ($date_convert == 1) {
+	    	$date = date('Y-m-d',(int)strtotime($end_date));
+		    $curr_time_gmt = date('H:i:s',time()- date("Z"));
+		    $new_date = $date ." " . $curr_time_gmt;
+		    $end_date = date('Y-m-d H:i:s',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;	
+	    }
+
 
 	    $strtotime_start = strtotime($start_date);
 	    $strtotime_end = strtotime($end_date);
@@ -1204,6 +1521,22 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	            $diff_cumm_per_order_coupons = $actual_cumm_sales[11] - $comparison_cumm_sales[11];
 	        }
 
+
+	        // //Code for handling the Cumm Abandonment Rate Widget
+
+	        if ($comparison_cumm_sales[15] < $actual_cumm_sales[15]) {
+	            $imgurl_cumm_abandonment_rate = $_POST['SR_IMG_UP_GREEN'];
+	        }
+	        else {
+	            $imgurl_cumm_abandonment_rate = $_POST['SR_IMG_DOWN_RED'];
+	        }
+	        if ($comparison_cumm_sales[15] == 0) {
+	            $diff_cumm_abandonment_rate = round($actual_cumm_sales[15],get_option( 'woocommerce_price_num_decimals' ));
+	        }
+	        else {
+	            $diff_cumm_abandonment_rate = $actual_cumm_sales[15] - $comparison_cumm_sales[15];
+	        }
+
 	        $encoded['result_monthly_sales'] = $actual_cumm_sales[0];
 	        $encoded['total_monthly_sales'] = $sr_currency_symbol . sr_number_format($actual_cumm_sales[1],$sr_decimal_places);
 	        $encoded['img_cumm_sales'] = $imgurl_cumm_sales;
@@ -1242,8 +1575,24 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	        $encoded['cumm_taxes'] = $actual_cumm_sales[13];
 
-	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[14];
-	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[15];
+	        $encoded['cumm_top_abandoned_products'] = $actual_cumm_sales[14];
+
+	        if ($actual_cumm_sales[15] != "") {
+	        	$encoded['cumm_abandoned_rate'] = sr_number_format($actual_cumm_sales[15],$sr_decimal_places);
+		        $encoded['img_cumm_abandoned_rate'] = $imgurl_cumm_abandonment_rate;
+		        $encoded['diff_cumm_abandoned_rate'] = sr_number_format(abs($diff_cumm_abandonment_rate),$sr_decimal_places);	
+	        } else {
+	        	$encoded['cumm_abandoned_rate'] = '';
+		        $encoded['img_cumm_abandoned_rate'] = '';
+		        $encoded['diff_cumm_abandoned_rate'] = '';
+	        }
+
+	        
+
+	        $encoded['cumm_sales_funnel'] = $actual_cumm_sales[16];
+
+	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[17];
+	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[18];
 
 	        $encoded['siteurl'] = get_option('siteurl');
 	        
