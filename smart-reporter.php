@@ -3,17 +3,17 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.4
+Version: 2.5
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
-Copyright (c) 2011, 2012, 2013 Store Apps All rights reserved.
+Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
 */
 
 //Hooks
 register_activation_hook ( __FILE__, 'sr_activate' );
 register_deactivation_hook ( __FILE__, 'sr_deactivate' );
 
-define ( 'IS_WOO16', version_compare ( WOOCOMMERCE_VERSION, '2.0', '<' ) ); // Flag for Handling Woo 2.0 and above
+define ( 'IS_WOO16', version_compare ( get_option( 'woocommerce_version' ), '2.0', '<' ) ); // Flag for Handling Woo 2.0 and above
 
 function woocommerce_shop_order_search_custom_fields1( $wp ) {
     global $pagenow, $wpdb;
@@ -123,11 +123,19 @@ function sr_deactivate() {
 		$wpdb->query( "DROP TABLE {$wpdb->prefix}sr_woo_order_items" );
 		$wpdb = clone $wpdb_obj;
 	}
+
+	wp_clear_scheduled_hook( 'sr_send_summary_mails' ); //For clearing the scheduled daily summary mails event
 }
 
 function get_latest_version($plugin_file) {
+
+	$latest_version = '';
+
 	$sr_plugin_info = get_site_transient ( 'update_plugins' );
-	$latest_version = $sr_plugin_info->response [$plugin_file]->new_version;
+	// if ( property_exists($sr_plugin_info, 'response [$plugin_file]') && property_exists('response [$plugin_file]', 'new_version') ) {
+	if ( property_exists($sr_plugin_info, 'response [$plugin_file]') ) {
+		$latest_version = $sr_plugin_info->response [$plugin_file]->new_version;	
+	}
 	return $latest_version;
 }
 
@@ -338,6 +346,14 @@ function is_pro_updated() {
     }
 	
 
+	add_action ( 'init', 'sr_schedule_daily_summary_mails' );
+
+	function sr_schedule_daily_summary_mails() {
+		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr-summary-mails.php' )) {
+			include ('pro/sr-summary-mails.php');
+		}
+	}
+
 
 /**
  * Throw an error on admin page when WP e-Commerece plugin is not activated.
@@ -387,27 +403,28 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
 		$ext_version 	= '4.0.1';
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
+		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) ) {
 			define('WPSC_WOO_ACTIVATED',true);
-		} elseif (is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
+		} elseif ( defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
 			define('WPSC_ACTIVATED',true);
 		} elseif (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
 			define('WOO_ACTIVATED', true);
 		}
 		
 		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
-		if ($_GET['post_type'] == 'wpsc-product' || $_GET['page'] == 'smart-reporter-wpsc') {
+		if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
 			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 			define('WPSC_RUNNING', true);
 			define('WOO_RUNNING', false);
 			// checking the version for WPSC plugin
 			define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
 			define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
+
 			if ( IS_WPSC38 ) {		// WPEC 3.8.7 OR 3.8.8
 				define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.8', '<' ));
 				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
 			}
-		} else if ($_GET['post_type'] == 'product' || $_GET['page'] == 'smart-reporter-woo') {
+		} else if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') )  {
 			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
 				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
 			}
@@ -433,10 +450,17 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 
 		if (SRPRO === true) {
+
 			include ('pro/upgrade.php');
+
+			//wp-ajax action
+			if (is_admin() ) {
+	            add_action ( 'wp_ajax_top_ababdoned_products_export', 'sr_top_ababdoned_products_export' );
+	            add_action ( 'wp_ajax_sr_save_settings', 'sr_save_settings' );
+	        }
+
+			
 		}
-
-
 
 		// ================================================================================================
 		//Registering scripts and stylesheets for SR Beta Version
@@ -490,7 +514,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 		$page = add_submenu_page ('woocommerce', 'Smart Reporter', 'Smart Reporter', 'manage_woocommerce', 'smart-reporter-woo','admin_page');
 
-		if ($_GET ['action'] != 'sr-settings') { // not be include for settings page
+		// if ( $_GET ['action'] != 'sr-settings') { // not be include for settings page
+		if ( !isset($_GET ['action']) ) { // not be include for settings page
 			add_action ( 'admin_print_scripts-' . $page, 'sr_admin_scripts' );
 		}
 		add_action ( 'admin_print_styles-' . $page, 'sr_admin_styles' );
@@ -534,7 +559,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	function wpsc_add_modules_sr_admin_pages($page_hooks, $base_page) {
 		$page = add_submenu_page ( $base_page, 'Smart Reporter', 'Smart Reporter', 'manage_options', 'smart-reporter-wpsc', 'sr_show_console' );
 		add_action ( 'admin_print_styles-' . $page, 'sr_admin_styles' );
-		if ($_GET ['action'] != 'sr-settings') { // not be include for settings page
+		// if ( $_GET ['action'] != 'sr-settings') { // not be include for settings page
+		if ( !isset($_GET ['action']) ) { // not be include for settings page
 			add_action ( 'admin_print_scripts-' . $page, 'sr_admin_scripts' );
 		}
 		$page_hooks [] = $page;
@@ -840,7 +866,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$latest_version = get_latest_version (SR_PLUGIN_FILE );
 		$is_pro_updated = is_pro_updated ();
 		
-		if ($_GET ['action'] == 'sr-settings') {
+		if ( isset($_GET ['action']) && $_GET ['action'] == 'sr-settings') {
+
+
 			sr_settings_page (SR_PLUGIN_FILE);
 		} else {
 			$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
@@ -886,15 +914,15 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 	            $before_plug_page = '<a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
 	            
-	            if (SR_BETA == "true") {
-	            	// $before_plug_page .= ' | <a href="#" class="show_hide" rel="#slidingDiv">Settings</a>';
-	            	$after_plug_page = '';
-	            	$plug_page = '';
-	            }
-	            else {
+	            // if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') && SR_BETA == "true") {
+	            // 	// $before_plug_page .= ' | <a href="#" class="show_hide" rel="#slidingDiv">Settings</a>';
+	            // 	$after_plug_page = '';
+	            // 	$plug_page = '';
+	            // }
+	            // else {
 	            	$before_plug_page .= ' | <a href="admin.php?page=smart-reporter-';
 	            	$after_plug_page = '&action=sr-settings">Settings</a>';
-	            }
+	            // }
 
 	        }
 
@@ -931,29 +959,36 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 <?php
 			$error_message = '';
 			if ((file_exists( WP_PLUGIN_DIR . '/wp-e-commerce/wp-shopping-cart.php' )) && (file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ))) {
-			if (is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
-                            require_once (WPSC_FILE_PATH . '/wp-shopping-cart.php');
-                            if (IS_WPSC37 || IS_WPSC38) {
-                                if (file_exists( $base_path . 'reporter-console.php' )) {
-                                        include_once ($base_path . 'reporter-console.php');
-                                        return;
-                                } else {
-                                        $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
-                                }
-                            } else {
-                                $error_message = __( 'Smart Reporter currently works only with WP e-Commerce 3.7 or above.', 'smart-reporter' );
-                            }
+			
+			if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
+
+				if (is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
+	                require_once (WPSC_FILE_PATH . '/wp-shopping-cart.php');
+	                
+	                
+	                	if ( IS_WPSC37 || IS_WPSC38 ) {
+	                        if (file_exists( $base_path . 'reporter-console.php' )) {
+	                                include_once ($base_path . 'reporter-console.php');
+	                                return;
+	                        } else {
+	                                $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
+	                        }
+	                    } else {
+	                        $error_message = __( 'Smart Reporter currently works only with WP e-Commerce 3.7 or above.', 'smart-reporter' );
+	                    }
+                }
+
 			} else if (is_plugin_active( 'woocommerce/woocommerce.php' )) {
-                            if (IS_WOO13) {
-                                    $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
-                            } else {
-                                if (file_exists( $base_path . 'reporter-console.php' )) {
-                                        include_once ($base_path . 'reporter-console.php');
-                                        return;
-                                } else {
-                                        $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
-                                }
-                            }
+                if (IS_WOO13) {
+                        $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
+                } else {
+                    if (file_exists( $base_path . 'reporter-console.php' )) {
+                            include_once ($base_path . 'reporter-console.php');
+                            return;
+                    } else {
+                            $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
+                    }
+                }
 			}
                         else {
                             $error_message = "<b>" . __( 'Smart Reporter', 'smart-reporter' ) . "</b> " . __( 'add-on requires', 'smart-reporter' ) . " " .'<a href="http://www.storeapps.org/wpec/">' . __( 'WP e-Commerce', 'smart-reporter' ) . "</a>" . " " . __( 'plugin or', 'smart-reporter' ) . " " . '<a href="http://www.storeapps.org/woocommerce/">' . __( 'WooCommerce', 'smart-reporter' ) . "</a>" . " " . __( 'plugin. Please install and activate it.', 'smart-reporter' );

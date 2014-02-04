@@ -1,8 +1,44 @@
 <?php
-include_once ('../../../../wp-load.php');
-include_once ('../../../../wp-includes/wp-db.php');
+
+ob_start();
+
+if ( empty( $wpdb ) || !is_object( $wpdb ) ) {
+    if ( ! defined('ABSPATH') ) {
+        include_once ('../../../../wp-load.php');
+    }
+    require_once ABSPATH . 'wp-includes/wp-db.php';
+}
+
+// include_once ('../../../../wp-load.php');
+// include_once ('../../../../wp-includes/wp-db.php');
 include_once (ABSPATH . WPINC . '/functions.php');
-include_once ('reporter-console.php'); // Included for using the sr_number_format function
+// include_once ('reporter-console.php'); // Included for using the sr_number_format function
+
+
+//Function to convert the Sales Figures
+function sr_number_format($input, $places)
+{
+
+    $suffixes = array('', 'k', 'm', 'b', 't');
+    $suffixIndex = 0;
+    $mult = pow(10, $places);
+
+    while(abs($input) >= 1000 && $suffixIndex < sizeof($suffixes))
+    {
+        $suffixIndex++;
+        $input /= 1000;
+    }
+
+    return (
+        $input > 0
+            // precision of 3 decimal places
+            
+            ? floor($input * $mult) / $mult
+            : ceil($input * $mult) / $mult
+        )
+        . $suffixes[$suffixIndex];
+}
+
 
 // =============================================================================
 // Code For SR Beta
@@ -25,11 +61,11 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $limit = $_GET ['limit'];
 
 	// For pro version check if the required file exists
-	if (file_exists ( '../pro/sr-woo.php' )){
-	    define ( 'SRPRO', true );
-	} else {
-	    define ( 'SRPRO', false );
-	}
+	// if (file_exists ( '../pro/sr-woo.php' )){
+	//     define ( 'SRPRO', true );
+	// } else {
+	//     define ( 'SRPRO', false );
+	// }
 
 	//Function for sorting and getting the top 5 values
 	function usort_callback($a, $b)
@@ -40,10 +76,223 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	  return ( $a['calc_total'] > $b['calc_total'] ) ? -1 : 1;
 	}
 
+
+	//Function to get the abandoned Products
+	function sr_get_abandoned_products(&$start_date,&$end_date_query,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_post) {
+		
+		global $wpdb;
+
+		//Query to get Top Abandoned Products
+
+	    $current_time = current_time('timestamp');
+		$cut_off_time = (get_option('sr_abandoned_cutoff_time')) ? get_option('sr_abandoned_cutoff_time') : 0;
+		$cart_cut_off_time = $cut_off_time * 60;
+		$compare_time = $current_time - $cart_cut_off_time;
+
+		//Query to update the abandoned product status
+	    $query_abandoned_status = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
+	    							SET product_abandoned = 1
+	    							WHERE order_id IS NULL
+	    								AND abandoned_cart_time < ". $compare_time;
+
+		$wpdb->query ( $query_abandoned_status );
+
+		//Query to get the Top Abandoned Products
+
+		$query_top_abandoned_products = "SELECT SUM(quantity) as abondoned_qty,
+											GROUP_CONCAT(quantity order by id SEPARATOR '###') AS abandoned_quantity,
+											product_id as id
+											$select_top_abandoned_prod
+										FROM {$wpdb->prefix}sr_woo_abandoned_items
+										WHERE order_id IS NULL                            
+											AND product_abandoned = 1
+											AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'
+										GROUP BY product_id
+										ORDER BY abondoned_qty DESC
+										$limit";
+
+		$results_top_abandoned_products    = $wpdb->get_results ( $query_top_abandoned_products, 'ARRAY_A' );
+	    $rows_top_abandoned_products 	  =  $wpdb->num_rows;
+
+	    if ($rows_top_abandoned_products > 0) {
+
+	    	$prod_id = array();
+
+			foreach ($results_top_abandoned_products as $results_top_abandoned_product) {
+				$prod_id[] = $results_top_abandoned_product['id'];
+			}	    	
+
+			$prod_id = implode(",", $prod_id);
+
+			$query_prod_abandoned_rate = "SELECT SUM(quantity) as abondoned_rate,
+												COUNT(order_id) as orders_placed
+											FROM {$wpdb->prefix}sr_woo_abandoned_items
+											WHERE product_abandoned = 1
+												AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'
+												AND product_id IN (". $prod_id .")
+											GROUP BY product_id
+											ORDER BY FIND_IN_SET(product_id,'$prod_id') ";
+
+			$results_prod_abandoned_rate    = $wpdb->get_results ( $query_prod_abandoned_rate, 'ARRAY_A' );
+		    $rows_prod_abandoned_rate 	  =  $wpdb->num_rows;
+
+		    $j = 0;
+
+		    $total_prod_abandoned_qty = 0;
+		    $total_prod_qty = 0;
+
+		    //Query to get the last_order_date
+
+		    // if (empty($limit)) {
+
+		    	$terms_post_cond = (!empty($terms_post)) ? 'AND posts.ID IN ('.$terms_post.')' : '';
+
+		    	$query_last_order_date = "SELECT posts.id as order_id,
+		    									SUM(sr.quantity) as tot_qty_sold,
+		    									COUNT(posts.id) as order_count,
+		    									MAX(sr.order_id) AS max_order_id,
+		    									posts.post_date_gmt AS last_order_date
+	    									FROM {$wpdb->prefix}sr_woo_order_items AS sr
+	    										JOIN {$wpdb->prefix}posts AS posts 
+	    													ON (posts.id = sr.order_id)
+											WHERE sr.product_id IN (". $prod_id .")
+												AND posts.post_date_gmt BETWEEN '".$start_date."' AND '". $end_date_query."'
+												$terms_post_cond
+											GROUP BY sr.product_id
+												HAVING order_id = MAX(sr.order_id)
+											ORDER BY FIND_IN_SET(sr.product_id,'$prod_id')";
+
+				$results_last_order_date  = $wpdb->get_results ( $query_last_order_date, 'ARRAY_A' );
+		    	$rows_last_order_date 	  = $wpdb->num_rows;
+
+		    // }
+
+
+		    //Query to get the variation Attributes in a formatted manner
+
+		    $query_attributes = "SELECT post_id,
+		    							GROUP_CONCAT(meta_key order by meta_id SEPARATOR '###') AS meta_key,
+		    							GROUP_CONCAT(meta_value order by meta_id SEPARATOR '###') AS meta_value
+				    			FROM {$wpdb->prefix}postmeta
+				    			WHERE meta_key like 'attribute_%'
+				    				AND post_id IN ($prod_id)
+				    			GROUP BY post_id";
+		   	$results_attributes    = $wpdb->get_results ( $query_attributes, 'ARRAY_A' );
+		    $rows_attributes 	  =  $wpdb->num_rows; 
+
+		    $variation_attributes = array();
+
+		    foreach ($results_attributes as $results_attribute) {
+		    	$meta_key = explode('###', $results_attribute['meta_key']);
+                $meta_value = explode('###', $results_attribute['meta_value']);
+
+                if (count($meta_key) != count($meta_value))
+                    continue;
+
+                $variation_attributes[$results_attribute['post_id']] = woocommerce_get_formatted_variation( array_combine($meta_key,$meta_value), true );
+                
+		    }
+
+	    	foreach ($results_top_abandoned_products as &$results_top_abandoned_product) {
+	    		$abandoned_quantity = explode('###', $results_top_abandoned_product['abandoned_quantity']);
+                $abandoned_dates = explode('###', $results_top_abandoned_product['abandoned_dates']);
+                $max = 0;
+
+                if ($group_by == "display_date_time") {
+					$abandoned_dates_comp = explode('###', $results_top_abandoned_product['comp_time']);                	
+                }
+
+                if (count($abandoned_quantity) != count($abandoned_dates) && !empty($limit))
+                    continue;
+
+                unset($results_top_abandoned_product['abandoned_quantity']);
+                unset($results_top_abandoned_product['abandoned_dates']);
+
+                if ($group_by == "display_date_time") {
+                	unset($results_top_abandoned_product['comp_time']);
+                }
+
+                $abandoned_date_series = $date_series;
+
+                if ($group_by == "display_date_time") {
+
+                	for ($i=0; $i<sizeof($abandoned_dates_comp); $i++) {
+                		$abandoned_date_series[$abandoned_dates_comp[$i]]['post_date'] = $abandoned_dates[$i];
+						$abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] = $abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] + $abandoned_quantity[$i];
+	                }
+
+                } else {
+                	for ($i=0; $i<sizeof($abandoned_dates); $i++) {
+						$abandoned_date_series[$abandoned_dates[$i]]['sales'] = $abandoned_date_series[$abandoned_dates[$i]]['sales'] + $abandoned_quantity[$i];
+
+						if ($max < $abandoned_date_series[$abandoned_dates[$i]]['sales']) {
+							$max = $abandoned_date_series[$abandoned_dates[$i]]['sales'];
+						}
+	                }	
+                }
+                
+                if (!empty($limit)) {
+                	$results_top_abandoned_product ['graph_data'] = array();
+
+	                foreach ($abandoned_date_series as $abandoned_date_series1) {
+	                	$results_top_abandoned_product['graph_data'][] = $abandoned_date_series1;
+	                }	
+                }
+
+                $results_top_abandoned_product['max_count'] = $max;
+
+                $results_top_abandoned_product['price'] = get_post_meta($results_top_abandoned_product['id'],'_price',true) * $results_top_abandoned_product['abondoned_qty'];
+
+                if (empty($limit)) {
+                	$results_top_abandoned_product['price'] = sr_number_format($results_top_abandoned_product['price'] ,$sr_decimal_places);
+                } else {
+                	$results_top_abandoned_product['price'] = $sr_currency_symbol . sr_number_format($results_top_abandoned_product['price'] ,$sr_decimal_places);
+                }
+
+                $results_top_abandoned_product['abondoned_qty'] = sr_number_format($results_top_abandoned_product['abondoned_qty'] ,$sr_decimal_places);
+
+                if (empty($limit)) {
+                	// $results_top_abandoned_product['orders_placed'] = $results_prod_abandoned_rate[$j]['orders_placed'];
+                	$results_top_abandoned_product['orders_placed'] = sr_number_format($results_last_order_date[$j]['order_count'] ,$sr_decimal_places);
+                	$results_top_abandoned_product['last_order_date'] = $results_last_order_date[$j]['last_order_date']; 
+                }
+
+                // $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/$results_prod_abandoned_rate[$j]['abondoned_rate'])*100;
+                $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/($results_last_order_date[$j]['tot_qty_sold'] + $results_top_abandoned_product['abondoned_qty']))*100;
+                $results_top_abandoned_product['abandoned_rate'] = sr_number_format($abandoned_rate ,$sr_decimal_places) . "%";
+
+                //Code for formatting the product name
+
+
+                $post_parent = wp_get_post_parent_id($results_top_abandoned_product['id']);
+
+                if ($post_parent  > 0) {
+                	$results_top_abandoned_product ['prod_name'] = get_the_title($post_parent) . " (". $variation_attributes[$results_top_abandoned_product['id']] .")";
+
+                } else {
+                	$results_top_abandoned_product ['prod_name'] = get_the_title($results_top_abandoned_product['id']);
+                }
+
+                $results_top_abandoned_product ['prod_name'] = sanitize_title($results_top_abandoned_product ['prod_name']);
+
+                $total_prod_abandoned_qty = $total_prod_abandoned_qty + $results_top_abandoned_product['abondoned_qty'];
+                $total_prod_qty = $total_prod_qty + $results_prod_abandoned_rate[$j]['abondoned_rate'];
+
+                $j++;
+
+	    	}
+
+	    }
+
+	    return json_encode($results_top_abandoned_products);
+
+	}
+
 	//Cummulative sales Query function
 	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$select_top_abandoned_prod,$terms_post,$post) {
 
 	    global $wpdb;
+
 	    $monthly_sales = array();
 	    $cumm_top_prod_graph_data = array();
 	    $results_top_prod = array();
@@ -54,6 +303,9 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $sr_currency_symbol = isset($post['SR_CURRENCY_SYMBOL']) ? $post['SR_CURRENCY_SYMBOL'] : '';
 	    $sr_decimal_places = isset($post['SR_DECIMAL_PLACES']) ? $post['SR_DECIMAL_PLACES'] : '';
 
+	    $terms_post_cond = (!empty($terms_post)) ? 'AND posts.ID IN ('.$terms_post.')' : '';
+	    $terms_postmeta_cond = (!empty($terms_post)) ? 'AND post_id IN ('.$terms_post.')' : '';
+
 	    //Query for getting the cumm sales
 
 	    $query_monthly_sales = "SELECT SUM( postmeta.meta_value ) AS todays_sales,
@@ -63,7 +315,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
 		                        WHERE postmeta.meta_key IN ('_order_total')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                            AND posts.ID IN ($terms_post)
+		                            $terms_post_cond
 	                            GROUP BY $group_by";
         $results_monthly_sales    = $wpdb->get_results ( $query_monthly_sales, 'ARRAY_A' );
 	    $rows_monthly_sales 	  =  $wpdb->num_rows;
@@ -94,7 +346,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                    AND posts.id IN (SELECT post_id FROM {$wpdb->prefix}postmeta
 	                                                        WHERE meta_key IN ('_customer_user')
 	                                                            AND meta_value = 0
-	                                                            AND post_id IN ($terms_post))
+	                                                            $terms_postmeta_cond)
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
 	                                LIMIT 5";
@@ -102,11 +354,12 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $results_cumm_top_cust_guest   =  $wpdb->get_results ( $query_cumm_top_cust_guest, 'ARRAY_A' );    
 	    $rows_cumm_top_cust_guest    =  $wpdb->num_rows;
 
+	    $results_cumm_top_cust = array();
+
 	    if($rows_cumm_top_cust_guest > 0) {
 
 	        $post_id = array();
-	        $results_cumm_top_cust = array();
-
+	        
 	        foreach ($results_cumm_top_cust_guest as $results_cumm_top_cust_guest1) {
 	            $post_id[] = $results_cumm_top_cust_guest1 ['post_id_max'];
 	        }
@@ -163,7 +416,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                    AND posts.id IN (SELECT post_id FROM {$wpdb->prefix}postmeta
 	                                                        WHERE meta_key IN ('_customer_user')
 	                                                            AND meta_value > 0
-	                                                            AND post_id IN ($terms_post))
+	                                                            $terms_postmeta_cond)
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
 	                                LIMIT 5";
@@ -236,7 +489,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                    FROM `{$wpdb->prefix}sr_woo_order_items` AS order_item
 	                                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
 	                                    WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-	                                        AND posts.id IN ($terms_post)
+	                                        $terms_post_cond
 	                                    GROUP BY order_item.product_id
 	                                    ORDER BY product_sales DESC
 	                                    LIMIT 5";
@@ -461,7 +714,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                                WHERE postmeta.meta_key IN ('_customer_user')
 		                                    AND postmeta.meta_value > 0
 		                                    AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                                    AND posts.id IN ($terms_post)
+		                                    $terms_post_cond
 		                                GROUP BY postmeta.meta_value";
 
 	    $results_cumm_reg_cust_count = $wpdb->get_col ( $query_cumm_reg_cust_count );
@@ -483,7 +736,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                                    WHERE postmeta1.meta_key IN ('_billing_email')
 		                                        AND postmeta2.meta_value = 0
 		                                        AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                                        AND posts.id IN ($terms_post)
+		                                        $terms_post_cond
 		                                    GROUP BY postmeta1.meta_value";
 
 	    $results_cumm_guest_cust_count 	=  $wpdb->get_col ( $query_cumm_guest_cust_count );
@@ -506,7 +759,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 			                                    FROM `{$wpdb->prefix}sr_woo_order_items` AS order_item
 			                                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
 			                                    WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-			                                    	AND posts.ID IN ($terms_post)";
+			                                    	$terms_post_cond";
 	    $results_cumm_avg_order_tot_items    = $wpdb->get_results ( $query_cumm_avg_order_tot_items, 'ARRAY_A' );
 	    $rows_cumm_avg_order_tot_items 	     = $wpdb->num_rows;
 
@@ -527,7 +780,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
 		                        WHERE postmeta.meta_key IN ('_order_discount','_cart_discount')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                            AND posts.ID IN ($terms_post)
+		                            $terms_post_cond
 	                            GROUP BY $group_by";
         $results_cumm_discount_sales    = $wpdb->get_results ( $query_cumm_discount_sales, 'ARRAY_A' );
 	    $rows_cumm_discount_sales 	  =  $wpdb->num_rows;
@@ -575,7 +828,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                        		ON (order_items.order_item_id = order_itemmeta.order_item_id 
 		                        				AND order_itemmeta.meta_key IN ('discount_amount') )
 		                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                            AND posts.ID IN ($terms_post)
+		                            $terms_post_cond
 		                            AND order_items.order_item_type IN ('coupon')
 	                            GROUP BY order_items.order_item_name
 	                            ORDER BY coupon_count DESC, coupon_amount DESC
@@ -597,7 +850,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		    									FROM `{$wpdb->prefix}posts` AS posts
 			                        				JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
 			                        			WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-						                            AND posts.ID IN ($terms_post)
+						                            $terms_post_cond
 					                            	AND order_items.order_item_type IN ('coupon')";
 		$results_cumm_orders_coupon_count 	= $wpdb->get_col ( $query_cumm_orders_coupon_count );
 	    $rows_cumm_orders_coupon_count	  	= $wpdb->num_rows;		
@@ -619,7 +872,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 				                        WHERE postmeta1.meta_key IN ('_payment_method')
 				                        	AND postmeta2.meta_key IN ('_order_total')
 				                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-				                            AND posts.ID IN ($terms_post)
+				                            $terms_post_cond
 			                            GROUP BY payment_method
 			                            ORDER BY sales_total DESC
 			                            LIMIT 5";
@@ -639,7 +892,14 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	        if (!empty($top_payment_gateway)) {
 	        	$top_payment_gateway_imploded = "'".implode("','", $top_payment_gateway)."'";
+	        	$top_payment_gateway_cond = 'AND postmeta1.meta_value IN ('.$top_payment_gateway_imploded.')';
+	        	// $top_payment_gateway_order_by = 'ORDER BY FIND_IN_SET(postmeta1.meta_value,\'".implode(",",$top_payment_gateway)."\')';
+	        	$top_payment_gateway_order_by = "ORDER BY FIND_IN_SET(postmeta1.meta_value,'".implode(",", $top_payment_gateway)."')";
+
 	        }
+	    } else {
+	    	$top_payment_gateway_cond = '';
+	    	$top_payment_gateway_order_by = '';
 	    }
 
         //Query to get the Top 5 Products graph related data
@@ -654,10 +914,10 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 			                        WHERE postmeta1.meta_key IN ('_payment_method')
 			                        	AND postmeta2.meta_key IN ('_order_total')
 			                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-			                            AND posts.ID IN ($terms_post)
-			                            AND postmeta1.meta_value IN ($top_payment_gateway_imploded)
+			                            $terms_post_cond
+			                            $top_payment_gateway_cond
 		                            GROUP BY payment_method, $group_by
-		                            ORDER BY FIND_IN_SET(postmeta1.meta_value,'".implode(",",$top_payment_gateway)."')";
+		                            $top_payment_gateway_order_by";
 
         $results_top_gateways_graph = $wpdb->get_results ( $query_top_gateways_graph, 'ARRAY_A' );
         $rows_top_gateways_graph	= $wpdb->num_rows;
@@ -722,20 +982,20 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
         //Query to get the Payment Gateway Title
 
-        $query_gateway_title = "SELECT DISTINCT postmeta1.meta_value as gateway_title,
-        							postmeta2.meta_value as gateway_method
-	    						FROM `{$wpdb->prefix}postmeta` AS postmeta1
-	    							JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( postmeta1.post_id = postmeta2.post_id )
-    							WHERE postmeta1.meta_key IN ('_payment_method_title')
-    								AND postmeta2.meta_key IN ('_payment_method')
-    								AND postmeta2.meta_value IN ($top_payment_gateway_imploded)
-    							ORDER BY FIND_IN_SET(postmeta1.meta_value,'".implode(",",$top_payment_gateway)."')";
+        $query_gateway_title = "SELECT DISTINCT postmeta2.meta_value as gateway_title,
+        							postmeta1.meta_value as gateway_method
+	    						FROM `{$wpdb->prefix}postmeta` AS postmeta2
+	    							JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( postmeta2.post_id = postmeta1.post_id )
+    							WHERE postmeta2.meta_key IN ('_payment_method_title')
+    								AND postmeta1.meta_key IN ('_payment_method')
+    								$top_payment_gateway_cond
+    							$top_payment_gateway_order_by";
     	$result_gateway_title = $wpdb->get_results ( $query_gateway_title, 'ARRAY_A' );
 
     	$gateway_title = array();
 
     	foreach($result_gateway_title as $result_gateway_title1) {
-    		$gateway_title[$result_gateway_title1['gateway_method']] = $result_gateway_title1['gateway_title'];
+    		$gateway_title[strtolower($result_gateway_title1['gateway_method'])] = $result_gateway_title1['gateway_title'];
     	}
 
         //Top 5 Products Graph
@@ -798,7 +1058,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
                 $results_top_payment_gateway[$index]['graph_data_sales_count'] = $temp_gateway_sales_count;    
                 $results_top_payment_gateway[$index]['max_value_sales_count'] = $max_count;
 
-                $results_top_payment_gateway[$index]['payment_method'] = $gateway_title[$results_top_payment_gateway[$index]['payment_method']];
+                $results_top_payment_gateway[$index]['payment_method'] = $gateway_title[strtolower($results_top_payment_gateway[$index]['payment_method'])];
 
 	            $index++;
 	        }    
@@ -813,10 +1073,12 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
 		                        WHERE postmeta.meta_key IN ('_order_total','_order_shipping','_order_shipping_tax','_order_tax')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                            AND posts.ID IN ($terms_post)
+		                            $terms_post_cond
 		                        GROUP BY posts.ID";
         $results_cumm_taxes    = $wpdb->get_results ( $query_cumm_taxes, 'ARRAY_A' );
 	    $rows_cumm_taxes 	  =  $wpdb->num_rows;
+
+	    $tax_data = array();
 
 	    if ($rows_cumm_taxes > 0) {
 
@@ -848,163 +1110,6 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    	$tax_data['total_sales'] = $order_total;
 	    }
 
-
-
-
-	    //Query to get Top Abandoned Products
-
-	    $current_time = current_time('timestamp');
-		$cut_off_time = (get_option('sr_abandoned_cutoff_time')) ? get_option('sr_abandoned_cutoff_time') : 0;
-		$cart_cut_off_time = $cut_off_time * 60;
-		$compare_time = $current_time - $cart_cut_off_time;
-
-		//Query to update the abandoned product status
-	    $query_abandoned_status = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
-	    							SET product_abandoned = 1
-	    							WHERE order_id IS NULL
-	    								AND abandoned_cart_time < ". $compare_time;
-
-		$wpdb->query ( $query_abandoned_status );
-
-		//Query to get the Top Abandoned Products
-
-		$query_top_abandoned_products = "SELECT SUM(quantity) as abondoned_qty,
-											GROUP_CONCAT(quantity order by id SEPARATOR '###') AS abandoned_quantity,
-											product_id as id,
-											$select_top_abandoned_prod
-										FROM {$wpdb->prefix}sr_woo_abandoned_items
-										WHERE order_id IS NULL                            
-											AND product_abandoned = 1
-											AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'
-										GROUP BY product_id
-										ORDER BY abondoned_qty DESC
-										LIMIT 5";
-
-		$results_top_abandoned_products    = $wpdb->get_results ( $query_top_abandoned_products, 'ARRAY_A' );
-	    $rows_top_abandoned_products 	  =  $wpdb->num_rows;
-
-
-	    if ($rows_top_abandoned_products > 0) {
-
-	    	$prod_id = array();
-
-			foreach ($results_top_abandoned_products as $results_top_abandoned_product) {
-				$prod_id[] = $results_top_abandoned_product['id'];
-			}	    	
-
-			$prod_id = implode(",", $prod_id);
-
-			$query_prod_abandoned_rate = "SELECT SUM(quantity) as abondoned_rate
-											FROM {$wpdb->prefix}sr_woo_abandoned_items
-											WHERE product_abandoned = 1
-												AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."'
-												AND product_id IN (". $prod_id .")
-											GROUP BY product_id
-											ORDER BY FIND_IN_SET(product_id,'$prod_id') ";
-
-			$results_prod_abandoned_rate    = $wpdb->get_col ( $query_prod_abandoned_rate );
-		    $rows_prod_abandoned_rate 	  =  $wpdb->num_rows;
-
-		    $j = 0;
-
-		    $total_prod_abandoned_qty = 0;
-		    $total_prod_qty = 0;
-
-
-		    //Query to get the variation Attributes in a formatted manner
-
-		    $query_attributes = "SELECT post_id,
-		    							GROUP_CONCAT(meta_key order by meta_id SEPARATOR '###') AS meta_key,
-		    							GROUP_CONCAT(meta_value order by meta_id SEPARATOR '###') AS meta_value
-				    			FROM {$wpdb->prefix}postmeta
-				    			WHERE meta_key like 'attribute_%'
-				    				AND post_id IN ($prod_id)
-				    			GROUP BY post_id";
-		   	$results_attributes    = $wpdb->get_results ( $query_attributes, 'ARRAY_A' );
-		    $rows_attributes 	  =  $wpdb->num_rows; 
-
-		    $variation_attributes = array();
-
-		    foreach ($results_attributes as $results_attribute) {
-		    	$meta_key = explode('###', $results_attribute['meta_key']);
-                $meta_value = explode('###', $results_attribute['meta_value']);
-
-                if (count($meta_key) != count($meta_value))
-                    continue;
-
-                $variation_attributes[$results_attribute['post_id']] = woocommerce_get_formatted_variation( array_combine($meta_key,$meta_value), true );
-                
-		    }
-
-
-	    	foreach ($results_top_abandoned_products as &$results_top_abandoned_product) {
-	    		$abandoned_quantity = explode('###', $results_top_abandoned_product['abandoned_quantity']);
-                $abandoned_dates = explode('###', $results_top_abandoned_product['abandoned_dates']);
-
-                if ($group_by == "display_date_time") {
-					$abandoned_dates_comp = explode('###', $results_top_abandoned_product['comp_time']);                	
-                }
-
-                if (count($abandoned_quantity) != count($abandoned_dates))
-                    continue;
-
-                unset($results_top_abandoned_product['abandoned_quantity']);
-                unset($results_top_abandoned_product['abandoned_dates']);
-
-                if ($group_by == "display_date_time") {
-                	unset($results_top_abandoned_product['comp_time']);
-                }
-
-                $abandoned_date_series = $date_series;
-
-                if ($group_by == "display_date_time") {
-
-                	for ($i=0; $i<sizeof($abandoned_dates_comp); $i++) {
-                		$abandoned_date_series[$abandoned_dates_comp[$i]]['post_date'] = $abandoned_dates[$i];
-						$abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] = $abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] + $abandoned_quantity[$i];
-	                }
-
-                } else {
-                	for ($i=0; $i<sizeof($abandoned_dates); $i++) {
-						$abandoned_date_series[$abandoned_dates[$i]]['sales'] = $abandoned_date_series[$abandoned_dates[$i]]['sales'] + $abandoned_quantity[$i];
-	                }	
-                }
-
-                $results_top_abandoned_product ['graph_data'] = array();
-
-                foreach ($abandoned_date_series as $abandoned_date_series1) {
-                	$results_top_abandoned_product['graph_data'][] = $abandoned_date_series1;
-                }
-
-                $results_top_abandoned_product['price'] = get_post_meta($results_top_abandoned_product['id'],'_price',true) * $results_top_abandoned_product['abondoned_qty'];
-
-                $results_top_abandoned_product['abondoned_qty'] = floatval($results_top_abandoned_product['abondoned_qty']);
-
-                $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/$results_prod_abandoned_rate[$j])*100;
-
-                $results_top_abandoned_product['abandoned_rate'] = round($abandoned_rate,get_option( 'woocommerce_price_num_decimals' )) . "%";
-
-                //Code for formatting the product name
-
-
-                $post_parent = wp_get_post_parent_id($results_top_abandoned_product['id']);
-
-                if ($post_parent  > 0) {
-                	$results_top_abandoned_product ['prod_name'] = get_the_title($post_parent) . " (". $variation_attributes[$results_top_abandoned_product['id']] .")";
-
-                } else {
-                	$results_top_abandoned_product ['prod_name'] = get_the_title($results_top_abandoned_product['id']);
-                }
-
-                $total_prod_abandoned_qty = $total_prod_abandoned_qty + $results_top_abandoned_product['abondoned_qty'];
-                $total_prod_qty = $total_prod_qty + $results_prod_abandoned_rate[$j];
-
-                $j++; 
-
-	    	}
-
-	    }
-
 	    $query_min_abandoned_date = "SELECT MIN(abandoned_cart_time) AS min_abandoned_date
 	    							FROM {$wpdb->prefix}sr_woo_abandoned_items";
 		$results_min_abandoned_date = $wpdb->get_col ( $query_min_abandoned_date );
@@ -1032,7 +1137,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		$total_abandoned_cart_count    = $wpdb->get_col ( $query_total_abandoned_cart );
 		$rows_total_abandoned_cart 	 = $wpdb->num_rows; 
 
-	    if ( $rows_total_abandoned_cart > 0) {
+	    if ( $total_cart_count[0] > 0) {
 	    	$cumm_cart_abandoned_rate = round(($total_abandoned_cart_count[0]/$total_cart_count[0])*100, get_option( 'woocommerce_price_num_decimals' )); 		
 	    } else {
 	    	$cumm_cart_abandoned_rate = 0;
@@ -1146,7 +1251,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	        }
 	        else {
 	            if ($tot_cumm_orders == 0) {
-	                $results [] = floatval($total_monthly_sales);       
+	                $results [4] = floatval($total_monthly_sales);       
 	            }
 	            else {
 	                $results [4] = floatval($total_monthly_sales/$tot_cumm_orders);
@@ -1185,7 +1290,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	        $results [13] = $tax_data;
 
-	        $results [14] = $results_top_abandoned_products;
+	        // $results [14] = $results_top_abandoned_products;
+	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_post),true);
 	        
 	        $results [15] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_cart_abandoned_rate : '';
 
@@ -1225,7 +1331,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    }
 	    else if ($diff_dates > 30 && $diff_dates <= 365) {
 	        $month = array('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec');
-	        $date_mn = "2012-01-01";
+	        // $date_mn = "2012-01-01";
+	        $date_mn = date('Y', strtotime($start_date)) . "-01-01";
 	        $date_mn_initial = $date_mn;
 	        for ($i = 0;$i<12;$i++ ) {
 	            if ($i > 0) {
@@ -1288,6 +1395,9 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    $tot_cumm_orders_qty = 0;
 
 	    //Query to get the relevant order ids
+
+	    // WHERE terms.name IN ('completed','processing','on-hold','pending')
+
 	    $query_terms = "SELECT id FROM {$wpdb->prefix}posts AS posts
 	                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
 	                                                            ON term_relationships.object_id = posts.ID 
@@ -1295,7 +1405,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
 	                                            JOIN {$wpdb->prefix}terms AS terms 
 	                                                            ON term_taxonomy.term_id = terms.term_id
-	                            WHERE terms.name IN ('completed','processing','on-hold','pending')
+	                            WHERE terms.name IN ('completed','processing','on-hold')
 	                                AND posts.post_status IN ('publish')";
 	                  
 	    $terms_post = $wpdb->get_col($query_terms);
@@ -1303,6 +1413,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	    if ($rows_terms_post > 0) {
 	    	$terms_post = implode(",",$terms_post);
+	    } else {
+	    	$terms_post = ''; 
 	    }
 
 
@@ -1313,7 +1425,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%Y-%m-%d') by posts.id SEPARATOR '###') AS order_dates";
 
-	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y-%m-%d') order by id SEPARATOR '###') AS abandoned_dates";
+	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y-%m-%d') order by id SEPARATOR '###') AS abandoned_dates";
 
         	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);
 
@@ -1326,7 +1438,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%b') by posts.id SEPARATOR '###') AS order_dates";
 
-	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%b') order by id SEPARATOR '###') AS abandoned_dates";
+	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%b') order by id SEPARATOR '###') AS abandoned_dates";
 
         	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"month_nm",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);
 	    }
@@ -1338,7 +1450,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(order_item.quantity order by order_item.order_id SEPARATOR '###') AS quantity_details,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%Y') by posts.id SEPARATOR '###') AS order_dates";
 
-	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y') order by id SEPARATOR '###') AS abandoned_dates";
+	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y') order by id SEPARATOR '###') AS abandoned_dates";
 	        
         	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"year_nm",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);  
 	    }
@@ -1352,7 +1464,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%H:%i:%s') by posts.id SEPARATOR '###') AS display_time,
 	                            GROUP_CONCAT(DATE_FORMAT(posts.`post_date`, '%k') by posts.id SEPARATOR '###') AS comp_time";
 
-	        $select_top_abandoned_prod = "GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y/%m/%d %H:%i:%s') order by id SEPARATOR '###') AS abandoned_dates,
+	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y/%m/%d %H:%i:%s') order by id SEPARATOR '###') AS abandoned_dates,
 	        							  GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%k') order by id SEPARATOR '###') AS comp_time";
 	                    
 	        // $end_date_query = date('Y-m-d', strtotime($end_date_query .' +1 day'));
@@ -1372,19 +1484,15 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	    return $results;
 	}
 
-	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'monthly') )) {
 
+	// Function to convert the date in local timezone
+	function date_timezone_conversion($post) {
 
-
-	//Sales	    
-	    $sr_currency_symbol = isset($_POST['SR_CURRENCY_SYMBOL']) ? $_POST['SR_CURRENCY_SYMBOL'] : '';
-	    $sr_decimal_places = isset($_POST['SR_DECIMAL_PLACES']) ? $_POST['SR_DECIMAL_PLACES'] : '';
-	    
-	    $start_date = date('Y-m-d H:i:s',(int)strtotime($_POST['start_date']));
-	    
+		$_POST = $post;
+		$converted_dates = array(); // array to return the converted dates
+		
+	    $start_date= date('Y-m-d H:i:s',(int)strtotime($_POST['start_date']));
 	    $date_convert = 0;
-
-
 
 	    if (!empty($_POST['end_date']) || $_POST['end_date'] != "") {
 
@@ -1415,6 +1523,448 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		    $end_date = date('Y-m-d H:i:s',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;	
 	    }
 
+	    $converted_dates ['start_date'] = $start_date;
+	    $converted_dates ['end_date'] = $end_date;
+
+		return $converted_dates;	    
+
+	}
+
+
+	//Daily Widgets Data 
+
+	function sr_get_daily_kpi_data() {
+
+		global $wpdb;
+
+		//Code for date localization
+
+		$today_arr = getdate();
+		$curr_time_gmt = date('H:i:s',time()- date("Z"));
+		$new_date = date('Y-m-d') ." " . $curr_time_gmt;
+		$today = date('Y-m-d',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;
+		$yesterday = date('Y-m-d', strtotime($today .' -1 day'));
+
+		$query_terms     = "SELECT id FROM {$wpdb->prefix}posts AS posts
+                        JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+                                                    ON term_relationships.object_id = posts.ID 
+                                    JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+                                                    ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+                                    JOIN {$wpdb->prefix}terms AS terms 
+                                                    ON term_taxonomy.term_id = terms.term_id
+                    WHERE terms.name IN ('completed','processing','on-hold')
+                        AND posts.post_status IN ('publish')";
+          
+		$terms_post      = $wpdb->get_col($query_terms);
+		$rows_terms_post = $wpdb->num_rows;
+
+		if ($rows_terms_post > 0) {
+		    $terms_post = implode(",",$terms_post);
+		    $cond_terms_post = "AND posts.ID IN ($terms_post)";
+		} else {
+		    $cond_terms_post = '';
+		}
+
+		$daily_widget_data = array();
+
+		// ================================================
+		// Todays Sales
+		// ================================================
+
+		$query_today        = "SELECT SUM( postmeta.meta_value ) AS todays_sales 
+		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
+		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        WHERE postmeta.meta_key IN ('_order_total')
+		                            AND posts.post_date LIKE '$today%'
+		                            $cond_terms_post";
+		$results_today      = $wpdb->get_col ( $query_today );
+		$rows_results_today = $wpdb->num_rows;
+
+		if ($rows_results_today > 0 && (!empty($results_today[0])) ) {
+			$daily_widget_data['sales_today'] = $results_today[0];
+		}
+		else {
+			$daily_widget_data['sales_today'] = 0;
+		}
+
+		$query_yest        = "SELECT SUM( postmeta.meta_value ) AS yesterdays_sales 
+		                    FROM `{$wpdb->prefix}postmeta` AS postmeta
+		                    LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                    WHERE postmeta.meta_key IN ('_order_total')
+		                        AND posts.post_date LIKE '$yesterday%'
+		                        $cond_terms_post";
+		$results_yest       = $wpdb->get_col ( $query_yest );
+		$rows_results_yest  = $wpdb->num_rows;
+
+		if ($rows_results_yest > 0) {
+			$daily_widget_data['sales_yest'] = $results_yest[0];
+		}
+		else {
+			$daily_widget_data['sales_yest'] = 0;
+		}
+
+		if ($daily_widget_data['sales_yest'] == 0) {
+			$daily_widget_data['diff_daily_sales'] = round($daily_widget_data['sales_today'],2);
+		}
+		else {
+			$daily_widget_data['diff_daily_sales'] = abs(round(((($daily_widget_data['sales_today'] - $daily_widget_data['sales_yest'])/$daily_widget_data['sales_yest']) * 100),2));
+		}
+
+		if ($daily_widget_data['diff_daily_sales'] != 0) {
+			if ($daily_widget_data['sales_yest'] < $daily_widget_data['sales_today']) {
+			    $daily_widget_data['imgurl_daily_sales'] = $_POST ['SR_IMG_UP_GREEN'];
+			}
+			else {
+			    $daily_widget_data['imgurl_daily_sales'] = $_POST ['SR_IMG_DOWN_RED'];
+			}    
+		}
+		else {
+			$daily_widget_data['diff_daily_sales'] = "";
+			$daily_widget_data['imgurl_daily_sales'] = "";
+		}
+
+		$daily_widget_data['sales_today_formatted'] = $_POST ['SR_CURRENCY_SYMBOL'] . sr_number_format($daily_widget_data['sales_today'],$_POST ['SR_DECIMAL_PLACES']);
+		$daily_widget_data['diff_daily_sales_formatted'] = (!empty($daily_widget_data['diff_daily_sales'])) ? sr_number_format($daily_widget_data['diff_daily_sales'], $_POST ['SR_DECIMAL_PLACES']) . '%' : "";
+
+		// ================================================
+		// Todays Customers
+		// ================================================
+
+
+		$result_guest_today_email1 = array();
+		$result_guest_yest_email1 = array();
+		$reg_today_count = 0;
+		$reg_yest_count = 0;
+
+
+		//Reg Customers
+		$query_reg_today    = "SELECT ID FROM `$wpdb->users` 
+		                    WHERE user_registered LIKE  '$today%'";
+		$reg_today_ids      = $wpdb->get_col ( $query_reg_today );
+		$rows_reg_today_ids = $wpdb->num_rows;
+
+		if ($rows_reg_today_ids > 0) {
+		    $query_reg_today_count  ="SELECT COUNT(*)
+		                               FROM {$wpdb->prefix}postmeta AS postmeta
+		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+		                               WHERE postmeta.meta_key IN ('_customer_user')
+		                                     AND postmeta.meta_value IN (".implode(",",$reg_today_ids).")
+		                                     AND posts.post_date LIKE  '$today%'
+		                                     $cond_terms_post
+		                               GROUP BY postmeta.meta_value";
+
+		    $reg_today              = $wpdb->get_col ( $query_reg_today_count ); 
+		    $rows_reg_today         = $wpdb->num_rows;   
+
+		    if($rows_reg_today > 0) {
+		        $reg_today_count = $reg_today[0];
+		    }
+		}
+
+
+		$query_reg_yest      = "SELECT ID FROM `$wpdb->users` 
+		                     WHERE user_registered LIKE  '$yesterday%'";
+		$reg_yest_ids        = $wpdb->get_col ( $query_reg_yest );
+		$rows_reg_yest_ids   = $wpdb->num_rows;
+
+		if ($rows_reg_yest_ids > 0) {
+		    $query_reg_today_count  ="SELECT COUNT(*)
+		                               FROM {$wpdb->prefix}postmeta AS postmeta
+		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+		                               WHERE postmeta.meta_key IN ('_customer_user')
+		                                     AND postmeta.meta_value IN (".implode(",",$reg_yest_ids).")
+		                                     AND posts.post_date LIKE  '$yesterday%'
+		                                     $cond_terms_post
+		                               GROUP BY postmeta.meta_value";
+
+		    $reg_yest               = $wpdb->get_col ( $query_reg_today_count );  
+		    $rows_reg_yest          = $wpdb->num_rows;   
+
+		    if($rows_reg_yest > 0) {
+		        $reg_yest_count = $reg_yest[0];
+		    }
+
+		}
+
+		//Guest Customers
+
+		$query_guest_today_email    = "SELECT postmeta1.meta_value
+		                       FROM {$wpdb->prefix}postmeta AS postmeta1
+		                                JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
+		                                INNER JOIN {$wpdb->prefix}postmeta AS postmeta2
+		                                               ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_customer_user'))
+		                       WHERE postmeta1.meta_key IN ('_billing_email')
+		                             AND postmeta2.meta_value = 0
+		                             AND posts.post_date LIKE  '$today%'
+		                             $cond_terms_post
+		                       GROUP BY postmeta1.meta_value";
+
+		$result_guest_today_email   = $wpdb->get_col ( $query_guest_today_email );
+		$rows_guest_today_email     = $wpdb->num_rows;
+
+		if ($rows_guest_today_email > 0) {
+		    $result_guest_today_email1   = array_flip($result_guest_today_email);    
+
+		    $query_guest_today          = "SELECT DISTINCT postmeta.meta_value
+		                               FROM {$wpdb->prefix}postmeta AS postmeta
+		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+		                               WHERE postmeta.meta_key IN ('_billing_email')
+		                                     AND postmeta.meta_value IN ('". implode("','",$result_guest_today_email) ."')
+		                                         AND posts.post_date NOT LIKE  '$today%'
+		                               GROUP BY posts.ID";
+
+		    $result_guest_today         = $wpdb->get_col ( $query_guest_today );
+
+		    for($i=0; $i<sizeof($result_guest_today);$i++) {
+		        if (isset($result_guest_today_email1[$result_guest_today[$i]])) {
+		            unset($result_guest_today_email1[$result_guest_today[$i]]);
+		        }        
+		    }
+
+
+
+		}
+
+		$daily_widget_data['today_count_cust'] = 0;
+
+		$daily_widget_data['today_count_cust'] = sizeof($result_guest_today_email1) + $reg_today_count;    
+
+		$query_guest_yest_email    ="SELECT postmeta1.meta_value
+		                           FROM {$wpdb->prefix}postmeta AS postmeta1
+		                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
+		                                    INNER JOIN {$wpdb->prefix}postmeta AS postmeta2
+		                                                   ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_customer_user'))
+		                           WHERE postmeta1.meta_key IN ('_billing_email')
+		                                 AND postmeta2.meta_value = 0
+		                                 AND posts.post_date LIKE  '$yesterday%'
+		                                 $cond_terms_post
+		                           GROUP BY postmeta1.meta_value";
+
+		$result_guest_yest_email   =  $wpdb->get_col ( $query_guest_yest_email );
+		$rows_guest_yest_email     = $wpdb->num_rows;
+
+		if ($rows_guest_yest_email > 0) {
+		$result_guest_yest_email1   = array_flip($result_guest_yest_email);
+
+		$query_guest_yest   = "SELECT DISTINCT postmeta.meta_value
+		                       FROM {$wpdb->prefix}postmeta AS postmeta
+		                                JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+		                       WHERE postmeta.meta_key IN ('_billing_email')
+		                             AND postmeta.meta_value IN ('". implode("','",$result_guest_yest_email) ."')
+		                             AND posts.post_date NOT LIKE  '$yesterday%'
+		                                 AND posts.post_date NOT LIKE  '$today%'
+		                       GROUP BY posts.ID";
+
+		$result_guest_yest   =  $wpdb->get_col ( $query_guest_yest );
+
+		for($i=0; $i<sizeof($result_guest_yest);$i++) {
+		    if (isset($result_guest_yest_email1[$result_guest_yest[$i]])) {
+		        unset($result_guest_yest_email1[$result_guest_yest[$i]]);
+		    }
+		}    
+		}
+
+		$daily_widget_data['yest_count_cust'] = 0;
+
+		$daily_widget_data['yest_count_cust'] = sizeof($result_guest_yest_email1) + $reg_yest_count;    
+
+		$daily_widget_data['diff_daily_cust'] = abs($daily_widget_data['today_count_cust'] - $daily_widget_data['yest_count_cust']);
+
+		if($daily_widget_data['diff_daily_cust'] != 0) {
+			if ($daily_widget_data['yest_count_cust'] < $daily_widget_data['today_count_cust']) {
+			    $daily_widget_data['imgurl_daily_cust'] = $_POST ['SR_IMG_UP_GREEN'];
+			}
+			else {
+			    $daily_widget_data['imgurl_daily_cust'] = $_POST ['SR_IMG_DOWN_RED'];
+			}    
+		}
+		else {
+			$daily_widget_data['diff_daily_cust'] = "";
+			$daily_widget_data['imgurl_daily_cust'] = "";
+		}
+
+		$daily_widget_data['today_count_cust_formatted'] = sr_number_format($daily_widget_data['today_count_cust'],$_POST ['SR_DECIMAL_PLACES']);
+		$daily_widget_data['diff_daily_cust_formatted'] = (!empty($daily_widget_data['diff_daily_cust'])) ? sr_number_format($daily_widget_data['diff_daily_cust'], $_POST ['SR_DECIMAL_PLACES']) : "";
+
+		// ================================================
+		// Todays Returns
+		// ================================================
+
+		$query_terms_refund         = "SELECT id FROM {$wpdb->prefix}posts AS posts
+		                            JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+		                                                        ON term_relationships.object_id = posts.ID 
+		                                        JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+		                                                        ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+		                                        JOIN {$wpdb->prefix}terms AS terms 
+		                                                        ON term_taxonomy.term_id = terms.term_id
+		                            WHERE terms.name IN ('refunded')
+		                            AND posts.post_status IN ('publish')";
+
+		$terms_refund_post          = $wpdb->get_col($query_terms_refund);
+		$rows_terms_refund_post     = $wpdb->num_rows;
+
+		if ($rows_terms_refund_post > 0) {
+			$terms_refund_post = implode(",",$terms_refund_post);
+
+			$query_today_refund     = "SELECT SUM(postmeta.meta_value) as todays_refund
+			                           FROM {$wpdb->prefix}postmeta AS postmeta
+			                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+			                           WHERE postmeta.meta_key IN ('_order_total')
+			                                 AND posts.post_modified LIKE '$today%'
+			                                 AND posts.ID IN ($terms_refund_post)";
+
+			$result_today_refund    = $wpdb->get_col ( $query_today_refund ); 
+
+			$query_yest_refund      = "SELECT SUM(postmeta.meta_value) as yest_refund
+			                           FROM {$wpdb->prefix}postmeta AS postmeta
+			                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+			                           WHERE postmeta.meta_key IN ('_order_total')
+			                                 AND posts.post_modified LIKE '$yesterday%'
+			                                 AND posts.ID IN ($terms_refund_post)";
+
+			$result_yest_refund     = $wpdb->get_col ( $query_yest_refund );
+
+		}
+		else {
+			$rows_today_refund = 0;
+			$rows_yest_refund = 0;
+		}
+
+
+		if (!empty($result_today_refund[0])) {
+			$daily_widget_data['today_refund']   = $result_today_refund[0];
+		}
+		else {
+			$daily_widget_data['today_refund']   = "0";
+		}
+
+		if (!empty($result_yest_refund[0])) {
+			$daily_widget_data['yest_refund']   = $result_yest_refund[0];
+		}
+		else {
+			$daily_widget_data['yest_refund']   = "0";
+		}
+
+
+		if ($daily_widget_data['yest_refund'] == "0") {
+			$daily_widget_data['diff_daily_refund'] = round($daily_widget_data['today_refund'],2);
+		}
+		else {
+			$daily_widget_data['diff_daily_refund'] = abs(round(((($daily_widget_data['today_refund'] - $daily_widget_data['yest_refund'])/$daily_widget_data['yest_refund']) * 100),2));
+		}
+
+		if ($daily_widget_data['diff_daily_refund'] != 0) {
+			if ($daily_widget_data['yest_refund'] < $daily_widget_data['today_refund']) {
+			    $daily_widget_data['imgurl_daily_refund'] = $_POST ['SR_IMG_UP_RED'];
+			}
+			else {
+			    $daily_widget_data['imgurl_daily_refund'] = $_POST ['SR_IMG_UP_GREEN'];
+			}    
+		}
+		else {
+			$daily_widget_data['diff_daily_refund'] = "";
+			$daily_widget_data['imgurl_daily_refund'] = "";
+		}
+
+		$daily_widget_data['today_refund_formatted'] = $_POST ['SR_CURRENCY_SYMBOL'] . sr_number_format($daily_widget_data['today_refund'],$_POST ['SR_DECIMAL_PLACES']);
+		$daily_widget_data['diff_daily_refund_formatted'] = (!empty($daily_widget_data['diff_daily_refund'])) ? sr_number_format($daily_widget_data['diff_daily_refund'], $_POST ['SR_DECIMAL_PLACES']) . '%' : "";
+
+		// ================================================
+		// Orders Unfulfillment
+		// ================================================
+
+		$query_shipping_status  = "SELECT option_value FROM {$wpdb->prefix}options
+		                        WHERE option_name LIKE 'woocommerce_calc_shipping'";
+		$result_shipping_status = $wpdb->get_col ( $query_shipping_status );
+
+		$query_physical_prod  = "SELECT post_id
+		                       FROM {$wpdb->prefix}postmeta
+		                       WHERE (meta_key LIKE '_downloadable' AND meta_value LIKE 'no')
+		                             OR (meta_key LIKE '_virtual' AND meta_value LIKE 'no')";
+
+		$result_physical_prod = $wpdb->get_col ( $query_physical_prod ); 
+		$rows_physical_prod   = $wpdb->num_rows;
+
+		$query_order_fulfillment_today  = "SELECT count(id) FROM {$wpdb->prefix}posts AS posts
+		                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+		                                                            ON term_relationships.object_id = posts.ID 
+		                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+		                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+		                                            JOIN {$wpdb->prefix}terms AS terms 
+		                                                            ON term_taxonomy.term_id = terms.term_id
+		                                WHERE terms.name IN ('processing')
+		                                    AND posts.post_status IN ('publish')
+		                                    AND (posts.post_modified LIKE '$today%'
+		                                        OR posts.post_date LIKE '$today%')";
+		          
+		$result_order_fulfillment_today = $wpdb->get_col($query_order_fulfillment_today);
+		$rows_order_fulfillment_today   = $wpdb->num_rows;
+
+		if($rows_order_fulfillment_today > 0) {
+			$daily_widget_data['count_order_fulfillment_today'] = $result_order_fulfillment_today[0];
+		}
+		else {
+			$daily_widget_data['count_order_fulfillment_today'] = 0;
+		}
+
+		$query_order_fulfillment_yest   = "SELECT count(id) FROM {$wpdb->prefix}posts AS posts
+		                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
+		                                                            ON term_relationships.object_id = posts.ID 
+		                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+		                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
+		                                            JOIN {$wpdb->prefix}terms AS terms 
+		                                                            ON term_taxonomy.term_id = terms.term_id
+		                                WHERE terms.name IN ('processing')
+		                                    AND posts.post_status IN ('publish')
+		                                    AND (posts.post_modified LIKE '$yesterday%'
+		                                        OR posts.post_date LIKE '$yesterday%')";
+		          
+		$result_order_fulfillment_yest   = $wpdb->get_col($query_order_fulfillment_yest);
+		$rows_order_fulfillment_yest    = $wpdb->num_rows;
+
+		if($rows_order_fulfillment_yest > 0) {
+			$daily_widget_data['count_order_fulfillment_yest'] = $result_order_fulfillment_yest[0];
+		}
+		else {
+			$daily_widget_data['count_order_fulfillment_yest'] = 0;
+		}
+
+		$daily_widget_data['diff_order_fulfillment'] = abs($daily_widget_data['count_order_fulfillment_today'] - $daily_widget_data['count_order_fulfillment_yest']);
+
+		if ($daily_widget_data['diff_order_fulfillment'] != 0) {
+			if ($daily_widget_data['count_order_fulfillment_today'] > $daily_widget_data['count_order_fulfillment_yest']) {
+			    $daily_widget_data['imgurl_order_fulfillment'] = $_POST ['SR_IMG_UP_RED'];
+			}
+			else {
+			    $daily_widget_data['imgurl_order_fulfillment'] = $_POST ['SR_IMG_UP_GREEN'];
+			}    
+		}
+		else {
+			$daily_widget_data['diff_order_fulfillment'] = "";
+			$daily_widget_data['imgurl_order_fulfillment'] = "";
+		}
+
+		$daily_widget_data['count_order_fulfillment_today_formatted'] = sr_number_format($daily_widget_data['count_order_fulfillment_today'],$_POST ['SR_DECIMAL_PLACES']);
+		$daily_widget_data['diff_order_fulfillment_formatted'] = (!empty($daily_widget_data['diff_order_fulfillment'])) ? sr_number_format($daily_widget_data['diff_order_fulfillment'], $_POST ['SR_DECIMAL_PLACES']) : "";
+
+		return $daily_widget_data;
+
+	}
+
+	if (isset ( $_POST ['cmd'] ) && ($_POST ['cmd'] == 'daily')) {
+		echo json_encode (sr_get_daily_kpi_data());
+	}
+
+	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'monthly') )) {
+
+		$sr_currency_symbol = isset($_POST['SR_CURRENCY_SYMBOL']) ? $_POST['SR_CURRENCY_SYMBOL'] : '';
+	    $sr_decimal_places = isset($_POST['SR_DECIMAL_PLACES']) ? $_POST['SR_DECIMAL_PLACES'] : '';
+
+		//Get the converted dates    
+	    $converted_dates = date_timezone_conversion($_POST);
+
+	    $start_date = $converted_dates ['start_date'];
+	    $end_date = $converted_dates ['end_date'];
 
 	    $strtotime_start = strtotime($start_date);
 	    $strtotime_end = strtotime($end_date);
@@ -1498,7 +2048,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 	            $imgurl_cumm_discount_sales = $_POST['SR_IMG_DOWN_RED'];
 	        }
 
-	        if ($comparison_cumm_sales[1] == 0) {
+	        if ($comparison_cumm_sales[8] == 0) {
 	            $diff_discount_cumm_sales = round($actual_cumm_sales[8],get_option( 'woocommerce_price_num_decimals' ));
 	        }
 	        else {
@@ -1637,11 +2187,11 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 		$limit = $_GET ['limit'];
 
 	// For pro version check if the required file exists
-	if (file_exists ( '../pro/sr-woo.php' )){
-		define ( 'SRPRO', true );
-	} else {
-		define ( 'SRPRO', false );
-	}
+	// if (file_exists ( '../pro/sr-woo.php' )){
+	// 	define ( 'SRPRO', true );
+	// } else {
+	// 	define ( 'SRPRO', false );
+	// }
 
 	function arr_init($arr_start, $arr_end, $category = '') {
 		global $cat_rev, $months, $order_arr;
@@ -1835,7 +2385,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 	if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
 		
-	        if (SRPRO == true) {
+	        if ( defined('SRPRO') && SRPRO == true ) {
 	            if ( WPSC_RUNNING === true ) {
 			if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' ) ) include( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' );
 	            } else {
@@ -1860,7 +2410,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 				$from ['date'] = $temp;
 			}
 			// date('Y-m-d H:i:s',(int)strtotime($_POST ['fromDate']))		$from ['date']		$to['date']
-			if (SRPRO == true){
+			if ( defined('SRPRO') && SRPRO == true ){
 				$where_date = " AND (posts.`post_date` between '" . date('Y-m-d H:i:s',$from ['date']) . "' AND '" . date('Y-m-d H:i:s',$to['date']) . "')";
 			}else{
 				$diff = 86400 * 7;
@@ -1955,6 +2505,8 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 			
 		$order_by = " ORDER BY sales DESC ";
 		
+		$search_condn = '';
+
 		if (isset ( $_GET ['searchText'] ) && $_GET ['searchText'] != '') {
 			$search_on = $wpdb->_real_escape ( trim ( $_GET ['searchText'] ) );
 			$search_ons = explode( ' ', $search_on );
@@ -1988,5 +2540,7 @@ include_once ('reporter-console.php'); // Included for using the sr_number_forma
 
 		echo json_encode ( $encoded );
 	}
+
+ob_end_flush();
 
 ?>
