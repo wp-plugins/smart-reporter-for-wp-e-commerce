@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.5
+Version: 2.6
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
@@ -344,13 +344,18 @@ function is_pro_updated() {
 		}
     	
     }
-	
+
 
 	add_action ( 'init', 'sr_schedule_daily_summary_mails' );
 
 	function sr_schedule_daily_summary_mails() {
-		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr-summary-mails.php' )) {
-			include ('pro/sr-summary-mails.php');
+
+		if ( in_array( 'woocommerce/woocommerce.php', get_option( 'active_plugins' ) ) || ( is_multisite() && in_array( 'woocommerce/woocommerce.php', get_option( 'active_sitewide_plugins' ) ) ) ) {
+
+			if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr-summary-mails.php' )) {
+				include ('pro/sr-summary-mails.php');
+			}
+
 		}
 	}
 
@@ -482,7 +487,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         wp_register_script ( 'sr_jqplot_all_scripts', plugins_url ( 'resources/jqplot/jqplot.BezierCurveRenderer.min.js', __FILE__ ), array ('sr_datepicker' ), $sr_plugin_info ['Version']);
 
         wp_register_style ( 'font_awesome', plugins_url ( "resources/font-awesome/css/font-awesome.min.css", __FILE__ ), array ());
-		wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/redmond.datepick.css', __FILE__ ), array ('font_awesome'));
+        // wp_register_style ( 'font_awesome', '//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css', array ());
+		// wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/redmond.datepick.css', __FILE__ ), array ('font_awesome'));
+		wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/smoothness.datepick.css', __FILE__ ), array ('font_awesome'));
 		wp_register_style ( 'sr_jqplot_all', plugins_url ( 'resources/jqplot/jquery.jqplot.min.css', __FILE__ ), array ('sr_datepicker_css'));
 		wp_register_style ( 'sr_main_beta', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_jqplot_all' ), $sr_plugin_info ['Version'] );
 		// ================================================================================================
@@ -888,7 +895,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 
    	<p class="wrap" style="font-size: 12px">
-	   	<span style="float: right"> <?php
+	   	<span style="float: right;margin-right: 2.25em;"> <?php
 			if ( SRPRO === true && ! is_multisite() ) {
 				
 				if (WPSC_RUNNING == true) {
@@ -1038,13 +1045,33 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 	};
 
 
+	if (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
+    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
+    }
+	
+	function sr_wp_dashboard_widget() {
+		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
+		if (file_exists( $base_path . 'reporter-console.php' )) {
+            include_once ($base_path . 'reporter-console.php');
+            wp_enqueue_script ( 'sr_jqplot_all_scripts' );
+			wp_enqueue_style ( 'sr_main_beta' );
+		
+			//Constants for the arrow indicators
+		    define ('SR_IMG_UP_GREEN', 'fa fa-angle-double-up icon_cumm_indicator_green');
+		    define ('SR_IMG_UP_RED', 'fa fa-angle-double-up icon_cumm_indicator_red');
+		    define ('SR_IMG_DOWN_RED', 'fa fa-angle-double-down icon_cumm_indicator_red');
+
+			wp_add_dashboard_widget( 'sr_dashboard_kpi', __( 'Sales Summary', 'smart_reporter' ), 'sr_dashboard_widget_kpi' );
+		}
+	}
+
 	function sr_beta_show_console() {
 		
 
 		//Constants for the arrow indicators
-	    define ('SR_IMG_UP_GREEN', 'icon-arrow-up icon_cumm_indicator_green');
-	    define ('SR_IMG_UP_RED', 'icon-arrow-up icon_cumm_indicator_red');
-	    define ('SR_IMG_DOWN_RED', 'icon-arrow-down icon_cumm_indicator_red');
+	    define ('SR_IMG_UP_GREEN', 'fa fa-angle-double-up icon_cumm_indicator_green');
+	    define ('SR_IMG_UP_RED', 'fa fa-angle-double-up icon_cumm_indicator_red');
+	    define ('SR_IMG_DOWN_RED', 'fa fa-angle-double-down icon_cumm_indicator_red');
 	    
 	    //Constant for DatePicker Icon    
 	    define ('SR_IMG_DATE_PICKER', SR_IMG_URL . 'calendar-blue.gif');

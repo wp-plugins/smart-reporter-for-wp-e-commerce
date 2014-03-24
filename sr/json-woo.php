@@ -221,7 +221,7 @@ function sr_number_format($input, $places)
 						$abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] = $abandoned_date_series[$abandoned_dates_comp[$i]]['sales'] + $abandoned_quantity[$i];
 	                }
 
-                } else {
+                } else if (!empty($limit)) {
                 	for ($i=0; $i<sizeof($abandoned_dates); $i++) {
 						$abandoned_date_series[$abandoned_dates[$i]]['sales'] = $abandoned_date_series[$abandoned_dates[$i]]['sales'] + $abandoned_quantity[$i];
 
@@ -844,7 +844,7 @@ function sr_number_format($input, $places)
 
 	    // % Orders Containing Coupons
 
-	    $sr_per_order_containing_coupons = 0;
+	    $sr_per_order_containing_coupons = '';
 
 	    $query_cumm_orders_coupon_count 	= "SELECT COUNT( posts.ID ) AS total_coupon_orders
 		    									FROM `{$wpdb->prefix}posts` AS posts
@@ -1530,6 +1530,120 @@ function sr_number_format($input, $places)
 
 	}
 
+	// Function for getting the formatted sales frequency
+	function sr_get_frequency_formatted($days) {
+
+		// 1 hr = 0.0416 days 
+
+		if ($days < 0.0416)
+        {
+            $duration=round((($days/ 0.0416) * 60),2) . 'min';
+        }
+        else if ($days < 1)
+        {
+            /**
+             * In this we convert 1 day velocity to be based upon Hours.
+             * So we get say, 0.5 days we multiply it by 24 and it becomes 12hrs.
+             *
+             * 1min = 0.0167 hrs.
+             */
+            $valueAsPerDuration = $days * 24;
+            $remainderValue = floor((($valueAsPerDuration % 1) / 0.0167));
+            $duration =  floor($valueAsPerDuration) . 'h';
+            $duration .= ($remainderValue != 0) ? ' ' . round($remainderValue,0) . 'min' : '';
+        }
+        else if ($days < 7)
+        {
+            $valueAsPerDuration = $days;
+            $remainderValue = round((($valueAsPerDuration % 1) * 24),0);
+            $duration = floor($valueAsPerDuration) . 'd';
+            $duration .= ($remainderValue != 0) ? ' ' . $remainderValue . 'h' : '';
+        }
+        else if ($days < 30)
+        {
+            $valueAsPerDuration = $days / 7;
+            $remainderValue = round(($valueAsPerDuration % 7),0);
+            $duration = floor($valueAsPerDuration) . 'w';
+            $duration .= ($remainderValue != 0) ? ' ' . $remainderValue . 'd' : '';
+        }
+        else if ($days < 365)
+        {
+            $valueAsPerDuration = $days / 30;
+            $remainderValue =  round(($valueAsPerDuration % 30),0);
+            $duration = floor($valueAsPerDuration) . 'm';
+            $duration .= ($remainderValue != 0) ? ' ' . $remainderValue . 'd' : '';
+        }
+        else if ($days > 365)
+        {
+            $valueAsPerDuration = $days / 365;
+            $remainderValue = round(($valueAsPerDuration % 365),0);
+            $additionalText = '';
+
+            if ($remainderValue > 30)
+            {
+                $remainderValue = round(($remainderValue / 30),0);
+                $additionalText = 'm';
+            }
+            else
+            {
+                $additionalText = 'd';
+            }
+            $duration = floor($valueAsPerDuration) . 'y';
+            $duration .= ($remainderValue != 0) ? ' ' . $remainderValue . $additionalText : '';
+        }
+
+        return $duration;
+	}
+
+	//Formatting the kpi data
+
+	function sr_get_daily_kpi_data_formatted($kpi_name,$current_value,$comparison_value,$post) {
+
+		$_POST = $post;
+
+		if ($kpi_name == "daily_cust" || $kpi_name == "order_fulfillment") {
+			$daily_widget_data['diff_'.$kpi_name] = abs($current_value - $comparison_value);	
+		} else {
+			if ($comparison_value == 0) {
+				$daily_widget_data['diff_'.$kpi_name] = round($current_value,2);
+			}
+			else {
+				$daily_widget_data['diff_'.$kpi_name] = abs(round(((($current_value - $comparison_value)/$comparison_value) * 100),2));
+			}	
+		}
+
+		if ($daily_widget_data['diff_'.$kpi_name] != 0) {
+			if ($comparison_value < $current_value) {
+				if ($kpi_name == "daily_refund" || $kpi_name == "order_fulfillment") {
+					$daily_widget_data['imgurl_'.$kpi_name] = $_POST ['SR_IMG_UP_RED'];
+				} else {
+					$daily_widget_data['imgurl_'.$kpi_name] = $_POST ['SR_IMG_UP_GREEN'];	
+				}
+			}
+			else {
+				if ($kpi_name == "daily_refund"  || $kpi_name == "order_fulfillment") {
+					$daily_widget_data['imgurl_daily_refund'] = $_POST ['SR_IMG_UP_GREEN'];
+				} else {
+			    	$daily_widget_data['imgurl_'.$kpi_name] = $_POST ['SR_IMG_DOWN_RED'];
+			    }
+			}    
+		}
+		else {
+			$daily_widget_data['diff_'.$kpi_name] = "";
+			$daily_widget_data['imgurl_'.$kpi_name] = "";
+		}
+
+		if ($kpi_name == "daily_cust" || $kpi_name == "order_fulfillment") {
+			$daily_widget_data[$kpi_name.'_formatted'] = sr_number_format($current_value,$_POST ['SR_DECIMAL_PLACES']);
+		} else {
+			$daily_widget_data[$kpi_name.'_formatted'] = $_POST ['SR_CURRENCY_SYMBOL'] . sr_number_format($current_value,$_POST ['SR_DECIMAL_PLACES']);
+		}
+		
+		$daily_widget_data['diff_'.$kpi_name.'_formatted'] = (!empty($daily_widget_data['diff_'.$kpi_name])) ? sr_number_format($daily_widget_data['diff_'.$kpi_name], $_POST ['SR_DECIMAL_PLACES']) . '%' : "";
+
+		return $daily_widget_data;
+
+	}
 
 	//Daily Widgets Data 
 
@@ -1543,7 +1657,16 @@ function sr_number_format($input, $places)
 		$curr_time_gmt = date('H:i:s',time()- date("Z"));
 		$new_date = date('Y-m-d') ." " . $curr_time_gmt;
 		$today = date('Y-m-d',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;
+		$today_time = date('Y-m-d H:i:s',((int)strtotime($new_date)) + ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS )) ;
 		$yesterday = date('Y-m-d', strtotime($today .' -1 day'));
+
+		// $today_to_date = $today . " 00:00:00";
+		$this_month_start   = date("Y-m-d H:i:s", mktime(0,0,0,date('m', strtotime($today)),1,date('Y', strtotime($today))));
+		$days_in_this_month = date('t', mktime(0, 0, 0, date('m', strtotime($today)), 1, date('Y', strtotime($today))));
+
+		$comparison_to_date = date('Y-m-d', strtotime($today . ' -1 month')) . " 00:00:00";
+		$comparison_month_start   = date("Y-m-d H:i:s", mktime(0,0,0,date('m', strtotime($comparison_to_date)),1,date('Y', strtotime($comparison_to_date))));
+		$comparison_days_in_month = date('t', mktime(0, 0, 0, date('m', strtotime($comparison_to_date)), 1, date('Y', strtotime($comparison_to_date))));
 
 		$query_terms     = "SELECT id FROM {$wpdb->prefix}posts AS posts
                         JOIN {$wpdb->prefix}term_relationships AS term_relationships 
@@ -1603,33 +1726,94 @@ function sr_number_format($input, $places)
 			$daily_widget_data['sales_yest'] = 0;
 		}
 
-		if ($daily_widget_data['sales_yest'] == 0) {
-			$daily_widget_data['diff_daily_sales'] = round($daily_widget_data['sales_today'],2);
+		$daily_sales_kpi = sr_get_daily_kpi_data_formatted('daily_sales',$daily_widget_data['sales_today'],$daily_widget_data['sales_yest'],$_POST);
+		
+		// Query to get the month to date and forecasted sales
+
+		$query_month_to_date_sales = "SELECT COUNT( posts.ID ) as sales_count, 
+											SUM( postmeta.meta_value ) AS month_to_date 
+					                    FROM `{$wpdb->prefix}postmeta` AS postmeta
+					                    LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+					                    WHERE postmeta.meta_key IN ('_order_total')
+				                        	AND posts.post_date between '$this_month_start' AND '$today_time'
+				                        	$cond_terms_post";
+		$results_month_to_date_sales = $wpdb->get_results ( $query_month_to_date_sales, 'ARRAY_A' );
+
+		$month_to_date_sales = (!empty($results_month_to_date_sales[0]['month_to_date'])) ? $results_month_to_date_sales[0]['month_to_date'] : 0;
+		$avg_sales_per_day  = round(($results_month_to_date_sales[0]['month_to_date']/$today_arr['mday']),2);
+		$forcasted_sales 	= $avg_sales_per_day * $days_in_this_month;
+
+		// Code for calculating the sales frequency
+		$date_diff = round((strtotime($today_time)-strtotime($this_month_start)) / 60);
+		$frequency_diff_days = $date_diff / 1440;
+
+		$sales_frequency = (!empty($results_month_to_date_sales[0]['sales_count'])) ? ($frequency_diff_days / $results_month_to_date_sales[0]['sales_count']) : '0';
+
+		// $diff = date_diff($today_time,$this_month_start);
+
+		$sales_frequency_formatted = sr_get_frequency_formatted($sales_frequency);
+
+		// Query to get the comparison month to date and forecasted sales
+
+		$query_comparison_month_to_date_sales = "SELECT COUNT( posts.ID ) as sales_count, 
+													SUM( postmeta.meta_value ) AS month_to_date
+							                    FROM `{$wpdb->prefix}postmeta` AS postmeta
+							                    LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+							                    WHERE postmeta.meta_key IN ('_order_total')
+						                        	AND posts.post_date between '$comparison_month_start' AND '$comparison_to_date'
+						                        	$cond_terms_post";
+		$results_comparison_month_to_date_sales = $wpdb->get_results ( $query_comparison_month_to_date_sales, 'ARRAY_A' );
+
+		$comparison_month_to_date_sales = (!empty($results_comparison_month_to_date_sales[0]['month_to_date'])) ? $results_comparison_month_to_date_sales[0]['month_to_date'] : 0;
+		$comparison_avg_sales_per_day  = round(($results_comparison_month_to_date_sales[0]['month_to_date']/$today_arr['mday']),2);
+		$comparison_forcasted_sales 	= $comparison_avg_sales_per_day * $comparison_days_in_month;
+
+		$comparison_sales_frequency = (!empty($results_comparison_month_to_date_sales[0]['sales_count'])) ? ($frequency_diff_days / $results_comparison_month_to_date_sales[0]['sales_count']) : '0';
+
+		//Code for month to date sales KPI
+		$month_to_date_sales_kpi = sr_get_daily_kpi_data_formatted('month_to_date_sales',$month_to_date_sales,$comparison_month_to_date_sales,$_POST);
+
+		//Code for average sales per day KPI
+		$avg_sales_per_day_kpi = sr_get_daily_kpi_data_formatted('avg_sales_per_day',$avg_sales_per_day,$comparison_avg_sales_per_day,$_POST);
+		
+		//Code for Forecasted Sales KPI
+		$forcasted_sales_kpi = sr_get_daily_kpi_data_formatted('forcasted_sales',$forcasted_sales,$comparison_forcasted_sales,$_POST);
+
+		
+
+
+		//Code for Sales Frequency KPI
+
+		// $sales_count = (!empty($results_month_to_date_sales[0]['sales_count'])) ? $results_month_to_date_sales[0]['sales_count'] : '0';
+		// $comparison_sales_count = (!empty($results_comparison_month_to_date_sales[0]['sales_count'])) ? $results_comparison_month_to_date_sales[0]['sales_count'] : '0';
+
+		if ($comparison_sales_frequency == 0) {
+			$daily_widget_data['diff_sales_frequency'] = round($sales_frequency,2);
 		}
 		else {
-			$daily_widget_data['diff_daily_sales'] = abs(round(((($daily_widget_data['sales_today'] - $daily_widget_data['sales_yest'])/$daily_widget_data['sales_yest']) * 100),2));
+			$daily_widget_data['diff_sales_frequency'] = abs(round(((($sales_frequency - $comparison_sales_frequency)/$comparison_sales_frequency) * 100),2));
 		}
 
-		if ($daily_widget_data['diff_daily_sales'] != 0) {
-			if ($daily_widget_data['sales_yest'] < $daily_widget_data['sales_today']) {
-			    $daily_widget_data['imgurl_daily_sales'] = $_POST ['SR_IMG_UP_GREEN'];
+		if ($daily_widget_data['diff_sales_frequency'] != 0) {
+			if ($comparison_sales_frequency < $sales_frequency) {
+				$daily_widget_data['imgurl_sales_frequency'] = $_POST ['SR_IMG_UP_RED'];	
 			}
 			else {
-			    $daily_widget_data['imgurl_daily_sales'] = $_POST ['SR_IMG_DOWN_RED'];
+		    	$daily_widget_data['imgurl_sales_frequency'] = $_POST ['SR_IMG_UP_GREEN'];
 			}    
 		}
 		else {
-			$daily_widget_data['diff_daily_sales'] = "";
-			$daily_widget_data['imgurl_daily_sales'] = "";
+			$daily_widget_data['diff_sales_frequency'] = "";
+			$daily_widget_data['imgurl_sales_frequency'] = "";
 		}
 
-		$daily_widget_data['sales_today_formatted'] = $_POST ['SR_CURRENCY_SYMBOL'] . sr_number_format($daily_widget_data['sales_today'],$_POST ['SR_DECIMAL_PLACES']);
-		$daily_widget_data['diff_daily_sales_formatted'] = (!empty($daily_widget_data['diff_daily_sales'])) ? sr_number_format($daily_widget_data['diff_daily_sales'], $_POST ['SR_DECIMAL_PLACES']) . '%' : "";
+		$daily_widget_data['sales_frequency_formatted'] = $sales_frequency_formatted;
+		
+		$daily_widget_data['diff_sales_frequency_formatted'] = (!empty($daily_widget_data['diff_sales_frequency'])) ? sr_number_format($daily_widget_data['diff_sales_frequency'], $_POST ['SR_DECIMAL_PLACES']) . '%' : "";
 
 		// ================================================
 		// Todays Customers
 		// ================================================
-
 
 		$result_guest_today_email1 = array();
 		$result_guest_yest_email1 = array();
@@ -1660,7 +1844,6 @@ function sr_number_format($input, $places)
 		        $reg_today_count = $reg_today[0];
 		    }
 		}
-
 
 		$query_reg_yest      = "SELECT ID FROM `$wpdb->users` 
 		                     WHERE user_registered LIKE  '$yesterday%'";
@@ -1720,9 +1903,6 @@ function sr_number_format($input, $places)
 		            unset($result_guest_today_email1[$result_guest_today[$i]]);
 		        }        
 		    }
-
-
-
 		}
 
 		$daily_widget_data['today_count_cust'] = 0;
@@ -1766,26 +1946,10 @@ function sr_number_format($input, $places)
 
 		$daily_widget_data['yest_count_cust'] = 0;
 
-		$daily_widget_data['yest_count_cust'] = sizeof($result_guest_yest_email1) + $reg_yest_count;    
+		$daily_widget_data['yest_count_cust'] = sizeof($result_guest_yest_email1) + $reg_yest_count;
 
-		$daily_widget_data['diff_daily_cust'] = abs($daily_widget_data['today_count_cust'] - $daily_widget_data['yest_count_cust']);
-
-		if($daily_widget_data['diff_daily_cust'] != 0) {
-			if ($daily_widget_data['yest_count_cust'] < $daily_widget_data['today_count_cust']) {
-			    $daily_widget_data['imgurl_daily_cust'] = $_POST ['SR_IMG_UP_GREEN'];
-			}
-			else {
-			    $daily_widget_data['imgurl_daily_cust'] = $_POST ['SR_IMG_DOWN_RED'];
-			}    
-		}
-		else {
-			$daily_widget_data['diff_daily_cust'] = "";
-			$daily_widget_data['imgurl_daily_cust'] = "";
-		}
-
-		$daily_widget_data['today_count_cust_formatted'] = sr_number_format($daily_widget_data['today_count_cust'],$_POST ['SR_DECIMAL_PLACES']);
-		$daily_widget_data['diff_daily_cust_formatted'] = (!empty($daily_widget_data['diff_daily_cust'])) ? sr_number_format($daily_widget_data['diff_daily_cust'], $_POST ['SR_DECIMAL_PLACES']) : "";
-
+		$daily_cust_kpi = sr_get_daily_kpi_data_formatted('daily_cust',$daily_widget_data['today_count_cust'],$daily_widget_data['yest_count_cust'],$_POST);
+		
 		// ================================================
 		// Todays Returns
 		// ================================================
@@ -1845,29 +2009,7 @@ function sr_number_format($input, $places)
 			$daily_widget_data['yest_refund']   = "0";
 		}
 
-
-		if ($daily_widget_data['yest_refund'] == "0") {
-			$daily_widget_data['diff_daily_refund'] = round($daily_widget_data['today_refund'],2);
-		}
-		else {
-			$daily_widget_data['diff_daily_refund'] = abs(round(((($daily_widget_data['today_refund'] - $daily_widget_data['yest_refund'])/$daily_widget_data['yest_refund']) * 100),2));
-		}
-
-		if ($daily_widget_data['diff_daily_refund'] != 0) {
-			if ($daily_widget_data['yest_refund'] < $daily_widget_data['today_refund']) {
-			    $daily_widget_data['imgurl_daily_refund'] = $_POST ['SR_IMG_UP_RED'];
-			}
-			else {
-			    $daily_widget_data['imgurl_daily_refund'] = $_POST ['SR_IMG_UP_GREEN'];
-			}    
-		}
-		else {
-			$daily_widget_data['diff_daily_refund'] = "";
-			$daily_widget_data['imgurl_daily_refund'] = "";
-		}
-
-		$daily_widget_data['today_refund_formatted'] = $_POST ['SR_CURRENCY_SYMBOL'] . sr_number_format($daily_widget_data['today_refund'],$_POST ['SR_DECIMAL_PLACES']);
-		$daily_widget_data['diff_daily_refund_formatted'] = (!empty($daily_widget_data['diff_daily_refund'])) ? sr_number_format($daily_widget_data['diff_daily_refund'], $_POST ['SR_DECIMAL_PLACES']) . '%' : "";
+		$daily_refund_kpi = sr_get_daily_kpi_data_formatted('daily_refund',$daily_widget_data['today_refund'],$daily_widget_data['yest_refund'],$_POST);
 
 		// ================================================
 		// Orders Unfulfillment
@@ -1877,6 +2019,8 @@ function sr_number_format($input, $places)
 		                        WHERE option_name LIKE 'woocommerce_calc_shipping'";
 		$result_shipping_status = $wpdb->get_col ( $query_shipping_status );
 
+		$daily_widget_data['result_shipping_status'] = $result_shipping_status[0];
+
 		$query_physical_prod  = "SELECT post_id
 		                       FROM {$wpdb->prefix}postmeta
 		                       WHERE (meta_key LIKE '_downloadable' AND meta_value LIKE 'no')
@@ -1884,6 +2028,8 @@ function sr_number_format($input, $places)
 
 		$result_physical_prod = $wpdb->get_col ( $query_physical_prod ); 
 		$rows_physical_prod   = $wpdb->num_rows;
+
+		$daily_widget_data['rows_physical_prod'] = $rows_physical_prod;
 
 		$query_order_fulfillment_today  = "SELECT count(id) FROM {$wpdb->prefix}posts AS posts
 		                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
@@ -1929,29 +2075,19 @@ function sr_number_format($input, $places)
 			$daily_widget_data['count_order_fulfillment_yest'] = 0;
 		}
 
-		$daily_widget_data['diff_order_fulfillment'] = abs($daily_widget_data['count_order_fulfillment_today'] - $daily_widget_data['count_order_fulfillment_yest']);
+		$daily_order_fulfillment_kpi = sr_get_daily_kpi_data_formatted('order_fulfillment',$daily_widget_data['count_order_fulfillment_today'],$daily_widget_data['count_order_fulfillment_yest'],$_POST);
 
-		if ($daily_widget_data['diff_order_fulfillment'] != 0) {
-			if ($daily_widget_data['count_order_fulfillment_today'] > $daily_widget_data['count_order_fulfillment_yest']) {
-			    $daily_widget_data['imgurl_order_fulfillment'] = $_POST ['SR_IMG_UP_RED'];
-			}
-			else {
-			    $daily_widget_data['imgurl_order_fulfillment'] = $_POST ['SR_IMG_UP_GREEN'];
-			}    
-		}
-		else {
-			$daily_widget_data['diff_order_fulfillment'] = "";
-			$daily_widget_data['imgurl_order_fulfillment'] = "";
-		}
-
-		$daily_widget_data['count_order_fulfillment_today_formatted'] = sr_number_format($daily_widget_data['count_order_fulfillment_today'],$_POST ['SR_DECIMAL_PLACES']);
-		$daily_widget_data['diff_order_fulfillment_formatted'] = (!empty($daily_widget_data['diff_order_fulfillment'])) ? sr_number_format($daily_widget_data['diff_order_fulfillment'], $_POST ['SR_DECIMAL_PLACES']) : "";
+		$daily_widget_data = array_merge($daily_widget_data, $daily_sales_kpi, $month_to_date_sales_kpi, $avg_sales_per_day_kpi, $forcasted_sales_kpi, $daily_cust_kpi, $daily_refund_kpi, $daily_order_fulfillment_kpi);
 
 		return $daily_widget_data;
-
 	}
 
 	if (isset ( $_POST ['cmd'] ) && ($_POST ['cmd'] == 'daily')) {
+		
+		while(ob_get_contents()) {
+         	   ob_clean();
+		}
+
 		echo json_encode (sr_get_daily_kpi_data());
 	}
 
@@ -2161,6 +2297,10 @@ function sr_number_format($input, $places)
 	        $encoded['tick_format'] = "%H:%M:%S";
 	    }
 
+	    while(ob_get_contents()) {
+         	   ob_clean();
+		}
+
 	    echo json_encode ( $encoded );
 	    unset($encoded);
 	    
@@ -2193,13 +2333,15 @@ function sr_number_format($input, $places)
 	// 	define ( 'SRPRO', false );
 	// }
 
-	function arr_init($arr_start, $arr_end, $category = '') {
-		global $cat_rev, $months, $order_arr;
+	if (!function_exists('sr_arr_init')) {
+		function sr_arr_init($arr_start, $arr_end, $category = '') {
+			global $cat_rev, $months, $order_arr;
 
-		for($i = $arr_start; $i <= $arr_end; $i ++) {
-			$key = ($category == 'month') ? $months [$i - 1] : $i;
-			$cat_rev [$key] = 0;
-		}
+			for($i = $arr_start; $i <= $arr_end; $i ++) {
+				$key = ($category == 'month') ? $months [$i - 1] : $i;
+				$cat_rev [$key] = 0;
+			}
+		}	
 	}
 
 	function get_grid_data( $select, $from, $where, $where_date, $group_by, $search_condn, $order_by ) {
@@ -2446,34 +2588,34 @@ function sr_number_format($input, $places)
 							$parts ['abbr'] = '%k';
 	                                                $parts ['day'] = 'today';
 
-							arr_init ( 0, $parts ['no'],'hr' );
+							sr_arr_init ( 0, $parts ['no'],'hr' );
 						} else {
 							$parts ['category'] = 'day';
 							$parts ['no'] = date ( 't', $from ['date'] );
 							$parts ['abbr'] = '%e';
 
-							arr_init ( 1, $parts ['no'] );
+							sr_arr_init ( 1, $parts ['no'] );
 						}
 					} else {
 						$parts ['category'] = 'day';
 						$parts ['no'] = date ( 't', $from ['date'] );
 						$parts ['abbr'] = '%e';
 
-						arr_init ( 1, $parts ['no'] );
+						sr_arr_init ( 1, $parts ['no'] );
 					}
 				} else {
 					$parts ['category'] = 'month';
 					$parts ['no'] = $to ['mon'] - $frm ['mon'];
 					$parts ['abbr'] = '%b';
 
-					arr_init ( $frm ['mon'], $to ['mon'], $parts ['category'] );
+					sr_arr_init ( $frm ['mon'], $to ['mon'], $parts ['category'] );
 				}
 			} else {
 				$parts ['category'] = 'year';
 				$parts ['no'] = $to ['yr'] - $frm ['yr'];
 				$parts ['abbr'] = '%Y';
 
-				arr_init ( $frm ['yr'], $to ['yr'] );
+				sr_arr_init ( $frm ['yr'], $to ['yr'] );
 			}
 			// EOF
 		}
@@ -2538,9 +2680,13 @@ function sr_number_format($input, $places)
 			
 		}
 
+		while(ob_get_contents()) {
+         	   ob_clean();
+		}
+
 		echo json_encode ( $encoded );
 	}
 
-ob_end_flush();
+// ob_end_flush();
 
 ?>

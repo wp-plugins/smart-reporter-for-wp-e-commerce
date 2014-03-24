@@ -29,13 +29,15 @@ if (file_exists ( '../pro/sr.php' )){
 	define ( 'SRPRO', false );
 }
 
-function arr_init($arr_start, $arr_end, $category = '') {
-	global $cat_rev, $months, $order_arr;
+if (!function_exists('sr_arr_init')) {
+	function sr_arr_init($arr_start, $arr_end, $category = '') {
+		global $cat_rev, $months, $order_arr;
 
-	for($i = $arr_start; $i <= $arr_end; $i ++) {
-		$key = ($category == 'month') ? $months [$i - 1] : $i;
-		$cat_rev [$key] = 0;
-	}
+		for($i = $arr_start; $i <= $arr_end; $i ++) {
+			$key = ($category == 'month') ? $months [$i - 1] : $i;
+			$cat_rev [$key] = 0;
+		}
+	}	
 }
 
 function get_grid_data( $select, $from, $where, $order_by ) {
@@ -260,34 +262,34 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 						$parts ['abbr'] = '%k';
                                                 $parts ['day'] = 'today';
 
-						arr_init ( 0, $parts ['no'],'hr' );
+						sr_arr_init ( 0, $parts ['no'],'hr' );
 					} else {
 						$parts ['category'] = 'day';
 						$parts ['no'] = date ( 't', $from ['date'] );
 						$parts ['abbr'] = '%e';
 
-						arr_init ( 1, $parts ['no'] );
+						sr_arr_init ( 1, $parts ['no'] );
 					}
 				} else {
 					$parts ['category'] = 'day';
 					$parts ['no'] = date ( 't', $from ['date'] );
 					$parts ['abbr'] = '%e';
 
-					arr_init ( 1, $parts ['no'] );
+					sr_arr_init ( 1, $parts ['no'] );
 				}
 			} else {
 				$parts ['category'] = 'month';
 				$parts ['no'] = $to ['mon'] - $frm ['mon'];
 				$parts ['abbr'] = '%b';
 
-				arr_init ( $frm ['mon'], $to ['mon'], $parts ['category'] );
+				sr_arr_init ( $frm ['mon'], $to ['mon'], $parts ['category'] );
 			}
 		} else {
 			$parts ['category'] = 'year';
 			$parts ['no'] = $to ['yr'] - $frm ['yr'];
 			$parts ['abbr'] = '%Y';
 
-			arr_init ( $frm ['yr'], $to ['yr'] );
+			sr_arr_init ( $frm ['yr'], $to ['yr'] );
 		}
 		// EOF
 	}
