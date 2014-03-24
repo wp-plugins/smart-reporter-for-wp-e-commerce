@@ -346,8 +346,10 @@ pre.code{
 /*==============================*/
 
 .cumm_header {
-  border-color : #368ee0;
-  background-color : #368ee0;
+  /*border-color : #368ee0;
+  background-color : #368ee0;*/
+  border-color : #85898e;
+  background-color : #85898e;
   font-size : 1.5em;
   font-weight: 900;
   font-family: Helvetica, Arial, sans-serif;
@@ -356,11 +358,13 @@ pre.code{
 }
 
 .cumm_header_top_cust_coupons {
-  border-bottom : 0.16em solid #368ee0;
+  /*border-bottom : 0.16em solid #368ee0;*/
+  border-bottom : 0.16em solid #85898e;
   font-size : 1.45em;
   font-weight: 900;
   font-family: Helvetica, Arial, sans-serif;
-  color: #368ee0;
+  /*color: #368ee0;*/
+  color: #85898e;
   width: 50%;
   margin-left: 0.68em;
   padding: 7px 0 2px 0;
@@ -414,21 +418,42 @@ pre.code{
 .daily_widget { 
   float: left;
   width: 17.862em;
-  height: 7em;
+  height: 5em;
   border: 0.2em solid #e8e8e8;
   /*border-radius: 0.7em;*/
   /*background-image: url("../resources/themes/images/orders_stats.png");*/
   margin-right: 1.89em;
-  margin-bottom: 2em;
+  margin-bottom: 1.5em;
   margin-top: 0.29em;
+  background-color: #FFFFFF;
+}
+
+.daily_widget_dashboard { 
+  float: left;
+  width: 17em;
+  height: 4.3em;
+  border: 0.2em solid #e8e8e8;
+  /*border-radius: 0.7em;*/
+  /*background-image: url("../resources/themes/images/orders_stats.png");*/
+  margin-right: 0.8em;
+  margin-left: 0.8em;
+  margin-bottom: 0.9em;
+  margin-top: 0.8em;
   background-color: #FFFFFF;
 }
 
 .daily_widgets_icon {
   width: 3.45em;
-    height: 5.5em;
-    margin-top: 0.8em;
-    border-right: 1px solid #ededed;
+  height: 4em;
+  margin-top: 0.5em;
+  border-right: 1px solid #ededed;
+}
+
+.daily_widgets_icon_dashboard {
+  width: 2.8em;
+  height: 3.2em;
+  margin-top: 0.5em;
+  border-right: 1px solid #ededed;
 }
 
 .daily_widgets_icon1 {
@@ -436,41 +461,57 @@ pre.code{
   color: #4083D8;
   height: 5.5em;
   font-size: 2.0em;
-  line-height: 2.7em;
+  line-height: 2em;
+}
+
+.daily_widgets_icon1_margin_left {
+  margin-left: 0.5em;
+}
+
+.daily_widgets_icon1_dashboard_font_size {
+  font-size: 1.6em;
 }
 
 .daily_widgets_data {
   width: 19.3em;
-  margin-top: -4.25em;
+  margin-top: -3.25em;
 }
 
 .daily_widgets_text {
+  margin-top: 0.4em;
+  margin-left: 5em;
+  color: #727277;
+  font-weight: 500;
+  font-size: 0.8em;
+}
 
-    margin-top: 0.4em;
-    margin-left: 3.7em;
-    color: #727277;
-    font-weight: 500;
-    font-size: 1.1em;
-
+.daily_widgets_text_dashboard_margin_top {
+  margin-top: 0.1em;
+  margin-left: 4.7em;
 }
 
 .daily_widgets_price {
   font-size : 2.2em;
   font-family: Helvetica, Arial, sans-serif;
-    color: #4083D8;
-    font-weight: 500;
-    margin-top: 0.9em;
-    margin-left: 1.8em;
-    /*float: right*/
+  color: #4083D8;
+  font-weight: 500;
+  margin-top: 0.9em;
+  margin-left: 1.8em;
+  /*float: right*/
 }
 
 .daily_widgets_comp_price {
   margin-left:-0.5em;
   font-size: 0.37em;
   font-family: Helvetica, Arial, sans-serif;
-    color: #4083D8;
-    font-weight: 500;
-    margin-top: 0.9em;
+  color: #4083D8;
+  font-weight: 500;
+  margin-top: 0.9em;
+}
+
+.daily_widgets_price_dashboard_font_size {
+  font-size: 2em;
+  line-height: 0.9em;
 }
 
 .daily_widget_order_fulfill { 
@@ -491,45 +532,66 @@ pre.code{
 
 .daily_widget_3_color {
   /*color: #3eb157;*/
-  color: #f26645;
+  color: #f86868;
 }
 
 .daily_widget_4_color {
-  color: #15295c;
+  color: #ab8465;
   /*color: #A38250;*/
+}
+
+.daily_widget_5_color {
+  color: #f37b53;
+}
+
+.daily_widget_6_color {
+  color: #f2ae43;
+}
+
+.daily_widget_7_color {
+  color: #847cc5;
+}
+
+.daily_widget_8_color {
+  color: #77808a;
 }
 
 .sr_cumm_date {
   height: 2.0em;
   /*float: right;*/
-  width: 21em;
+  width: 21.3em;
   /*margin-left: 57.5em;*/
-  margin-right: 0.2em;
-  border-bottom: 0.2em solid #368ee0;
+  margin-top: 0.3em;
+  margin-right: 0.3em;
+  /*border-bottom: 0.2em solid #368ee0;*/
+  border-bottom: 0.1em solid #7d8083;
 }
 
 .sr_cumm_date_picker {
   float: right;
-  height: 1.8em;
+  height: 1.7em;
   width:  7.0em;
-  /*text-align: center;*/
+  text-align: center;
 }
 
 .sr_cumm_date_label {
   float: right;
   color: #727277;
-  font-size: 1.5em;
-  margin-top: 0.25em;
+  font-size: 1.3em;
   margin-right: 0.5em;
+  line-height: 1em;
 }
 
 .sr_cumm_date_icon {
-  height: 1.5em;
-  width: 1.5em;
+  /*height: 1.5em;
+  width: 1.5em;*/
+  font-size: 1.55em;
   float: right;
-  margin-top: 0.2em;
-  margin-right: 0.5em;
+  margin-left: 0.3em;
+  margin-top: 0em;
+  margin-right: 0em;
   cursor: pointer;
+  color: #85898e;
 }
 
 /* Current Summary & KPIs*/
@@ -727,13 +789,15 @@ pre.code{
 }
 
 .icon_cumm_indicator_green {
-  font-size: 20px;
+  font-size: 16px;
+  line-height: 9px;
   color: green;
   /*margin-left: -0.2em;*/
 }
 
 .icon_cumm_indicator_red {
-  font-size: 20px;
+  font-size: 16px;
+  line-height: 9px;
   color: red;
   /*margin-left: -0.2em;*/
 }
@@ -769,7 +833,6 @@ pre.code{
   border:1px #245ec6 solid;
 }
 
-
 .daily_summary_widgets {
   width: 11.3em;
   height: 4.5em;
@@ -777,6 +840,16 @@ pre.code{
   float: right;
   text-align: center;
   background-color: #FFFFFF;
+}
+
+.sr_promotion_footer {
+  text-align: center; 
+  float: left;
+  width: 100%;
+  color: #9e9b9b;
+  font-size: 0.95em;
+  margin-top: 2em;
+  margin-bottom: -1.5em;
 }
 
 /*CSS BUTTON*/

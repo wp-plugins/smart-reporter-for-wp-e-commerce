@@ -1,5 +1,5 @@
 <?php 
-global $wpdb;
+global $wpdb, $_wp_admin_css_colors;
 
 // to set javascript variable of file exists
 // $fileExists = ((defined(SRPRO)) && SRPRO === true) ? 1 : 0;
@@ -26,6 +26,271 @@ $sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
 $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
 $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
 $sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
+
+// ================================================
+// Code for SR WP Dashboard Widget
+// ================================================
+
+function sr_dashboard_widget_kpi() {
+
+    $sr_currency_symbol = defined('SR_CURRENCY_SYMBOL') ? SR_CURRENCY_SYMBOL : '';
+    $sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
+    $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
+    $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
+    $sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
+
+    ?>
+    <script type="text/javascript">
+
+        jQuery(function($){ 
+
+            $(document).ready(function() {
+            
+                $.ajax({
+                        type : 'POST',
+                        url : '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                        dataType:"text",
+                        async: false,
+                        data: {
+                            cmd: 'daily',
+                            SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
+                            SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
+                            SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
+                            SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
+                            SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>"
+                        },
+                        success: function(response) {
+                            daily_widget_data = $.parseJSON(response);
+
+                            if(daily_widget_data.rows_physical_prod > 0 && daily_widget_data.result_shipping_status == "yes") {
+
+                                $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_4_color">' + daily_widget_data.order_fulfillment_formatted 
+                                                                    + ' <i class="' + daily_widget_data.imgurl_order_fulfillment + '"></i>'
+                                                                    + '  <span class = "daily_widgets_comp_price daily_widget_4_color">' + daily_widget_data.diff_order_fulfillment_formatted + '</span> </span>');
+                            } else {
+                                $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_4_color"> N/A </span>');
+                            }
+
+                            $('#daily_total_sales').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_1_color"> ' + daily_widget_data.daily_sales_formatted
+                                                            + ' <i class= "' + daily_widget_data.imgurl_daily_sales + '" ></i>' 
+                                                            + '  <span class = "daily_widgets_comp_price daily_widget_1_color">' + daily_widget_data.diff_daily_sales_formatted + '</span> </span>');
+
+                            $('#daily_new_cust').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_2_color"> ' + daily_widget_data.daily_cust_formatted
+                                                        + ' <i class="' + daily_widget_data.imgurl_daily_cust + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_2_color">' + daily_widget_data.diff_daily_cust_formatted + '</span> </span>');
+
+                            $('#daily_refund').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_3_color">' + daily_widget_data.daily_refund_formatted
+                                                        + ' <i class="' + daily_widget_data.imgurl_daily_refund + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_3_color">' + daily_widget_data.diff_daily_refund_formatted + '</span> </span>');
+
+
+                            $('#month_to_date_sales').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_5_color">' + daily_widget_data.month_to_date_sales_formatted
+                                                        + ' <i class="' + daily_widget_data.imgurl_month_to_date_sales + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_5_color">' + daily_widget_data.diff_month_to_date_sales_formatted + '</span> </span>');
+
+                            $('#average_sales_day').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_6_color">' + daily_widget_data.avg_sales_per_day_formatted
+                                                        + ' <i class="' + daily_widget_data.imgurl_avg_sales_per_day + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_6_color">' + daily_widget_data.diff_avg_sales_per_day_formatted + '</span> </span>');
+
+                            $('#forecasted_sales').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_7_color">' + daily_widget_data.forcasted_sales_formatted
+                                                        + ' <i class="' + daily_widget_data.imgurl_forcasted_sales + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_7_color">' + daily_widget_data.diff_forcasted_sales_formatted + '</span> </span>');
+
+                            $('#sales_frequency').append('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_8_color">' + daily_widget_data.sales_frequency_formatted
+                                                        + ' <i class="' + daily_widget_data.imgurl_sales_frequency + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_8_color">' + daily_widget_data.diff_sales_frequency_formatted + '</span> </span>');
+
+                            
+                            
+                        }
+
+                    });
+            });
+
+            $("#sr_wordpress_dashboard_widget").on('click',function(){
+                window.open('<?php echo admin_url("admin.php?page=smart-reporter-woo"); ?>');
+            });
+
+        });
+        
+    </script>
+
+    <!-- 
+    // ================================================
+    // Display Part Of SR Wordpress Dashboard
+    // ================================================
+    -->
+    <div id= "sr_wordpress_dashboard_widget" style="overflow:hidden; cursor:pointer;">
+       <!-- <div style="width:50%;"> -->
+        <div>
+                <div id = "daily_widget_1" class = "daily_widget_dashboard first">
+                    <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_1").hover(
+                                function() { $(this).css('border', '0.2em solid #12B41F');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+
+                    <div class = "daily_widgets_icon_dashboard"> 
+                        <i class = "fa fa-signal daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_1_color">   </i>
+                    </div>
+
+                    <div id="daily_total_sales" class="daily_widgets_data">
+                            <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Sales Today </p>
+                    </div>
+                </div>
+        </div>
+        <div>
+                <div id = "daily_widget_2" class="daily_widget_dashboard second">
+                  <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_2").hover(
+                                function() { $(this).css('border', '0.2em solid #12ADC2');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+                  <div class="daily_widgets_icon_dashboard">
+                    <i class = "fa fa-user daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_2_color"> </i>     
+                  </div>
+
+                  <div id="daily_new_cust" class="daily_widgets_data">
+                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> New Customers Today </p>
+                  </div>
+
+                </div>
+        </div>
+
+        <div>
+                <div id = "daily_widget_3" class="daily_widget_dashboard third">
+
+                   <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_3").hover(
+                                function() { $(this).css('border', '0.2em solid #f86868');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+                  <div class="daily_widgets_icon_dashboard">
+                    <i class = "fa fa-thumbs-down daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_3_color"> </i>   
+                  </div>
+                  <div id="daily_refund" class="daily_widgets_data">
+                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Refund Today </p>
+                  </div>
+
+                </div>
+        </div>
+
+        <div>
+                <div id = "daily_widget_4" class="daily_widget_dashboard fourth">
+                    <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_4").hover(
+                                function() { $(this).css('border', '0.2em solid #ab8465');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+                    <div class="daily_widgets_icon_dashboard">
+                      <i class = "fa fa-truck daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_4_color"> </i>   
+                    </div>
+                    <div id="daily_order_unfullfilment" class="daily_widgets_data">
+                      <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Orders To Fulfill </p>
+                    </div>
+                </div>
+        </div>
+        <!-- </div> -->
+
+        <!-- <div class="row" style="width:50%;"> -->
+        <div>
+                <div id = "daily_widget_5" class = "daily_widget_dashboard first">
+                    <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_5").hover(
+                                function() { $(this).css('border', '0.2em solid #f37b53');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+
+                    <div class = "daily_widgets_icon_dashboard"> 
+                        <i class = "fa fa-dashboard daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_5_color">   </i>
+                    </div>
+
+                    <div id="month_to_date_sales" class="daily_widgets_data">
+                            <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Month To Date Sales </p>
+                    </div>
+                </div>
+        </div>
+        <div>
+                <div id = "daily_widget_6" class="daily_widget_dashboard second">
+                  <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_6").hover(
+                                function() { $(this).css('border', '0.2em solid #f2ae43');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+                  <div class="daily_widgets_icon_dashboard">
+                    <i class = "fa fa-filter daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_6_color"> </i>     
+                  </div>
+
+                  <div id="average_sales_day" class="daily_widgets_data">
+                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Average Sales/Day </p>
+                  </div>
+
+                </div>
+        </div>
+
+        <div>
+                <div id = "daily_widget_7" class="daily_widget_dashboard third">
+
+                   <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_7").hover(
+                                function() { $(this).css('border', '0.2em solid #847cc5');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+                  <div class="daily_widgets_icon_dashboard">
+                    <i class = "fa fa-rocket daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_7_color"> </i>   
+                  </div>
+                  <div id="forecasted_sales" class="daily_widgets_data">
+                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Forecasted Sales </p>
+                  </div>
+
+                </div>
+        </div>
+
+        <div>
+                <div id = "daily_widget_8" class="daily_widget_dashboard fourth">
+                    <script type="text/javascript">
+                        jQuery(function($){
+                            $("#daily_widget_8").hover(
+                                function() { $(this).css('border', '0.2em solid #77808a');},
+                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                            );
+                        });
+                    </script>
+                    <div class="daily_widgets_icon_dashboard">
+                      <i class = "fa fa-clock-o daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_8_color"> </i>   
+                    </div>
+                    <div id="sales_frequency" class="daily_widgets_data" style="margin-top: -3.8em;">
+                      <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top" style="margin-top: 0.6em; margin-bottom:0.6em;"> One Sale Every </p>
+                    </div>
+                </div>
+        </div>
+    <!-- </div> -->
+        
+    </div>
+
+<?php
+}
 
 // ================================================
 // Code for SR Beta
@@ -76,21 +341,43 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 success: function(response) {
                     daily_widget_data = $.parseJSON(response);
 
-                    $('#daily_total_sales').prepend('<span class = "daily_widgets_price daily_widget_1_color"> ' + daily_widget_data.sales_today_formatted
+                    if(daily_widget_data.rows_physical_prod > 0 && daily_widget_data.result_shipping_status == "yes") {
+                        $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widget_4_color">' + daily_widget_data.order_fulfillment_formatted 
+                                                        + ' <i class="' + daily_widget_data.imgurl_order_fulfillment + '"></i>'
+                                                        + '  <span class = "daily_widgets_comp_price daily_widget_4_color">' + daily_widget_data.diff_order_fulfillment_formatted + '</span> </span>');
+                    } else {
+                        $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widget_4_color"> N/A </span>');
+                    }
+
+                    $('#daily_total_sales').prepend('<span class = "daily_widgets_price daily_widget_1_color"> ' + daily_widget_data.daily_sales_formatted
                                                     + ' <i class= "' + daily_widget_data.imgurl_daily_sales + '" ></i>' 
                                                     + '  <span class = "daily_widgets_comp_price daily_widget_1_color">' + daily_widget_data.diff_daily_sales_formatted + '</span> </span>');
 
-                    $('#daily_new_cust').prepend('<span class = "daily_widgets_price daily_widget_2_color"> ' + daily_widget_data.today_count_cust_formatted
+                    $('#daily_new_cust').prepend('<span class = "daily_widgets_price daily_widget_2_color"> ' + daily_widget_data.daily_cust_formatted
                                                 + ' <i class="' + daily_widget_data.imgurl_daily_cust + '"></i>'
                                                 + '  <span class = "daily_widgets_comp_price daily_widget_2_color">' + daily_widget_data.diff_daily_cust_formatted + '</span> </span>');
 
-                    $('#daily_refund').prepend('<span class = "daily_widgets_price daily_widget_3_color">' + daily_widget_data.today_refund_formatted
+                    $('#daily_refund').prepend('<span class = "daily_widgets_price daily_widget_3_color">' + daily_widget_data.daily_refund_formatted
                                                 + ' <i class="' + daily_widget_data.imgurl_daily_refund + '"></i>'
                                                 + '  <span class = "daily_widgets_comp_price daily_widget_3_color">' + daily_widget_data.diff_daily_refund_formatted + '</span> </span>');
 
-                    $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widget_4_color">' + daily_widget_data.count_order_fulfillment_today_formatted 
-                                                        + ' <i class="' + daily_widget_data.imgurl_order_fulfillment + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_4_color">' + daily_widget_data.diff_order_fulfillment_formatted + '</span> </span>');
+
+                    $('#month_to_date_sales').prepend('<span class = "daily_widgets_price daily_widget_5_color">' + daily_widget_data.month_to_date_sales_formatted
+                                                + ' <i class="' + daily_widget_data.imgurl_month_to_date_sales + '"></i>'
+                                                + '  <span class = "daily_widgets_comp_price daily_widget_5_color">' + daily_widget_data.diff_month_to_date_sales_formatted + '</span> </span>');
+
+                    $('#average_sales_day').prepend('<span class = "daily_widgets_price daily_widget_6_color">' + daily_widget_data.avg_sales_per_day_formatted
+                                                + ' <i class="' + daily_widget_data.imgurl_avg_sales_per_day + '"></i>'
+                                                + '  <span class = "daily_widgets_comp_price daily_widget_6_color">' + daily_widget_data.diff_avg_sales_per_day_formatted + '</span> </span>');
+
+                    $('#forecasted_sales').prepend('<span class = "daily_widgets_price daily_widget_7_color">' + daily_widget_data.forcasted_sales_formatted
+                                                + ' <i class="' + daily_widget_data.imgurl_forcasted_sales + '"></i>'
+                                                + '  <span class = "daily_widgets_comp_price daily_widget_7_color">' + daily_widget_data.diff_forcasted_sales_formatted + '</span> </span>');
+
+                    $('#sales_frequency').append('<span class = "daily_widgets_price daily_widget_8_color">' + daily_widget_data.sales_frequency_formatted
+                                                + ' <i class="' + daily_widget_data.imgurl_sales_frequency + '"></i>'
+                                                + '  <span class = "daily_widgets_comp_price daily_widget_8_color">' + daily_widget_data.diff_sales_frequency_formatted + '</span> </span>');
+
                     
                 }
 
@@ -122,7 +409,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 </script>
 
                 <div class = "daily_widgets_icon"> 
-                    <i class = "icon-signal daily_widgets_icon1 daily_widget_1_color">   </i>
+                    <i class = "fa fa-signal daily_widgets_icon1 daily_widget_1_color">   </i>
                 </div>
 
                 <div id="daily_total_sales" class="daily_widgets_data">
@@ -141,7 +428,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                     });
                 </script>
               <div class="daily_widgets_icon">
-                <i class = "icon-user daily_widgets_icon1 daily_widget_2_color"> </i>     
+                <i class = "fa fa-user daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_2_color"> </i>     
               </div>
 
               <div id="daily_new_cust" class="daily_widgets_data">
@@ -157,13 +444,13 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                <script type="text/javascript">
                     jQuery(function($){
                         $("#daily_widget_3").hover(
-                            function() { $(this).css('border', '0.2em solid #f26645');},
+                            function() { $(this).css('border', '0.2em solid #f86868');},
                             function() { $(this).css('border', '0.2em solid #e8e8e8'); }
                         );
                     });
                 </script>
               <div class="daily_widgets_icon">
-                <i class = "icon-thumbs-down daily_widgets_icon1 daily_widget_3_color"> </i>   
+                <i class = "fa fa-thumbs-down daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_3_color"> </i>   
               </div>
               <div id="daily_refund" class="daily_widgets_data">
                 <p class="daily_widgets_text"> Refund Today </p>
@@ -172,27 +459,109 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
             </div>
     </div>
 
-    <?php if($rows_physical_prod > 0 && $result_shipping_status[0] == "yes") {?>
     <div>
             <div id = "daily_widget_4" class="daily_widget daily_widget_order_fulfill fourth">
                 <script type="text/javascript">
                     jQuery(function($){
                         $("#daily_widget_4").hover(
-                            function() { $(this).css('border', '0.2em solid #15295c');},
+                            function() { $(this).css('border', '0.2em solid #ab8465');},
                             function() { $(this).css('border', '0.2em solid #e8e8e8'); }
                         );
                     });
                 </script>
                 <div class="daily_widgets_icon">
-                  <i class = "icon-truck daily_widgets_icon1 daily_widget_4_color"> </i>   
+                  <i class = "fa fa-truck daily_widgets_icon1 daily_widget_4_color"> </i>   
                 </div>
                 <div id="daily_order_unfullfilment" class="daily_widgets_data">
                   <p class="daily_widgets_text"> Orders To Fulfill </p>
                 </div>
             </div>
     </div>
-    <?php }?>
     </div>
+
+    <div class="row">
+    <div>
+            <div id = "daily_widget_5" class = "daily_widget first daily_widget_today_sales">
+                <script type="text/javascript">
+                    jQuery(function($){
+                        $("#daily_widget_5").hover(
+                            function() { $(this).css('border', '0.2em solid #f37b53');},
+                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                        );
+                    });
+                </script>
+
+                <div class = "daily_widgets_icon"> 
+                    <i class = "fa fa-dashboard daily_widgets_icon1 daily_widget_5_color">   </i>
+                </div>
+
+                <div id="month_to_date_sales" class="daily_widgets_data">
+                        <p class="daily_widgets_text"> Month To Date Sales </p>
+                </div>
+            </div>
+    </div>
+    <div>
+            <div id = "daily_widget_6" class="daily_widget second">
+              <script type="text/javascript">
+                    jQuery(function($){
+                        $("#daily_widget_6").hover(
+                            function() { $(this).css('border', '0.2em solid #f2ae43');},
+                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                        );
+                    });
+                </script>
+              <div class="daily_widgets_icon">
+                <i class = "fa fa-filter daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_6_color"> </i>     
+              </div>
+
+              <div id="average_sales_day" class="daily_widgets_data">
+                <p class="daily_widgets_text"> Average Sales/Day </p>
+              </div>
+
+            </div>
+    </div>
+
+    <div>
+            <div id = "daily_widget_7" class="daily_widget third">
+
+               <script type="text/javascript">
+                    jQuery(function($){
+                        $("#daily_widget_7").hover(
+                            function() { $(this).css('border', '0.2em solid #847cc5');},
+                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                        );
+                    });
+                </script>
+              <div class="daily_widgets_icon">
+                <i class = "fa fa-rocket daily_widgets_icon1 daily_widget_7_color"> </i>   
+              </div>
+              <div id="forecasted_sales" class="daily_widgets_data">
+                <p class="daily_widgets_text"> Forecasted Sales </p>
+              </div>
+
+            </div>
+    </div>
+
+    <div>
+            <div id = "daily_widget_8" class="daily_widget daily_widget_order_fulfill fourth">
+                <script type="text/javascript">
+                    jQuery(function($){
+                        $("#daily_widget_8").hover(
+                            function() { $(this).css('border', '0.2em solid #77808a');},
+                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
+                        );
+                    });
+                </script>
+                <div class="daily_widgets_icon">
+                  <i class = "fa fa-clock-o daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_8_color"> </i>   
+                </div>
+                <div id="sales_frequency" class="daily_widgets_data" style="margin-top: -4.5em;">
+                  <p class="daily_widgets_text" style="margin-top: 0.8em; margin-bottom:1em;"> One Sale Every </p>
+                </div>
+            </div>
+    </div>
+    </div>
+
 </div>
 
 
@@ -208,8 +577,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
     <div id="sr_cumm_total_discount_value" style="height:60px;width:100%;">
           <div class="cumm_header">
-              <i class="icon-location-arrow icon_cumm_widgets" ></i>
-              <!-- <i class="icon-rocket icon_cumm_widgets" ></i> -->
+              <i class="fa fa-location-arrow icon_cumm_widgets" ></i>
+              <!-- <i class="fa fa-rocket icon_cumm_widgets" ></i> -->
               Discounts
           </div>
           <div id="sr_cumm_total_discount_total" class="cumm_total">
@@ -225,7 +594,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
     <div id="sr_cumm_sales_value" style="height:60px;width:100%;">
           <div class="cumm_header">
-              <i class="icon-bar-chart icon_cumm_widgets" ></i>
+              <i class="fa fa-bar-chart-o icon_cumm_widgets" ></i>
               Sales
           </div>
           <div id="sr_cumm_sales_total" class="cumm_total">
@@ -483,14 +852,27 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
     //Functions for on window resize
 
-    $(window).resize(function() {
-        top_prod_display(myJsonObj);
-        top_gateway_display(myJsonObj);
-        top_ababdoned_products_display(myJsonObj);
-        cumm_taxes_display(myJsonObj);
-        cumm_sales_funnel_display(myJsonObj);
-    });
+    jQuery(function($){
 
+        $(window).resize(function() {
+
+            $('#top_prod_data').empty();
+            $('#sr_cumm_order_by_gateways_data').empty();
+            $('#sr_cumm_top_abandoned_products_data').empty();
+            $('#sr_cumm_taxes_data').empty();
+            $('#sr_cumm_sales_funnel_data').empty();
+
+            setTimeout(function(){
+
+                top_prod_display(myJsonObj);
+                top_gateway_display(myJsonObj);
+                top_ababdoned_products_display(myJsonObj);
+                cumm_taxes_display(myJsonObj);
+                cumm_sales_funnel_display(myJsonObj);
+
+            }, 1000);
+        });
+    });
 
     //Function to handle the css of the widgets on window resize
 
@@ -768,7 +1150,12 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 }
 
                     $(window).resize(function() {
-                        monthly_sales_graph_resize();
+                        $('#sr_cumm_sales_graph').empty();
+
+                        setTimeout(function() {
+                            monthly_sales_graph_resize();
+                        }, 1000);
+
                     });
 
                     var monthly_sales_graph_resize = function() {
@@ -964,7 +1351,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
     <div id="sr_cumm_top_cust" class="cumm_widget" style="height: 12.5em;" >    
           <!-- <div class="cumm_header_top_cust_coupons" style="width: 55%; margin-top: 0.25em" > -->
           <div class="cumm_header">
-              <i class = "icon-group icon_cumm_widgets"> </i>
+              <i class = "fa fa-group icon_cumm_widgets"> </i>
 
               Top Customers
           
@@ -1055,7 +1442,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
         <div id="sr_cumm_top_coupons" class="cumm_widget" style="height: 12.5em;">
 
             <div class="cumm_header">
-              <i class = "icon-tags icon_cumm_widgets"> </i>     
+              <i class = "fa fa-tags icon_cumm_widgets"> </i>     
               Top Coupons
             </div>
             <div id = "sr_cumm_top_coupons_data" class= "cumm_widget_table_data" > </div>
@@ -1130,24 +1517,24 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
         //Funciton to handle the graph display part for Top Products Widget
         var top_prod_graph_display = function (display_data,tick_format,tick_format_yaxis,top_prod_data,min_date,max_date,plot_nm) {
 
-            $(window).resize(function() {
-               top_prod_graph_resize();
-            });
-
-            var top_prod_graph_resize = function() {
-                
-                for(var i = 0, len = display_data.length; i < len; i++){
-
-                    // var plot = plot_nm + i;
-                    if (plot_nm_i) {
-                        plot_nm_i.destroy();
-                        plot_nm_i.replot();
-                    }
-                }
-                                            
-            }
-
             jQuery(function($) {
+
+                $(window).resize(function() {
+                   top_prod_graph_resize();
+                });
+
+                var top_prod_graph_resize = function() {
+                    
+                    for(var i = 0, len = display_data.length; i < len; i++){
+
+                        // var plot = plot_nm + i;
+                        if (plot_nm_i) {
+                            plot_nm_i.destroy();
+                            plot_nm_i.replot();
+                        }
+                    }
+                                                
+                }
 
                 for(var i = 0, len = display_data.length; i < len; i++){
 
@@ -1409,7 +1796,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
         <div class="cumm_header">
     
-            <i class = "icon-star icon_cumm_widgets"> </i>     
+            <i class = "fa fa-star icon_cumm_widgets"> </i>     
 
             Top Products
 
@@ -1465,7 +1852,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                   prod_name_trimmed = prod_name;
               }
 
-              table_html += '<tr><td><div id="'+span_id+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+prod_name+'"><b>'+prod_name_trimmed+'</b><br>'+resp['top_prod_data'][i].product_sales_display+'</td></tr> ';
+              table_html += '<tr><td><div id="'+span_id+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+prod_name+'"><b style="font-weight:bold;">'+prod_name_trimmed+'</b><br>'+resp['top_prod_data'][i].product_sales_display+'</td></tr> ';
 
               var graph_data = new Array();
               var len = resp['top_prod_data'][i].graph_data.length;
@@ -1626,7 +2013,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 <div id="sr_cumm_order_by_gateways" class="cumm_widget">    
     <div class="cumm_header">
-      <i class="icon-credit-card icon_cumm_widgets" ></i>
+      <i class="fa fa-credit-card icon_cumm_widgets" ></i>
       Payment Gateways
     </div>
 
@@ -1676,7 +2063,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                   gateway_name_trimmed = gateway_name;
               }
 
-              table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td><div id="'+span_id_sales_count+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+gateway_name+'"><b>'+gateway_name_trimmed+'</b><br>'+gateway_sales_display+'</td></tr> ';
+              table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td><div id="'+span_id_sales_count+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+gateway_name+'"><b style="font-weight:bold;">'+gateway_name_trimmed+'</b><br>'+gateway_sales_display+'</td></tr> ';
 
               var sales_amt_graph_data = new Array();
               var sales_count_graph_data = new Array();
@@ -1746,7 +2133,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 <div id="sr_cumm_taxes" class="cumm_widget">    
     <div class="cumm_header">
-      <i class="icon-bolt icon_cumm_widgets" ></i>
+      <i class="fa fa-bolt icon_cumm_widgets" ></i>
       Taxes & Shipping
     </div>
 
@@ -1857,8 +2244,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
                         seriesDefaults: {
                             shadow: false,
-                            
-                            seriesColors: ['#04c0f0','#a6dba0','#e66101','#5e3c99'], // FINAL
+                            // seriesColors: ['#04c0f0','#a6dba0','#e66101','#5e3c99'], // FINAL
+                            seriesColors: ['#04c0f0','#a6dba0','#e66101','#69639d'], // FINAL
                             
                             renderer: jQuery.jqplot.DonutRenderer,
                             rendererOptions: {
@@ -1927,7 +2314,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 <div id="sr_cumm_sales_funnel" class="cumm_widget">    
     <div class="cumm_header">
-      <i class="icon-filter icon_cumm_widgets" ></i>
+      <i class="fa fa-filter icon_cumm_widgets" ></i>
       Sales Funnel
     </div>
 
@@ -2096,13 +2483,13 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 <div id="sr_cumm_top_abandoned_products" class="cumm_widget">    
     <div class="cumm_header" style="padding:4px 0 8px 6px;">
-      <i class="icon-shopping-cart" style="font-size: 1.2em;"></i>
-      <i class="icon-share-alt" style="vertical-align: super;margin-left:-0.7em;font-size: 0.9em;"></i>
+      <i class="fa fa-shopping-cart" style="font-size: 1.2em;"></i>
+      <i class="fa fa-share" style="vertical-align: super;margin-left:-0.7em;font-size: 0.9em;"></i>
       Abandoned Products
 
       <span id="sr_cumm_top_abandoned_products_export" title="Export" class="top_abandoned_prod_export">
         <!-- <input type="button" name="top_abandoned_prod_export" id="top_abandoned_prod_export" value="Export" onclick="top_ababdoned_products_export()"> -->
-        <i id="sr_cumm_top_abandoned_products_export_icon" class = "icon-download-alt icon_cumm_widgets" style="color:#B1ADAD"> </i>
+        <i id="sr_cumm_top_abandoned_products_export_icon" class = "fa fa-download-alt icon_cumm_widgets" style="color:#B1ADAD"> </i>
       </span>
     </div>
 
@@ -2172,7 +2559,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                   abandoned_prod_name_trimmed = abandoned_prod_name;
               }
 
-              table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+abandoned_prod_name+'"><b>'+abandoned_prod_name_trimmed+'</b><br>'+abandoned_sales_display+'</td></tr> ';
+              table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+abandoned_prod_name+'"><b style="font-weight:bold;">'+abandoned_prod_name_trimmed+'</b><br>'+abandoned_sales_display+'</td></tr> ';
 
               var cumm_abandoned_graph_data = new Array();
 
@@ -2224,13 +2611,15 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 <div id="sr_cumm_date" style="height:2.1em;width:97.85%">
     <div id="sr_cumm_date1" class="sr_cumm_date">
         <form>
-            <img id = "sr_endcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon">
+            <!-- <img id = "sr_endcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon"> -->
+            <span id = "sr_endcal_icon" ><i class = "fa fa-calendar sr_cumm_date_icon"> </i> </span>
             <input type = "text" id="enddate_display" class = "sr_cumm_date_picker" >
             <label class = "sr_cumm_date_label"> To </label>
 
             <span>
-               <img id = "sr_startcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon">
-                <input type ="text" id="startdate_display" class = "sr_cumm_date_picker" >
+               <span id = "sr_startcal_icon" ><i class = "fa fa-calendar sr_cumm_date_icon" style="margin-right: 0.5em;"> </i> </span>
+               <input type ="text" id="startdate_display" class = "sr_cumm_date_picker" >
+               <!-- <img id = "sr_startcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon"> -->
             </span>
 
             <span id ="startdate" style="padding-top: 2px;font-size : 1.4em; float:right; display: none"> </span>
@@ -2557,9 +2946,11 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
     jQuery(function($){
         
         $(".cumm_widget, .sr_cumm_small_widget").hover(
-            function() { $(this).css('border', '0.2em solid #368ee0');},
+            function() { $(this).css('border', '0.2em solid #85898e');},
             function() { $(this).css('border', '0.2em solid #e8e8e8'); }
         );
+
+        $("#sr_putler_promotion").insertAfter("#sr_cumm_date");
 
         $("#sr_cumm_order_by_gateways").insertAfter("#sr_cumm_date");
         $("#sr_cumm_taxes").insertAfter("#sr_cumm_date");
@@ -2578,10 +2969,11 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 </div> <!-- Closing the main div i.e. sr_widgets_beta -->
 
+
+
 <?php
 }
-
-else {
+else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_GET['page'] == 'smart-reporter-wpsc') ) {
 
     // to set javascript variable of file exists
     // $fileExists = (SRPRO === true) ? 1 : 0;
@@ -2679,9 +3071,11 @@ else {
 
     <?php
 
-    }
-
-         
+    }        
 }
 
 ?>
+
+<div id="sr_putler_promotion" class="sr_promotion_footer">
+    <?php echo __(" For more Extensive Reporting use "); ?> <a href="http://www.putler.com/?&utm_source=SR_IN_WP" target="_blank"> <?php echo __('Putler'); ?></a> 
+</div>
