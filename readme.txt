@@ -1,10 +1,10 @@
 === Smart Reporter for WooCommerce and WP eCommerce ===
-Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, naresh.vachhani, Tarun.Parswani
+Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, nareshvachhani, Tarun.Parswani
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.8.1
-Stable tag: 2.5
+Stable tag: 2.6
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -12,7 +12,7 @@ Business analysis and reporting for WooCommerce and WP eCommerce like never befo
 
 Smart Reporter shows you key performance indicators and product wise sales trends in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
 
-It also shows you key performance indicators (total sales, average sales, velocity etc) so you can quickly guage performance of your business.
+It also shows you key performance indicators (total sales, average sales, velocity etc) so you can quickly guage performance of your business. Also, the same key performance indicators are available on the wordpress dashboard page so you need not navigate to Smart Reporter page everytime.
 
 You can filter reports by date range and can also search and view sales trends of specific products.
 
@@ -35,7 +35,7 @@ Yes. Smart Reporter is compatible only with WP e-Commerce 3.8+, and not with 3.7
 
 = Can I export data from Smart Reporter? =
 
-No. Currently you can only see these reports. We are planning for CSV export in future.
+Yes. Currently you can export only the abandoned products using Smart Reporter. However, we do have plans to have export for other widgets in the future versions.
 
 
 
@@ -48,6 +48,13 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.6 =
+* New: Month To Date Sales, Average Sales/day, Forecasted Sales, Sales Frequency KPI's [Smart Reporter Beta] (WooCommerce)
+* New: Smart Reporter Wordpress Dashboard widget (WooCommerce)
+* New: Weekly/Monthly Summary Mails [Smart Reporter Beta] (WooCommerce)
+* New: Send Summary Mails to multiple email address [Smart Reporter Beta] (WooCommerce)
+* Fixed: Minor Fixes [Smart Reporter Beta] (WooCommerce)
 
 = 2.5 =
 * New: Export CSV functionality for Abandoned Products [Smart Reporter Beta] (WooCommerce)
@@ -144,6 +151,9 @@ No. Currently you can only see these reports. We are planning for CSV export in 
 
 == Upgrade Notice ==
 
+= 2.6 =
+New KPI's, Smart Reporter Wordpress Dashboard widget, option for Weekly and Monthly Summary Mails in addition to Daily Summary Mails along with option for sending Summary Mails to multiple email addresses, recommended upgrade.
+
 = 2.5 =
 New Export CSV functionality for Abandoned Products and Daily Summary Mails functionality for Smart Reporter Beta
 and compatibility with new versions of WooCommerce & WordPress, recommended upgrade.
@@ -200,7 +210,7 @@ Important bug fix.
 New feature - Auto upgrade functionality for Pro version only.
 
 = 1.3 =
-New features - Now you can have ummary details of: Today's Sales, Month To Date Sales, Average Sales/day, Forecasted Sales (Pro only).
+New features - Now you can have summary details of: Today's Sales, Month To Date Sales, Average Sales/day, Forecasted Sales (Pro only).
 
 = 1.2 =
 New features - see categories for products and search on them.
