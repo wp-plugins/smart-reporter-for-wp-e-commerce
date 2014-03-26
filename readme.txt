@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 3.8.1
-Stable tag: 2.6
+Stable tag: 2.6.1
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -48,6 +48,9 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.6.1 =
+* Fix: Fatal error causing inaccess to Wordpress site
 
 = 2.6 =
 * New: Month To Date Sales, Average Sales/day, Forecasted Sales, Sales Frequency KPI's [Smart Reporter Beta] (WooCommerce)
@@ -150,6 +153,9 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 
 
 == Upgrade Notice ==
+
+= 2.6.1 =
+Fix for fatal error, recommended upgrade.
 
 = 2.6 =
 New KPI's, Smart Reporter Wordpress Dashboard widget, option for Weekly and Monthly Summary Mails in addition to Daily Summary Mails along with option for sending Summary Mails to multiple email addresses, recommended upgrade.
