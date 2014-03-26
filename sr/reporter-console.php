@@ -2972,6 +2972,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 
 <?php
+smart_reporter_footer();
 }
 else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_GET['page'] == 'smart-reporter-wpsc') ) {
 
@@ -3071,11 +3072,14 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
 
     <?php
 
-    }        
+    }  
+    smart_reporter_footer();      
 }
 
-?>
-
-<div id="sr_putler_promotion" class="sr_promotion_footer">
-    <?php echo __(" For more Extensive Reporting use "); ?> <a href="http://www.putler.com/?&utm_source=SR_IN_WP" target="_blank"> <?php echo __('Putler'); ?></a> 
-</div>
+function smart_reporter_footer() {
+    ?>
+    <div id="sr_putler_promotion" class="sr_promotion_footer">
+        <?php echo __(" For more Extensive Reporting use "); ?> <a href="http://www.putler.com/?&utm_source=SR_IN_WP" target="_blank"> <?php echo __('Putler'); ?></a> 
+    </div>
+    <?php
+}

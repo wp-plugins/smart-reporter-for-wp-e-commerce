@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.6
+Version: 2.6.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
@@ -110,7 +110,7 @@ function sr_activate() {
  * Registers a plugin function to be run when the plugin is deactivated.
  */
 function sr_deactivate() {
-	global $wpdb;
+	global $wpdb, $blog_id;
 	if ( is_multisite() ) {
 		$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}", 0 );
 	} else {
@@ -467,6 +467,10 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			
 		}
 
+		if (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
+	    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
+	    }
+
 		// ================================================================================================
 		//Registering scripts and stylesheets for SR Beta Version
 		// ================================================================================================
@@ -806,36 +810,39 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                                 ");
                       
                         $order_id = implode( ", ", $results);
+                        $order_id = trim( $order_id );
                         
-                        $query_order_items = "SELECT order_items.order_item_id,
-                                                    order_items.order_id    ,
-                                                    order_items.order_item_name AS order_prod,
-                                            GROUP_CONCAT(order_itemmeta.meta_key
-                                            ORDER BY order_itemmeta.meta_id
-                                            SEPARATOR '###' ) AS meta_key,
-                                            GROUP_CONCAT(order_itemmeta.meta_value
-                                            ORDER BY order_itemmeta.meta_id
-                                            SEPARATOR '###' ) AS meta_value
-                                            FROM {$wpdb->prefix}woocommerce_order_items AS order_items
-                                            LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS order_itemmeta
-                                            ON (order_items.order_item_id = order_itemmeta.order_item_id)
-                                            WHERE order_items.order_id IN ($order_id)
-                                            GROUP BY order_items.order_item_id
-                                            ORDER BY FIND_IN_SET(order_items.order_id,'$order_id')";
-                                        
-                        $results  = $wpdb->get_results ( $query_order_items , 'ARRAY_A');          
-                        
-                        foreach ( $results as $result ) {
-                            $order_item_meta_values = explode('###', $result ['meta_value'] );
-                            $order_item_meta_key = explode('###', $result ['meta_key'] );
-                            if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
-                                continue; 
-                            $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
-                            if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
-                                $all_order_items[ $result['order_id'] ] = array();
-                            }
-                            $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
-                        }
+                        if ( !empty( $order_id ) ) {
+	                        $query_order_items = "SELECT order_items.order_item_id,
+	                                                    order_items.order_id    ,
+	                                                    order_items.order_item_name AS order_prod,
+	                                            GROUP_CONCAT(order_itemmeta.meta_key
+	                                            ORDER BY order_itemmeta.meta_id
+	                                            SEPARATOR '###' ) AS meta_key,
+	                                            GROUP_CONCAT(order_itemmeta.meta_value
+	                                            ORDER BY order_itemmeta.meta_id
+	                                            SEPARATOR '###' ) AS meta_value
+	                                            FROM {$wpdb->prefix}woocommerce_order_items AS order_items
+	                                            LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS order_itemmeta
+	                                            ON (order_items.order_item_id = order_itemmeta.order_item_id)
+	                                            WHERE order_items.order_id IN ($order_id)
+	                                            GROUP BY order_items.order_item_id
+	                                            ORDER BY FIND_IN_SET(order_items.order_id,'$order_id')";
+	                                        
+	                        $results  = $wpdb->get_results ( $query_order_items , 'ARRAY_A');          
+	                        
+	                        foreach ( $results as $result ) {
+	                            $order_item_meta_values = explode('###', $result ['meta_value'] );
+	                            $order_item_meta_key = explode('###', $result ['meta_key'] );
+	                            if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
+	                                continue; 
+	                            $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
+	                            if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
+	                                $all_order_items[ $result['order_id'] ] = array();
+	                            }
+	                            $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
+	                        }
+	                    }
                 } //end if
               
                 $values = sr_items_to_values( $all_order_items );
@@ -1045,9 +1052,9 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 	};
 
 
-	if (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
-    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
-    }
+	// if (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
+ //    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
+ //    }
 	
 	function sr_wp_dashboard_widget() {
 		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
