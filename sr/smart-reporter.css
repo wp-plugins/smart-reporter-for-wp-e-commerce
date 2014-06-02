@@ -26,6 +26,20 @@ body {
   font-size: small;
 }
 
+.cumm_widget {
+  float: left;
+  /*margin-left: 2%;*/
+  margin-right: 1.65em;
+  /*margin-bottom: 1.7em;*/
+  margin-top: 1.7em;
+  width: 24.7em;
+  /*border: 0.2em solid #368ee0;*/
+  border: 0.2em solid #e8e8e8;
+  height: 23em;
+  margin-left: 0.1em;
+  background-color: #FFFFFF;
+}
+
 @media (min-width: 1501px) and (max-width: 2000px) {
   body { font-size: 136%; }
   .cumm_widget {
@@ -40,13 +54,36 @@ body {
   }
 
   .sr_cumm_date {
-    margin-left: 57.5em;
+    /*margin-left: 57.5em;*/
+  }
+
+  .sr_cumm_sales_countries {
+    width:51.5em !important;
+  }
+
+  #sr_smart_date_select_label {
+    display: none;
+  }
+
+  #sr_smart_date {
+    margin-top: 0em !important;
   }
 }
 
 @media only screen and (min-width: 1301px) and (max-width: 1500px) {
   body { font-size: 91.8%; }  
 
+  .sr_cumm_sales_countries {
+    width:51.5em !important;
+  }
+
+  #sr_smart_date_select_label {
+    display: none;
+  }
+
+  #sr_smart_date {
+    margin-top: 0em !important;
+  }
 }
 
 @media only screen and (min-device-width: 1152px) and (max-device-width: 1300px) {
@@ -56,7 +93,19 @@ body {
   }
 
   .sr_cumm_date {
-    margin-left: 57.5em;
+    /*margin-left: 57.5em;*/
+  }
+
+  .sr_cumm_sales_countries {
+    width:51.5em !important;
+  }
+
+  #sr_smart_date_select_label {
+    display: none;
+  }
+
+  #sr_smart_date {
+    margin-top: 0em !important;
   }
 
 }
@@ -69,7 +118,19 @@ body {
   }
 
   .sr_cumm_date {
-    margin-left: 57.5em;
+    /*margin-left: 57.5em;*/
+  }
+
+  .sr_cumm_sales_countries {
+    width:51.5em !important;
+  }
+
+  #sr_smart_date_select_label {
+    display: none;
+  }
+
+  #sr_smart_date {
+    margin-top: 0em !important;
   }
 }
 
@@ -82,25 +143,51 @@ body {
   }
 
   .sr_cumm_date {
-    margin-left: 57.5em;
+    /*margin-left: 57.5em;*/
+  }
+
+  .sr_cumm_sales_countries {
+    width:51.5em !important;
+    margin-left:-27em;
+  }
+
+  #sr_smart_date_select_label {
+    display: none;
+  }
+
+  #sr_smart_date {
+    margin-top: 0em !important;
   }
 }
 
 @media only screen and (min-width: 501px) and (max-width: 1000px) {
-  body { font-size: 76%; }
+  body { font-size: 67%; }
 
   .cumm_widget_top_cust_coupons {
     width: 27em;      
   }
 
   .sr_cumm_date {
-    margin-left: 30.9em;
+    /*margin-left: 30.9em;*/
+  }
+
+  .sr_cumm_sales_countries {
+    width:24.7em !important;
+  }
+
+  #sr_smart_date_select_label {
+    display: none;
+  }
+
+  #sr_smart_date {
+    /*height: 1.2em !important;*/
+    margin-top: -0.5em !important;
   }
 
 }
 @media (min-width: 0px) and (max-width: 500px) {
   body {
-    font-size:100%;
+    font-size:92%;
   }
 
 
@@ -116,11 +203,35 @@ body {
   }
 
   .sr_cumm_date {
-    margin-left: 4.2em;
+    /*margin-left: 4.2em;*/
+  }
+
+  .sr_cumm_sales_countries {
+    width:24.7em !important;
+  }
+
+  #sr_smart_date_select {
+    /*width:21em !important;*/
+    display: inline-block;
+  }
+
+  #sr_cumm_date1 {
+    height: 5em !important;
+    width: 21em !important;
+  }
+
+  #sr_smart_date {
+    width: 16em;
+    margin-top: 0.9em !important;
+    margin-left: -1em !important;
+  }
+
+  #sr_smart_date_select_label {
+    display: inline-block;
+    /*margin-left: -0.6em;*/
   }
 
 }
-
 
 .example-info{
     width:150px;
@@ -393,7 +504,7 @@ pre.code{
     margin-top: 0.15em;
 }
 
-.top_gateways_header {
+.top_gateways_shipping_header {
   text-align: center;
   font-size: 1em;
   color: #C2C2C9;
@@ -558,9 +669,9 @@ pre.code{
 
 .sr_cumm_date {
   height: 2.0em;
-  /*float: right;*/
-  width: 21.3em;
-  /*margin-left: 57.5em;*/
+  float: left;
+  width: 29.5em;
+  margin-left: 0.25em;
   margin-top: 0.3em;
   margin-right: 0.3em;
   /*border-bottom: 0.2em solid #368ee0;*/
@@ -568,14 +679,14 @@ pre.code{
 }
 
 .sr_cumm_date_picker {
-  float: right;
+  float: left;
   height: 1.7em;
   width:  7.0em;
   text-align: center;
 }
 
 .sr_cumm_date_label {
-  float: right;
+  float: left;
   color: #727277;
   font-size: 1.3em;
   margin-right: 0.5em;
@@ -586,7 +697,7 @@ pre.code{
   /*height: 1.5em;
   width: 1.5em;*/
   font-size: 1.55em;
-  float: right;
+  float: left;
   margin-left: 0.3em;
   margin-top: 0em;
   margin-right: 0em;
@@ -601,20 +712,6 @@ pre.code{
   font-family: Helvetica, Arial, sans-serif;
   color: #666666;
   font-weight:700;
-}
-
-.cumm_widget {
-  float: left;
-  /*margin-left: 2%;*/
-  margin-right: 1.65em;
-  /*margin-bottom: 1.7em;*/
-  margin-top: 1.7em;
-  width: 24.7em;
-  /*border: 0.2em solid #368ee0;*/
-  border: 0.2em solid #e8e8e8;
-  height: 23em;
-  margin-left: 0.1em;
-  background-color: #FFFFFF;
 }
 
 .sr_cumm_sales_graph_collapsed {

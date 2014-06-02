@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.6.1
+Version: 2.7
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
@@ -21,11 +21,9 @@ function woocommerce_shop_order_search_custom_fields1( $wp ) {
     if(!(isset($_GET['source']) && $_GET['source'] == 'sr'))
     	return;
     
-    remove_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields' );
+    remove_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1' );
 
     $post_ids = (isset($_COOKIE['post_ids'])) ? explode(",",$_COOKIE['post_ids']) : 0;
-
-
 
     // Remove s - we don't want to search order name
     unset( $wp->query_vars['s'] );
@@ -39,7 +37,7 @@ function woocommerce_shop_order_search_custom_fields1( $wp ) {
     // Search by found posts
     $wp->query_vars['post__in'] = $post_ids;
 
-    add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields' );
+    add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1' );
 
 }
 add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1',5 );
@@ -488,22 +486,33 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         wp_register_script ( 'sr_jqplot_donout_render', plugins_url ( 'resources/jqplot/jqplot.donutRenderer.min.js', __FILE__ ), array ('sr_jqplot_pie_render' ));
         wp_register_script ( 'sr_jqplot_funnel_render', plugins_url ( 'resources/jqplot/jqplot.funnelRenderer.min.js', __FILE__ ), array ('sr_jqplot_donout_render' ));
         wp_enqueue_script ( 'sr_datepicker', plugins_url ( 'resources/jquery.datepick.package/jquery.datepick.js', __FILE__ ), array ('sr_jqplot_funnel_render' ));
-        wp_register_script ( 'sr_jqplot_all_scripts', plugins_url ( 'resources/jqplot/jqplot.BezierCurveRenderer.min.js', __FILE__ ), array ('sr_datepicker' ), $sr_plugin_info ['Version']);
+        wp_enqueue_script ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.min.js', __FILE__ ), array ('sr_datepicker' ));
+        wp_enqueue_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jvectormap/jquery-jvectormap-world-mill-en.js', __FILE__ ), array ('sr_jvectormap' ));
+        // wp_enqueue_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jvectormap/world-map.js', __FILE__ ), array ('sr_jvectormap' ));
+
+        // wp_enqueue_script ( 'sr_jvectormap', plugins_url ( 'resources/jqvmap/jquery.vmap.min.js', __FILE__ ), array ('sr_datepicker' ));
+        // wp_enqueue_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jqvmap/jquery.vmap.world.js', __FILE__ ), array ('sr_jvectormap' ));
+
+        wp_register_script ( 'sr_jqplot_all_scripts', plugins_url ( 'resources/jqplot/jqplot.BezierCurveRenderer.min.js', __FILE__ ), array ('sr_jvectormap_world_map' ), $sr_plugin_info ['Version']);
 
         wp_register_style ( 'font_awesome', plugins_url ( "resources/font-awesome/css/font-awesome.min.css", __FILE__ ), array ());
         // wp_register_style ( 'font_awesome', '//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css', array ());
 		// wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/redmond.datepick.css', __FILE__ ), array ('font_awesome'));
 		wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/smoothness.datepick.css', __FILE__ ), array ('font_awesome'));
 		wp_register_style ( 'sr_jqplot_all', plugins_url ( 'resources/jqplot/jquery.jqplot.min.css', __FILE__ ), array ('sr_datepicker_css'));
-		wp_register_style ( 'sr_main_beta', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_jqplot_all' ), $sr_plugin_info ['Version'] );
+		wp_register_style ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.css', __FILE__ ), array ('sr_jqplot_all'));
+		
+		// wp_register_style ( 'sr_jvectormap', plugins_url ( 'resources/jqvmap/jqvmap.css', __FILE__ ), array ('sr_jqplot_all'));
+		wp_register_style ( 'sr_main_beta', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_jvectormap' ), $sr_plugin_info ['Version'] );
 		// ================================================================================================
 
 
 	}
 
 	
+	// is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )
 	function sr_admin_notices() {
-		if (! is_plugin_active ( 'woocommerce/woocommerce.php' ) && ! is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
+		if (! is_plugin_active ( 'woocommerce/woocommerce.php' ) && ! is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
 			echo '<div id="notice" class="error"><p>';
 			_e ( '<b>Smart Reporter</b> add-on requires <a href="http://www.storeapps.org/wpec/">WP e-Commerce</a> plugin or <a href="http://www.storeapps.org/woocommerce/">WooCommerce</a> plugin. Please install and activate it.' );
 			echo '</p></div>', "\n";
@@ -1090,6 +1099,15 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
         wp_enqueue_script ( 'sr_jqplot_all_scripts' );
 		wp_enqueue_style ( 'sr_main_beta' );
 
+		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
+
+			$plugin_info 	= get_plugins ();
+			$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
+
+			wp_register_script ( 'sr_pro', plugins_url ( 'pro/sr.js', __FILE__ ), array ('sr_jqplot_all_scripts' ), $sr_plugin_info ['Version']);
+			wp_enqueue_script ( 'sr_pro' );
+		}
+		
 		sr_console_common();
 
 		// Code for overriding the wooCommerce orders module search functionality code
