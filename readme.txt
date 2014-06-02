@@ -3,8 +3,8 @@ Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, nareshvachhani, 
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 3.8.1
-Stable tag: 2.6.1
+Tested up to: 3.9.1
+Stable tag: 2.7
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -48,6 +48,13 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.7 =
+* New: Smart date filters let you select common date ranges easily [Smart Reporter Beta] (WooCommerce)
+* New: Sales By Countries widget [Smart Reporter Beta] (WooCommerce)
+* New: Top Shipping Methods widget [Smart Reporter Beta] (WooCommerce)
+* New: Quantity column in Smart Reporter grid [Smart Reporter Old]
+* Fixed: Minor Fixes [Smart Reporter Beta] (WooCommerce)
 
 = 2.6.1 =
 * Fix: Fatal error causing inaccess to Wordpress site
@@ -153,6 +160,9 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 
 
 == Upgrade Notice ==
+
+= 2.7 =
+New Smart date filters that let you select common date ranges easily, new sales by countries and top shipping methods widgets along with some important fixes, recommended upgrade.
 
 = 2.6.1 =
 Fix for fatal error, recommended upgrade.
