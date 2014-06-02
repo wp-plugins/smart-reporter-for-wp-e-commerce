@@ -359,6 +359,16 @@ Ext.onReady(function() {
 			xtype : 'numbercolumn',
 			format : '0.00',
 			dataIndex : 'sales'
+		},{
+			text : 'Qty',
+			width : 150,
+			flex : 0.5,
+			align : 'right',
+			tooltip: 'Quantity',
+			sortable : true,
+			xtype : 'numbercolumn',
+			format : '0',
+			dataIndex : 'quantity'
 		} ],
 
 		listeners : {

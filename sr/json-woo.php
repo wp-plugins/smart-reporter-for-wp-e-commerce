@@ -78,7 +78,7 @@ function sr_number_format($input, $places)
 
 
 	//Function to get the abandoned Products
-	function sr_get_abandoned_products(&$start_date,&$end_date_query,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_post) {
+	function sr_get_abandoned_products(&$start_date,&$end_date_query,&$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_post) {
 		
 		global $wpdb;
 
@@ -288,6 +288,69 @@ function sr_number_format($input, $places)
 
 	}
 
+	//Function for formatting Graph data
+
+	function sr_graph_data_formatting(&$graph_data,&$results,&$group_by,$index_flag,$graph_data_index_sales,$graph_data_index_count,$results_index_sales,$results_index_count ) {
+
+		if (empty($results) || empty($index_flag) || empty($graph_data_index_sales) || empty($graph_data_index_count) || empty($results_index_sales) || empty($results_index_count))
+			return;
+
+		// $graph_data = array();
+
+		for ($i=0, $j=0, $k=0; $i<sizeof($results);$i++) {
+
+		            if ($i>0) {
+
+		                if ($results [$i][$index_flag] == $flag) {
+		                    $j++;
+
+		                    $graph_data [$k][$j][$graph_data_index_sales] = $results [$i][$results_index_sales];
+		                    $graph_data [$k][$j][$graph_data_index_count] = $results [$i][$results_index_count];
+		                    $graph_data [$k][$j][$group_by] = $results [$i][$group_by];    
+
+		                    if($group_by == "display_date_time") {
+		                        $graph_data [$k][$j]['display_time'] = $results [$i]['display_time'];
+		                        $graph_data [$k][$j]['comp_time'] = $results [$i]['comp_time'];
+		                    } 
+
+		                    $flag = $results [$i][$index_flag];
+
+
+		                }
+		                else {
+
+		                    $k++;
+		                    $j=0;
+		                    $graph_data [$k] = array();
+
+		                    $graph_data [$k][$j][$graph_data_index_sales] = $results [$i][$results_index_sales];
+		                    $graph_data [$k][$j][$graph_data_index_count] = $results [$i][$results_index_count];
+		                    $graph_data [$k][$j][$group_by] = $results [$i][$group_by];
+		                    if($group_by == "display_date_time") {
+		                        $graph_data [$k][$j]['display_time'] = $results [$i]['display_time'];
+		                        $graph_data [$k][$j]['comp_time'] = $results [$i]['comp_time'];
+		                    }
+
+		                    $flag = $results [$i][$index_flag];
+		                }
+		            }
+		            else {
+
+		                $graph_data [$k] = array();
+		                $graph_data [$k][$j][$graph_data_index_sales] = $results [$i][$results_index_sales];
+		                $graph_data [$k][$j][$graph_data_index_count] = $results [$i][$results_index_count];
+		                $graph_data [$k][$j][$group_by] = $results [$i][$group_by];
+		                if($group_by == "display_date_time") {
+		                    $graph_data [$k][$j]['display_time'] = $results [$i]['display_time'];
+		                    $graph_data [$k][$j]['comp_time'] = $results [$i]['comp_time'];
+		                }
+		                
+		                $flag = $results [$i][$index_flag];
+		            }
+		        }
+	        return $graph_data;
+	}
+
 	//Cummulative sales Query function
 	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$select_top_abandoned_prod,$terms_post,$post) {
 
@@ -299,6 +362,7 @@ function sr_number_format($input, $places)
 	    $top_prod_ids = array();
 	    $top_prod_graph_data = array();
 	    $top_gateway_graph_data = array();
+	    $top_shipping_method_graph_data = array();
 
 	    $sr_currency_symbol = isset($post['SR_CURRENCY_SYMBOL']) ? $post['SR_CURRENCY_SYMBOL'] : '';
 	    $sr_decimal_places = isset($post['SR_DECIMAL_PLACES']) ? $post['SR_DECIMAL_PLACES'] : '';
@@ -320,8 +384,7 @@ function sr_number_format($input, $places)
         $results_monthly_sales    = $wpdb->get_results ( $query_monthly_sales, 'ARRAY_A' );
 	    $rows_monthly_sales 	  =  $wpdb->num_rows;
 
-	    
-
+	  
 	    //Query for Top 5 Customers
 
 	    //Reg Customers
@@ -532,61 +595,9 @@ function sr_number_format($input, $places)
 		            $top_prod_graph_temp [] = $results_top_prod_graph1['product_id'];
 		        }
 
-
-
-		        for ($i=0, $j=0, $k=0; $i<sizeof($results_top_prod_graph);$i++) {
-
-		            if ($i>0) {
-
-		                if ($results_top_prod_graph [$i]['product_id'] == $prod_id) {
-		                    $j++;
-
-		                    $top_prod_graph_data [$k][$j]['product_sales'] = $results_top_prod_graph [$i]['product_sales'];
-		                    $top_prod_graph_data [$k][$j]['product_qty'] = $results_top_prod_graph [$i]['product_qty'];
-		                    $top_prod_graph_data [$k][$j][$group_by] = $results_top_prod_graph [$i][$group_by];    
-
-		                    if($group_by == "display_date_time") {
-		                        $top_prod_graph_data [$k][$j]['display_time'] = $results_top_prod_graph [$i]['display_time'];
-		                        $top_prod_graph_data [$k][$j]['comp_time'] = $results_top_prod_graph [$i]['comp_time'];
-		                    } 
-
-		                    $prod_id = $results_top_prod_graph [$i]['product_id'];
-
-
-		                }
-		                else {
-
-		                    $k++;
-		                    $j=0;
-		                    $top_prod_graph_data [$k] = array();
-
-		                    $top_prod_graph_data [$k][$j]['product_sales'] = $results_top_prod_graph [$i]['product_sales'];
-		                    $top_prod_graph_data [$k][$j]['product_qty'] = $results_top_prod_graph [$i]['product_qty'];
-		                    $top_prod_graph_data [$k][$j][$group_by] = $results_top_prod_graph [$i][$group_by];
-		                    if($group_by == "display_date_time") {
-		                        $top_prod_graph_data [$k][$j]['display_time'] = $results_top_prod_graph [$i]['display_time'];
-		                        $top_prod_graph_data [$k][$j]['comp_time'] = $results_top_prod_graph [$i]['comp_time'];
-		                    }
-
-		                    $prod_id = $results_top_prod_graph [$i]['product_id'];
-		                }
-		            }
-		            else {
-
-		                $top_prod_graph_data [$k] = array();
-		                $top_prod_graph_data [$k][$j]['product_sales'] = $results_top_prod_graph [$i]['product_sales'];
-		                $top_prod_graph_data [$k][$j]['product_qty'] = $results_top_prod_graph [$i]['product_qty'];
-		                $top_prod_graph_data [$k][$j][$group_by] = $results_top_prod_graph [$i][$group_by];
-		                if($group_by == "display_date_time") {
-		                    $top_prod_graph_data [$k][$j]['display_time'] = $results_top_prod_graph [$i]['display_time'];
-		                    $top_prod_graph_data [$k][$j]['comp_time'] = $results_top_prod_graph [$i]['comp_time'];
-		                }
-		                
-		                $prod_id = $results_top_prod_graph [$i]['product_id'];
-		            }
-		        }
-	        }
-	        
+				//call function for graph data formatting
+		        sr_graph_data_formatting($top_prod_graph_data,$results_top_prod_graph,$group_by,'product_id','product_sales','product_qty','product_sales','product_qty' );
+		    }
 
 	    }
 
@@ -674,8 +685,6 @@ function sr_number_format($input, $places)
 	                    }
 	                }
 	                else {
-
-
 
 	                    if($results_top_prod_graph1[$j]['product_sales'] > $max) {
 	                        $max = floatval($results_top_prod_graph1[$j]['product_sales']);
@@ -927,57 +936,9 @@ function sr_number_format($input, $places)
 
 		if($rows_top_gateways_graph > 0) {
 
-	        for ($i=0, $j=0, $k=0; $i<sizeof($results_top_gateways_graph);$i++) {
+			//call function for graph data formatting
+	        sr_graph_data_formatting($top_gateway_graph_data,$results_top_gateways_graph,$group_by,'payment_method','gateway_sales_amt','gateway_sales_count','sales_total','sales_count' );
 
-	            if ($i>0) {
-
-	                if ($results_top_gateways_graph [$i]['payment_method'] == $payment_method) {
-	                    $j++;
-
-	                    $top_gateway_graph_data [$k][$j]['gateway_sales_amt'] = $results_top_gateways_graph [$i]['sales_total'];
-	                    $top_gateway_graph_data [$k][$j]['gateway_sales_count'] = $results_top_gateways_graph [$i]['sales_count'];
-	                    $top_gateway_graph_data [$k][$j][$group_by] = $results_top_gateways_graph [$i][$group_by];    
-
-	                    if($group_by == "display_date_time") {
-	                        $top_gateway_graph_data [$k][$j]['display_time'] = $results_top_gateways_graph [$i]['display_time'];
-	                        $top_gateway_graph_data [$k][$j]['comp_time'] = $results_top_gateways_graph [$i]['comp_time'];
-	                    } 
-
-	                    $payment_method = $results_top_gateways_graph [$i]['payment_method'];
-
-
-	                }
-	                else {
-
-	                    $k++;
-	                    $j=0;
-	                    $top_gateway_graph_data [$k] = array();
-
-	                    $top_gateway_graph_data [$k][$j]['gateway_sales_amt'] = $results_top_gateways_graph [$i]['sales_total'];
-	                    $top_gateway_graph_data [$k][$j]['gateway_sales_count'] = $results_top_gateways_graph [$i]['sales_count'];
-	                    $top_gateway_graph_data [$k][$j][$group_by] = $results_top_gateways_graph [$i][$group_by];
-	                    if($group_by == "display_date_time") {
-	                        $top_gateway_graph_data [$k][$j]['display_time'] = $results_top_gateways_graph [$i]['display_time'];
-	                        $top_gateway_graph_data [$k][$j]['comp_time'] = $results_top_gateways_graph [$i]['comp_time'];
-	                    }
-
-	                    $payment_method = $results_top_gateways_graph [$i]['payment_method'];
-	                }
-	            }
-	            else {
-
-	                $top_gateway_graph_data [$k] = array();
-	                $top_gateway_graph_data [$k][$j]['gateway_sales_amt'] = $results_top_gateways_graph [$i]['sales_total'];
-	                $top_gateway_graph_data [$k][$j]['gateway_sales_count'] = $results_top_gateways_graph [$i]['sales_count'];
-	                $top_gateway_graph_data [$k][$j][$group_by] = $results_top_gateways_graph [$i][$group_by];
-	                if($group_by == "display_date_time") {
-	                    $top_gateway_graph_data [$k][$j]['display_time'] = $results_top_gateways_graph [$i]['display_time'];
-	                    $top_gateway_graph_data [$k][$j]['comp_time'] = $results_top_gateways_graph [$i]['comp_time'];
-	                }
-	                
-	                $payment_method = $results_top_gateways_graph [$i]['payment_method'];
-	            }
-	        }
         }
 
         //Query to get the Payment Gateway Title
@@ -1144,6 +1105,187 @@ function sr_number_format($input, $places)
 	    }
 
 
+	    //Query for getting the countries wise sales
+
+	    $query_cumm_sales_billing_country = "SELECT SUM( postmeta.meta_value ) AS sales,
+	    							COUNT(posts.ID) AS total_orders,
+	    							postmeta_country.meta_value AS billing_country,
+	    							GROUP_CONCAT(DISTINCT postmeta.post_id
+	                                                             ORDER BY postmeta.post_id DESC SEPARATOR ',' ) AS order_ids
+		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
+		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	JOIN {$wpdb->prefix}postmeta AS postmeta_country ON ( postmeta_country.post_id = postmeta.post_id )
+		                        WHERE postmeta.meta_key IN ('_order_total')
+		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+		                            AND postmeta_country.meta_key IN ('_billing_country')
+	                            GROUP BY billing_country";
+        $results_cumm_sales_billing_country   = $wpdb->get_results ( $query_cumm_sales_billing_country, 'ARRAY_A' );
+	    $rows_cumm_sales_billing_country 	  =  $wpdb->num_rows;
+
+	    $cumm_sales_billing_country_values = array();
+	    $cumm_sales_billing_country_tooltip = array();
+
+	    if ($rows_cumm_sales_billing_country > 0) {
+
+	    	foreach( $results_cumm_sales_billing_country as $result_cumm_sales_billing_country ) {
+
+	    		$cumm_sales_billing_country_values [$result_cumm_sales_billing_country['billing_country']] =  $result_cumm_sales_billing_country['sales'];
+		    	$cumm_sales_billing_country_tooltip [$result_cumm_sales_billing_country['billing_country']] = array();
+		    	$cumm_sales_billing_country_tooltip [$result_cumm_sales_billing_country['billing_country']] ['sales'] = $sr_currency_symbol.sr_number_format($result_cumm_sales_billing_country['sales'],$sr_decimal_places);
+		    	$cumm_sales_billing_country_tooltip [$result_cumm_sales_billing_country['billing_country']] ['count'] = sr_number_format($result_cumm_sales_billing_country['total_orders'],$sr_decimal_places);
+		    	$cumm_sales_billing_country_tooltip [$result_cumm_sales_billing_country['billing_country']] ['order_ids'] = $result_cumm_sales_billing_country['order_ids'];
+
+	    	}	    	
+	    }
+	    
+	    //Query to get the top shipping methods
+	    $result_top_shipping_method = array();
+	    $results_top_shipping_method = array();
+	    $rows_top_shipping_method = 0;
+
+	    if (get_option( 'woocommerce_calc_shipping') == 'yes') {
+
+	    	$query_top_shipping_method = "SELECT COUNT( order_items.order_item_name ) AS shipping_count,
+			    							SUM(order_itemmeta.meta_value) AS shipping_amount,
+			    							order_items.order_item_name AS shipping_name,
+			    							SUM(postmeta.meta_value) AS sales_total,
+			    							GROUP_CONCAT(DISTINCT order_items.order_id
+			                                                             ORDER BY order_items.order_item_id DESC SEPARATOR ',' ) AS order_ids
+					                        FROM `{$wpdb->prefix}posts` AS posts
+					                        	JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
+					                        	JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
+					                        		ON (order_items.order_item_id = order_itemmeta.order_item_id 
+					                        				AND order_itemmeta.meta_key IN ('cost') )
+												LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta ON ( posts.ID = postmeta.post_id )
+					                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+					                            $terms_post_cond
+					                            AND order_items.order_item_type IN ('shipping')
+					                            AND postmeta.meta_key IN ('_order_total')
+				                            GROUP BY order_items.order_item_name
+				                            ORDER BY shipping_count DESC, shipping_amount DESC
+				                            LIMIT 5";
+
+	        $results_top_shipping_method = $wpdb->get_results ( $query_top_shipping_method, 'ARRAY_A' );
+		    $rows_top_shipping_method	  =  $wpdb->num_rows;
+	    }
+
+	    $top_shipping_method = array();
+
+	    if ($rows_top_shipping_method > 0) {
+	    	foreach ($results_top_shipping_method as &$result_top_shipping_method) {
+	    		$top_shipping_method[] = $result_top_shipping_method ['shipping_name'];
+
+		    	$result_top_shipping_method['shipping_method_sales_display'] = $sr_currency_symbol . sr_number_format($result_top_shipping_method['shipping_amount'],$sr_decimal_places);
+		    	$result_top_shipping_method['shipping_method_sales_percent'] = sr_number_format((($result_top_shipping_method ['sales_total'] / $total_monthly_sales) * 100),$sr_decimal_places) . '%';
+		    }
+
+		    if (!empty($top_shipping_method)) {
+	        	$top_shipping_method_imploded = "'".implode("','", $top_shipping_method)."'";
+	        	$top_shipping_method_cond = 'AND order_items.order_item_name IN ('.$top_shipping_method_imploded.')';
+	        	$top_shipping_method_order_by = "ORDER BY FIND_IN_SET(order_items.order_item_name,'".implode(",", $top_shipping_method)."')";
+
+	        } else {
+		    	$top_shipping_method_cond = '';
+		    	$top_shipping_method_order_by = '';
+		    }
+
+		    //Query to get the Top 5 Shipping Methods graph related data
+
+	        $query_top_shipping_method_graph   = "SELECT COUNT( order_items.order_item_name ) AS shipping_count,
+			    							SUM(order_itemmeta.meta_value) AS shipping_amount,
+			    							order_items.order_item_name AS shipping_name,
+		    								$select
+					                        FROM `{$wpdb->prefix}posts` AS posts
+				                        		JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
+				                        		JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
+				                        			ON (order_items.order_item_id = order_itemmeta.order_item_id 
+				                        				AND order_itemmeta.meta_key IN ('cost') )
+				                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+				                            AND order_items.order_item_type IN ('shipping')
+				                            $terms_post_cond
+				                            $top_shipping_method_cond
+			                            GROUP BY shipping_name, $group_by
+			                            $top_shipping_method_order_by";
+
+	        $results_top_shipping_method_graph = $wpdb->get_results ( $query_top_shipping_method_graph, 'ARRAY_A' );
+	        $rows_top_shipping_method_graph	= $wpdb->num_rows;
+
+
+	        $cumm_shipping_method_temp = $date_series;
+		    $cumm_shipping_method_sales = array();
+
+			if($rows_top_shipping_method_graph > 0) {
+
+				//call function for graph data formatting
+	        	sr_graph_data_formatting($top_shipping_method_graph_data,$results_top_shipping_method_graph,$group_by,'shipping_name','shipping_method_sales_amt','shipping_method_sales_count','shipping_amount','shipping_count' );
+	        }
+
+
+	        $cumm_top_shipping_method_graph_data = array();
+
+		    $index = 0;
+		    $max_values = array();
+
+		    if(!empty($top_shipping_method_graph_data)) {
+		        foreach ( $top_shipping_method_graph_data as $top_shipping_method_graph_data1 ) {
+		            $cumm_top_shipping_method_amt_graph_data[$index] = array();
+		            $temp_shipping_method_sales_amt = array();
+		            $temp_shipping_method_sales_count = array();
+		            $cumm_date_amt = $date_series;
+		            $cumm_date_count = $date_series;
+
+		            $max_amt=0;
+		            $max_count=0;
+
+		            for ( $j=0;$j<sizeof($top_shipping_method_graph_data1);$j++ ) {
+
+		                if($group_by == "display_date_time") {
+		                    $cumm_date_amt[$top_shipping_method_graph_data1[$j]['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $top_shipping_method_graph_data1[$j]['display_time'];
+		                    $cumm_date_count[$top_shipping_method_graph_data1[$j]['comp_time']]['post_date'] = date ("Y-m-d", strtotime($start_date)) .' '. $top_shipping_method_graph_data1[$j]['display_time'];
+
+		                    $cumm_date_amt[$top_shipping_method_graph_data1[$j]['comp_time']]['sales'] = floatval($top_shipping_method_graph_data1[$j]['shipping_method_sales_amt']);
+		                	$cumm_date_count[$top_shipping_method_graph_data1[$j]['comp_time']]['sales'] = floatval($top_shipping_method_graph_data1[$j]['shipping_method_sales_count']);
+		                }
+		                else {
+		                	$cumm_date_amt[$top_shipping_method_graph_data1[$j][$group_by]]['sales'] = floatval($top_shipping_method_graph_data1[$j]['shipping_method_sales_amt']);
+		                	$cumm_date_count[$top_shipping_method_graph_data1[$j][$group_by]]['sales'] = floatval($top_shipping_method_graph_data1[$j]['shipping_method_sales_count']);
+		                }
+
+		                //Shipping Method Sales Amt
+
+	                    if($top_shipping_method_graph_data1[$j]['shipping_method_sales_amt'] > $max_amt) {
+	                        $max_amt = floatval($top_shipping_method_graph_data1[$j]['shipping_method_sales_amt']);
+	                    }
+
+	                   //Shipping Method Sales Count
+
+	                    if($top_shipping_method_graph_data1[$j]['shipping_method_sales_count'] > $max_count) {
+	                        $max_count = floatval($top_shipping_method_graph_data1[$j]['shipping_method_sales_count']);
+	                    }
+
+		            }
+
+		            foreach ($cumm_date_amt as $cumm_date_amt1) {
+		                $temp_shipping_method_sales_amt [] = $cumm_date_amt1;
+		            }
+
+		            foreach ($cumm_date_count as $cumm_date_count1) {
+		                $temp_shipping_method_sales_count [] = $cumm_date_count1;
+		            }
+
+	                $results_top_shipping_method[$index]['graph_data_sales_amt'] = $temp_shipping_method_sales_amt;    
+	                $results_top_shipping_method[$index]['max_value_sales_amt'] = $max_amt;
+
+	                $results_top_shipping_method[$index]['graph_data_sales_count'] = $temp_shipping_method_sales_count;    
+	                $results_top_shipping_method[$index]['max_value_sales_count'] = $max_count;
+
+	                $results_top_shipping_method[$index]['shipping_method'] = $results_top_shipping_method[$index]['shipping_name'];
+
+		            $index++;
+		        }    
+		    }
+	    }
+
 	    //Sales Funnel
 
 	    $cumm_sales_funnel = array();
@@ -1291,11 +1433,16 @@ function sr_number_format($input, $places)
 	        $results [13] = $tax_data;
 
 	        // $results [14] = $results_top_abandoned_products;
-	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_post),true);
+	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_post),true);
 	        
 	        $results [15] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_cart_abandoned_rate : '';
 
 	        $results [16] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_sales_funnel : '';
+
+	        $results [17] = $cumm_sales_billing_country_values;
+	        $results [18] = $cumm_sales_billing_country_tooltip;
+
+	        $results [19] = $results_top_shipping_method;
 
 	    }
 
@@ -1306,8 +1453,6 @@ function sr_number_format($input, $places)
 
 	function sr_get_sales($start_date,$end_date,$diff_dates,$post) {
 	    global $wpdb;
-
-
 
 	    $cumm_sales = array();
 
@@ -1477,8 +1622,8 @@ function sr_number_format($input, $places)
 	        $results[2] = $max_date_sales;
 	    }
 	    else {
-	        $results[17] = $min_date_sales;
-	        $results[18] = $max_date_sales;
+	        $results[20] = $min_date_sales;
+	        $results[21] = $max_date_sales;
 	    }
 
 	    return $results;
@@ -2274,11 +2419,15 @@ function sr_number_format($input, $places)
 	        }
 
 	        
-
 	        $encoded['cumm_sales_funnel'] = $actual_cumm_sales[16];
 
-	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[17];
-	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[18];
+	        $encoded['cumm_sales_billing_country_values'] = $actual_cumm_sales[17];
+	        $encoded['cumm_sales_billing_country_tooltip'] = $actual_cumm_sales[18];
+
+	        $encoded['top_shipping_method_data'] = $actual_cumm_sales[19];
+
+	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[20];
+	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[21];
 
 	        $encoded['siteurl'] = get_option('siteurl');
 	        
@@ -2379,19 +2528,19 @@ function sr_number_format($input, $places)
 				
 				foreach ( $results as $result ) {
 					$grid_data [$count] ['products'] = $result ['products'];
-					$grid_data [$count] ['period']   = $result ['period'];
+					$grid_data [$count] ['period']   = (!empty($result ['period'])) ? $result ['period'] : '';
 					$grid_data [$count] ['sales']    = $result ['sales'];
 					$grid_data [$count] ['discount'] = $result ['discount'];
 					$grid_data [$count] ['category'] = $result ['category'];
 					$grid_data [$count] ['id'] 	 	 = $result ['id'];
 					$grid_data [$count] ['quantity'] = $result ['quantity'];
 					$thumbnail = isset( $result ['thumbnail'] ) ? wp_get_attachment_image_src( $result ['thumbnail'], 'admin-product-thumbnails' ) : '';
-					$grid_data [$count] ['image']    = ( $thumbnail[0] != '' ) ? $thumbnail[0] : $woo_default_image;
+					$grid_data [$count] ['image']    = ( !empty($thumbnail[0]) && $thumbnail[0] != '' ) ? $thumbnail[0] : $woo_default_image;
 					$count++;
 				}
 					
 				$encoded ['gridItems']      = $grid_data;
-				$encoded ['period_div'] 	= $parts ['category'];
+				$encoded ['period_div'] 	= (!empty($parts ['category'])) ? $parts ['category'] : '';
 				$encoded ['gridTotalCount'] = count($grid_data);
 			}
 
@@ -2683,7 +2832,7 @@ function sr_number_format($input, $places)
 		while(ob_get_contents()) {
          	   ob_clean();
 		}
-
+		
 		echo json_encode ( $encoded );
 	}
 

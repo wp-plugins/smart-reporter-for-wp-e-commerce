@@ -1,4 +1,5 @@
 <?php
+
 include_once ('../../../../wp-load.php');
 include_once ('../../../../wp-includes/wp-db.php');
 include_once (ABSPATH . WPINC . '/functions.php');
@@ -40,7 +41,7 @@ if (!function_exists('sr_arr_init')) {
 	}	
 }
 
-function get_grid_data( $select, $from, $where, $order_by ) {
+function get_grid_data_wpec( $select, $from, $where, $order_by ) {
 	global $wpdb, $cat_rev, $months, $order_arr;
 	
 		$wpsc_default_image = WP_PLUGIN_URL . '/wp-e-commerce/wpsc-theme/wpsc-images/noimage.png';
@@ -73,29 +74,29 @@ function get_grid_data( $select, $from, $where, $order_by ) {
 				$count++;
 			
 			foreach ( $results as $result ) {
-				$grid_data [$count] ['products'] = $result ['products'];
-				$grid_data [$count] ['period']   = $result ['period'];
-				$grid_data [$count] ['sales']    = $result ['sales'];
-				$grid_data [$count] ['category'] = $result ['category'];
-				$grid_data [$count] ['id'] 	 	 = $result ['id'];
-				$grid_data [$count] ['quantity'] = $result ['quantity'];
+				$grid_data [$count] ['products'] = (!empty($result ['products'])) ? $result ['products'] : '';
+				$grid_data [$count] ['period']   = (!empty($result ['period'])) ? $result ['period'] : '';
+				$grid_data [$count] ['sales']    = (!empty($result ['sales'])) ? $result ['sales'] : '';
+				$grid_data [$count] ['category'] = (!empty($result ['category'])) ? $result ['category'] : '';
+				$grid_data [$count] ['id'] 	 	 = (!empty($result ['id'])) ? $result ['id'] : '';
+				$grid_data [$count] ['quantity'] = (!empty($result ['quantity'])) ? $result ['quantity'] : '';
 				$thumbnail = isset( $result ['image'] ) ? wp_get_attachment_image_src( $result ['image'], 'admin-product-thumbnails' ) : '';
-				$grid_data [$count] ['image']    = ( $thumbnail[0] != '' ) ? $thumbnail[0] : $wpsc_default_image;
+				$grid_data [$count] ['image']    = ( !empty($thumbnail[0]) && $thumbnail[0] != '' ) ? $thumbnail[0] : $wpsc_default_image;
 				$count++;
 			}			
 			
-			$encoded ['gridItems']      = $grid_data;
-			$encoded ['period_div'] 	= $parts ['category'];
-			$encoded ['gridTotalCount'] = count($grid_data);
+			$encoded ['gridItems']      = (!empty($grid_data)) ? $grid_data : '';
+			$encoded ['period_div'] 	= (!empty($parts ['category'])) ? $parts ['category'] : '';
+			$encoded ['gridTotalCount'] = (!empty($grid_data)) ? count($grid_data) : '0';
 		}
 
 	return $encoded;
 }
 
-function get_graph_data( $product_id, $select, $from, $group_by, $where, $parts ) {
+function get_graph_data_wpec( $product_id, $select, $from, $group_by, $where, $parts ) {
 	global $wpdb, $cat_rev, $months, $order_arr;
 	
-	$encoded = get_last_few_order_details( $product_id, $select, $from, $group_by, $where );
+	$encoded = get_last_few_order_details_wpec( $product_id, $select, $from, $group_by, $where );
 	
 		$select  .= " ,FROM_UNIXTIME(wtpl.`date`, '{$parts ['abbr']}') AS period";
         
@@ -159,7 +160,7 @@ function get_graph_data( $product_id, $select, $from, $group_by, $where, $parts 
 	return $encoded;
 }
 
-function get_last_few_order_details( $product_id, $select, $from, $group_by, $where ) {
+function get_last_few_order_details_wpec( $product_id, $select, $from, $group_by, $where ) {
 	global $wpdb, $cat_rev, $months, $order_arr;
 	
 		$select .= ",wtcc.purchaseid as PurchaseID,wtpl.date as date,wtpl.totalprice as totalprice";
@@ -349,13 +350,15 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 
 	if ($_GET ['cmd'] == 'gridGetData') {
 		
-		$encoded = get_grid_data( $static_select, $from, $where, $order_by );
+		$encoded = get_grid_data_wpec( $static_select, $from, $where, $order_by );
 		
 	} else if ($_GET ['cmd'] == 'getData') {
 
-		$encoded = get_graph_data( $_GET ['id'], $static_select, $from, $group_by, $where, $parts );
+		$encoded = get_graph_data_wpec( $_GET ['id'], $static_select, $from, $group_by, $where, $parts );
 		
 	}
+
+
 }
 echo json_encode ( $encoded );
 ?>
