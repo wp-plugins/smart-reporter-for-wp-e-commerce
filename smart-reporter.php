@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.7
+Version: 2.7.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
@@ -371,7 +371,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	define ( 'SR_PLUGIN_DIR',dirname($plugin));
 	define ( 'SR_PLUGIN_DIR_ABSPATH', dirname(__FILE__) );
 	define ( 'SR_PLUGIN_FILE', $plugin );
-	define ( 'STORE_APPS_URL', 'http://www.storeapps.org/' );
+	if (!defined('STORE_APPS_URL')) {
+		define ( 'STORE_APPS_URL', 'http://www.storeapps.org/' );	
+	}
 	
 	define ( 'ADMIN_URL', get_admin_url () ); //defining the admin url
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
@@ -406,7 +408,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
 		$ext_version 	= '4.0.1';
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) ) {
+		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) && (!defined('WPSC_WOO_ACTIVATED'))) {
 			define('WPSC_WOO_ACTIVATED',true);
 		} elseif ( defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
 			define('WPSC_ACTIVATED',true);
@@ -417,23 +419,44 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
 		if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
 			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
-			define('WPSC_RUNNING', true);
-			define('WOO_RUNNING', false);
+			if (!defined('WPSC_RUNNING')) {
+				define('WPSC_RUNNING', true);	
+			}
+			
+			if (!defined('WOO_RUNNING')) {
+				define('WOO_RUNNING', false);
+			}
 			// checking the version for WPSC plugin
-			define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
-			define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
+
+			if (!defined('IS_WPSC37')) {
+				define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
+			}
+
+			if (!defined('IS_WPSC38')) {
+				define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
+			}
 
 			if ( IS_WPSC38 ) {		// WPEC 3.8.7 OR 3.8.8
-				define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.8', '<' ));
-				define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
+				if (!defined('IS_WPSC387')) {
+					define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.8', '<' ));
+				}
+
+				if (!defined('IS_WPSC388')) {
+					define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
+				}
 			}
 		} else if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') )  {
 			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
 				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
 			}
 
-			define('WPSC_RUNNING', false);
-			define('WOO_RUNNING', true);
+			if (!defined('WPSC_RUNNING')) {
+				define('WPSC_RUNNING', false);
+			}
+
+			if (!defined('WOO_RUNNING')) {
+				define('WOO_RUNNING', true);
+			}
 			// checking the version for WooCommerce plugin
 			define ( 'IS_WOO13', version_compare ( WOOCOMMERCE_VERSION, '1.4', '<' ) );                          
 
@@ -554,8 +577,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         <div style = "margin:0.7em 0.5em 0 0" class="wrap woocommerce">
 
             <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
-                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter <sup style="vertical-align: super;color:red; font-size:15px">Beta</sub></a>
-                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_old') ? 'nav-tab-active' : ''; ?>">Smart Reporter</a>
+                <!-- <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter <sup style="vertical-align: super;color:red; font-size:15px">Beta</sub></a> -->
+                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter</a>
+                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_old') ? 'nav-tab-active' : ''; ?>">Smart Reporter Old</a>
             </h2>
 
             <?php
@@ -863,6 +887,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	}
 	
 
+	$support_func_flag = 0;
+
 	function sr_console_common() {
 
 		?>
@@ -874,8 +900,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		        background: lightgrey;
 		    }
 		</style>    
-		<?php if ( SRPRO === true && function_exists( 'sr_support_ticket_content' ) ) sr_support_ticket_content(); 
-
+		<?php 
+		
 		if (WPSC_RUNNING === true) {
 			$json_filename = 'json';
 		} else if (WOO_RUNNING === true) {
@@ -935,6 +961,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	                add_thickbox();
 	            }
 
+
+	            // <a href="edit.php#TB_inline?max-height=420px&inlineId=smart_manager_post_query_form" title="Send your query" class="thickbox" id="support_link">Need Help?</a>
 	            $before_plug_page = '<a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
 	            
 	            // if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') && SR_BETA == "true") {

@@ -2388,7 +2388,9 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 $('#sr_cumm_sales_funnel_data').css('margin-left' ,'4.4em');
             }
            
-            if(resp['cumm_sales_funnel'] != '') {
+            if(resp['cumm_sales_funnel'] != '' && (resp['cumm_sales_funnel']['total_cart_count'] != 0 || resp['cumm_sales_funnel']['total_products_added_cart'] != 0 || 
+                                                     resp['cumm_sales_funnel']['orders_placed_count'] != 0 || resp['cumm_sales_funnel']['products_purchased_count'] != 0 || 
+                                                     resp['cumm_sales_funnel']['orders_completed_count'] != 0 || resp['cumm_sales_funnel']['products_sold_count'] != 0) ) {
 
                 $('#sr_cumm_sales_funnel_data').empty();
 
@@ -3272,6 +3274,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
             function() { $(this).css('border', '0.2em solid #e8e8e8'); }
         );
 
+        $("#add_social_links").insertAfter("#sr_cumm_date");
+        
         $("#sr_putler_promotion").insertAfter("#sr_cumm_date");
 
         $("#sr_cumm_order_by_shipping_method").insertAfter("#sr_cumm_date");
@@ -3376,7 +3380,7 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
 
         echo "<script type='text/javascript'>
         var adminUrl             = '" .ADMIN_URL. "';
-        SR                       =  new Object;";
+        var SR                       =  new Object;";
 
             if ( WPSC_RUNNING === true ) {
                 echo "SR.defaultCurrencySymbol = '" .$currency_sign. "';";
@@ -3402,10 +3406,48 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
     smart_reporter_footer();      
 }
 
+function add_social_links( $prefix = '' ) {
+
+    $social_link = '<style type="text/css">
+                        div > iframe {
+                            vertical-align: middle;
+                            padding: 5px 2px 0px 0px;
+                        }
+                        iframe[id^="twitter-widget"] {
+                            max-height: 2.5em;
+                            max-width: 10.5em;
+                        }
+                        iframe#fb_like_' . $prefix . ' {
+                            max-height: 1.6em;
+                            max-width: 6.2em;
+                        }
+                        span > iframe {
+                            vertical-align: middle;
+                        }
+                    </style>';
+    $social_link .= '<a href="https://twitter.com/storeapps" class="twitter-follow-button" data-show-count="true" data-dnt="true" data-show-screen-name="false">Follow</a>';
+    $social_link .= "<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>";
+    $social_link .= '<iframe id="fb_like_' . $prefix . '" src="http://www.facebook.com/plugins/like.php?href=https%3A%2F%2Fwww.facebook.com%2Fpages%2FStore-Apps%2F614674921896173&width=100&layout=button_count&action=like&show_faces=false&share=false&height=21"></iframe>';
+    $social_link .= '<script src="//platform.linkedin.com/in.js" type="text/javascript">lang: en_US</script><script type="IN/FollowCompany" data-id="3758881" data-counter="right"></script>';
+
+    return $social_link;
+
+}
+
 function smart_reporter_footer() {
     ?>
     <div id="sr_putler_promotion" class="sr_promotion_footer">
         <?php echo __(" For more Extensive Reporting use "); ?> <a href="http://www.putler.com/?&utm_source=SR_IN_WP" target="_blank"> <?php echo __('Putler'); ?></a> 
     </div>
+
+    <br/>
+    <br/>
+
+    <div id="add_social_links" class="wrap" style="float:left;">
+        <?php echo add_social_links();?>
+    </div>
+
     <?php
+
+    
 }

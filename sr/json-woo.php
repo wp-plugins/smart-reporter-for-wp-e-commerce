@@ -78,7 +78,7 @@ function sr_number_format($input, $places)
 
 
 	//Function to get the abandoned Products
-	function sr_get_abandoned_products(&$start_date,&$end_date_query,&$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_post) {
+	function sr_get_abandoned_products(&$start_date,&$end_date_query,&$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_taxonomy_ids) {
 		
 		global $wpdb;
 
@@ -145,7 +145,10 @@ function sr_number_format($input, $places)
 
 		    // if (empty($limit)) {
 
-		    	$terms_post_cond = (!empty($terms_post)) ? 'AND posts.ID IN ('.$terms_post.')' : '';
+		    	$terms_post_join = (!empty($terms_taxonomy_ids)) ? ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish") ' : '';
+        		$terms_post_cond = (!empty($terms_taxonomy_ids) && !empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';
+
+		    	// $terms_post_cond = (!empty($terms_post)) ? 'AND posts.ID IN ('.$terms_post.')' : '';
 
 		    	$query_last_order_date = "SELECT posts.id as order_id,
 		    									SUM(sr.quantity) as tot_qty_sold,
@@ -155,6 +158,7 @@ function sr_number_format($input, $places)
 	    									FROM {$wpdb->prefix}sr_woo_order_items AS sr
 	    										JOIN {$wpdb->prefix}posts AS posts 
 	    													ON (posts.id = sr.order_id)
+												$terms_post_join
 											WHERE sr.product_id IN (". $prod_id .")
 												AND posts.post_date_gmt BETWEEN '".$start_date."' AND '". $end_date_query."'
 												$terms_post_cond
@@ -258,11 +262,10 @@ function sr_number_format($input, $places)
                 }
 
                 // $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/$results_prod_abandoned_rate[$j]['abondoned_rate'])*100;
-                $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/($results_last_order_date[$j]['tot_qty_sold'] + $results_top_abandoned_product['abondoned_qty']))*100;
+                $abandoned_rate = (!empty($results_last_order_date[$j]['tot_qty_sold']) && !empty($results_top_abandoned_product['abondoned_qty'])) ? ($results_top_abandoned_product['abondoned_qty']/($results_last_order_date[$j]['tot_qty_sold'] + $results_top_abandoned_product['abondoned_qty']))*100 : '';
                 $results_top_abandoned_product['abandoned_rate'] = sr_number_format($abandoned_rate ,$sr_decimal_places) . "%";
 
                 //Code for formatting the product name
-
 
                 $post_parent = wp_get_post_parent_id($results_top_abandoned_product['id']);
 
@@ -352,7 +355,7 @@ function sr_number_format($input, $places)
 	}
 
 	//Cummulative sales Query function
-	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$select_top_abandoned_prod,$terms_post,$post) {
+	function sr_query_sales($start_date,$end_date_query,$date_series,$select,$group_by,$select_top_prod,$select_top_abandoned_prod,$terms_taxonomy_ids,$post) {
 
 	    global $wpdb;
 
@@ -367,8 +370,11 @@ function sr_number_format($input, $places)
 	    $sr_currency_symbol = isset($post['SR_CURRENCY_SYMBOL']) ? $post['SR_CURRENCY_SYMBOL'] : '';
 	    $sr_decimal_places = isset($post['SR_DECIMAL_PLACES']) ? $post['SR_DECIMAL_PLACES'] : '';
 
-	    $terms_post_cond = (!empty($terms_post)) ? 'AND posts.ID IN ('.$terms_post.')' : '';
-	    $terms_postmeta_cond = (!empty($terms_post)) ? 'AND post_id IN ('.$terms_post.')' : '';
+	    
+	    // $terms_postmeta_cond = (!empty($terms_post)) ? 'AND post_id IN ('.$terms_post.')' : '';
+
+	    $terms_post_join = (!empty($terms_taxonomy_ids)) ? ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish") ' : '';
+        $terms_post_cond = (!empty($terms_taxonomy_ids) && !empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';	    												
 
 	    //Query for getting the cumm sales
 
@@ -377,6 +383,7 @@ function sr_number_format($input, $places)
 	    						$select
 		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
 		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        $terms_post_join
 		                        WHERE postmeta.meta_key IN ('_order_total')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 		                            $terms_post_cond
@@ -384,7 +391,6 @@ function sr_number_format($input, $places)
         $results_monthly_sales    = $wpdb->get_results ( $query_monthly_sales, 'ARRAY_A' );
 	    $rows_monthly_sales 	  =  $wpdb->num_rows;
 
-	  
 	    //Query for Top 5 Customers
 
 	    //Reg Customers
@@ -396,7 +402,7 @@ function sr_number_format($input, $places)
 
 	    $query_cumm_top_cust_guest ="SELECT postmeta1.meta_value AS billing_email,
 	                                GROUP_CONCAT(DISTINCT postmeta2.post_id
-	                                                             ORDER BY postmeta2.meta_id DESC SEPARATOR ',' ) AS post_id,
+                                                     ORDER BY postmeta2.meta_id DESC SEPARATOR ',' ) AS post_id,
 	                                MAX(postmeta2.post_id) AS post_id_max,
 	                                SUM(postmeta2.meta_value) as total
 	                            
@@ -404,12 +410,13 @@ function sr_number_format($input, $places)
 	                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
 	                                    INNER JOIN {$wpdb->prefix}postmeta AS postmeta2
 	                                       ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_order_total'))
+	                                    $terms_post_join
 	                                WHERE postmeta1.meta_key IN ('_billing_email')
 	                                    AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 	                                    AND posts.id IN (SELECT post_id FROM {$wpdb->prefix}postmeta
 	                                                        WHERE meta_key IN ('_customer_user')
-	                                                            AND meta_value = 0
-	                                                            $terms_postmeta_cond)
+	                                                            AND meta_value = 0)
+										$terms_post_cond
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
 	                                LIMIT 5";
@@ -474,12 +481,13 @@ function sr_number_format($input, $places)
 	                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
 	                                    INNER JOIN {$wpdb->prefix}postmeta AS postmeta2
 	                                       ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_order_total'))
+	                                    $terms_post_join
 	                                WHERE postmeta1.meta_key IN ('_customer_user')
 	                                    AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 	                                    AND posts.id IN (SELECT post_id FROM {$wpdb->prefix}postmeta
 	                                                        WHERE meta_key IN ('_customer_user')
-	                                                            AND meta_value > 0
-	                                                            $terms_postmeta_cond)
+	                                                            AND meta_value > 0)
+										$terms_post_cond
 	                                GROUP BY postmeta1.meta_value
 	                                ORDER BY total DESC
 	                                LIMIT 5";
@@ -551,6 +559,7 @@ function sr_number_format($input, $places)
 	                                    SUM( order_item.quantity ) AS product_qty
 	                                    FROM `{$wpdb->prefix}sr_woo_order_items` AS order_item
 	                                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
+	                                        $terms_post_join
 	                                    WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 	                                        $terms_post_cond
 	                                    GROUP BY order_item.product_id
@@ -720,6 +729,7 @@ function sr_number_format($input, $places)
 	    $query_cumm_reg_cust_count 	="SELECT COUNT(DISTINCT postmeta.meta_value) AS cust_orders
 		                                FROM {$wpdb->prefix}postmeta AS postmeta
 		                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+		                                    $terms_post_join
 		                                WHERE postmeta.meta_key IN ('_customer_user')
 		                                    AND postmeta.meta_value > 0
 		                                    AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
@@ -742,6 +752,7 @@ function sr_number_format($input, $places)
 		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
 		                                        INNER JOIN {$wpdb->prefix}postmeta AS postmeta2 
 		                                            ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_customer_user'))
+	                                            $terms_post_join
 		                                    WHERE postmeta1.meta_key IN ('_billing_email')
 		                                        AND postmeta2.meta_value = 0
 		                                        AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
@@ -767,6 +778,7 @@ function sr_number_format($input, $places)
 				                                    SUM( order_item.quantity ) AS cumm_quantity
 			                                    FROM `{$wpdb->prefix}sr_woo_order_items` AS order_item
 			                                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
+			                                        $terms_post_join
 			                                    WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 			                                    	$terms_post_cond";
 	    $results_cumm_avg_order_tot_items    = $wpdb->get_results ( $query_cumm_avg_order_tot_items, 'ARRAY_A' );
@@ -786,7 +798,8 @@ function sr_number_format($input, $places)
 	    $query_cumm_discount_sales = "SELECT SUM( postmeta.meta_value ) AS discount_sales,
 	    						$select
 		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
-		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	$terms_post_join
 		                        WHERE postmeta.meta_key IN ('_order_discount','_cart_discount')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 		                            $terms_post_cond
@@ -836,6 +849,7 @@ function sr_number_format($input, $places)
 		                        	JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
 		                        		ON (order_items.order_item_id = order_itemmeta.order_item_id 
 		                        				AND order_itemmeta.meta_key IN ('discount_amount') )
+									$terms_post_join
 		                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 		                            $terms_post_cond
 		                            AND order_items.order_item_type IN ('coupon')
@@ -858,6 +872,7 @@ function sr_number_format($input, $places)
 	    $query_cumm_orders_coupon_count 	= "SELECT COUNT( posts.ID ) AS total_coupon_orders
 		    									FROM `{$wpdb->prefix}posts` AS posts
 			                        				JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
+			                        				$terms_post_join
 			                        			WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 						                            $terms_post_cond
 					                            	AND order_items.order_item_type IN ('coupon')";
@@ -876,8 +891,9 @@ function sr_number_format($input, $places)
 		    							COUNT(posts.ID) AS sales_count,
 		    							GROUP_CONCAT(posts.ID ORDER BY posts.ID DESC SEPARATOR ',' ) AS order_ids
 				                        FROM {$wpdb->prefix}posts AS posts 
-				                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( posts.ID = postmeta1.post_id )
-				                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( posts.ID = postmeta2.post_id )
+					                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( posts.ID = postmeta1.post_id )
+					                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( posts.ID = postmeta2.post_id )
+					                        $terms_post_join
 				                        WHERE postmeta1.meta_key IN ('_payment_method')
 				                        	AND postmeta2.meta_key IN ('_order_total')
 				                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
@@ -918,8 +934,9 @@ function sr_number_format($input, $places)
 	    							COUNT(posts.ID) AS sales_count,
 	    							$select
 			                        FROM {$wpdb->prefix}posts AS posts 
-			                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( posts.ID = postmeta1.post_id )
-			                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( posts.ID = postmeta2.post_id )
+				                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta1 ON ( posts.ID = postmeta1.post_id )
+				                        LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta2 ON ( posts.ID = postmeta2.post_id )
+				                        $terms_post_join
 			                        WHERE postmeta1.meta_key IN ('_payment_method')
 			                        	AND postmeta2.meta_key IN ('_order_total')
 			                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
@@ -1031,7 +1048,8 @@ function sr_number_format($input, $places)
 	    $query_cumm_taxes = "SELECT GROUP_CONCAT(postmeta.meta_key order by postmeta.meta_id SEPARATOR '###') AS prod_othermeta_key,
 									GROUP_CONCAT(postmeta.meta_value order by postmeta.meta_id SEPARATOR '###') AS prod_othermeta_value
 		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
-		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	$terms_post_join
 		                        WHERE postmeta.meta_key IN ('_order_total','_order_shipping','_order_shipping_tax','_order_tax')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 		                            $terms_post_cond
@@ -1111,13 +1129,15 @@ function sr_number_format($input, $places)
 	    							COUNT(posts.ID) AS total_orders,
 	    							postmeta_country.meta_value AS billing_country,
 	    							GROUP_CONCAT(DISTINCT postmeta.post_id
-	                                                             ORDER BY postmeta.post_id DESC SEPARATOR ',' ) AS order_ids
+                                                 	ORDER BY postmeta.post_id DESC SEPARATOR ',' ) AS order_ids
 		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
-		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
 		                        	JOIN {$wpdb->prefix}postmeta AS postmeta_country ON ( postmeta_country.post_id = postmeta.post_id )
+		                        	$terms_post_join
 		                        WHERE postmeta.meta_key IN ('_order_total')
 		                            AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 		                            AND postmeta_country.meta_key IN ('_billing_country')
+		                            $terms_post_cond
 	                            GROUP BY billing_country";
         $results_cumm_sales_billing_country   = $wpdb->get_results ( $query_cumm_sales_billing_country, 'ARRAY_A' );
 	    $rows_cumm_sales_billing_country 	  =  $wpdb->num_rows;
@@ -1150,13 +1170,14 @@ function sr_number_format($input, $places)
 			    							order_items.order_item_name AS shipping_name,
 			    							SUM(postmeta.meta_value) AS sales_total,
 			    							GROUP_CONCAT(DISTINCT order_items.order_id
-			                                                             ORDER BY order_items.order_item_id DESC SEPARATOR ',' ) AS order_ids
+			                                        		ORDER BY order_items.order_item_id DESC SEPARATOR ',' ) AS order_ids
 					                        FROM `{$wpdb->prefix}posts` AS posts
 					                        	JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
 					                        	JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
 					                        		ON (order_items.order_item_id = order_itemmeta.order_item_id 
 					                        				AND order_itemmeta.meta_key IN ('cost') )
 												LEFT JOIN `{$wpdb->prefix}postmeta` AS postmeta ON ( posts.ID = postmeta.post_id )
+												$terms_post_join
 					                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
 					                            $terms_post_cond
 					                            AND order_items.order_item_type IN ('shipping')
@@ -1192,20 +1213,21 @@ function sr_number_format($input, $places)
 		    //Query to get the Top 5 Shipping Methods graph related data
 
 	        $query_top_shipping_method_graph   = "SELECT COUNT( order_items.order_item_name ) AS shipping_count,
-			    							SUM(order_itemmeta.meta_value) AS shipping_amount,
-			    							order_items.order_item_name AS shipping_name,
-		    								$select
-					                        FROM `{$wpdb->prefix}posts` AS posts
-				                        		JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
-				                        		JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
-				                        			ON (order_items.order_item_id = order_itemmeta.order_item_id 
-				                        				AND order_itemmeta.meta_key IN ('cost') )
-				                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-				                            AND order_items.order_item_type IN ('shipping')
-				                            $terms_post_cond
-				                            $top_shipping_method_cond
-			                            GROUP BY shipping_name, $group_by
-			                            $top_shipping_method_order_by";
+					    							SUM(order_itemmeta.meta_value) AS shipping_amount,
+					    							order_items.order_item_name AS shipping_name,
+				    								$select
+							                        FROM `{$wpdb->prefix}posts` AS posts
+						                        		JOIN {$wpdb->prefix}woocommerce_order_items as order_items ON ( posts.ID = order_items.order_id )
+						                        		JOIN {$wpdb->prefix}woocommerce_order_itemmeta as order_itemmeta 
+						                        			ON (order_items.order_item_id = order_itemmeta.order_item_id 
+						                        				AND order_itemmeta.meta_key IN ('cost') )
+														$terms_post_join
+						                        WHERE posts.post_date BETWEEN '$start_date' AND '$end_date_query'
+						                            AND order_items.order_item_type IN ('shipping')
+						                            $terms_post_cond
+						                            $top_shipping_method_cond
+					                            GROUP BY shipping_name, $group_by
+					                            $top_shipping_method_order_by";
 
 	        $results_top_shipping_method_graph = $wpdb->get_results ( $query_top_shipping_method_graph, 'ARRAY_A' );
 	        $rows_top_shipping_method_graph	= $wpdb->num_rows;
@@ -1433,7 +1455,7 @@ function sr_number_format($input, $places)
 	        $results [13] = $tax_data;
 
 	        // $results [14] = $results_top_abandoned_products;
-	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_post),true);
+	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_taxonomy_ids),true);
 	        
 	        $results [15] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_cart_abandoned_rate : '';
 
@@ -1543,23 +1565,19 @@ function sr_number_format($input, $places)
 
 	    // WHERE terms.name IN ('completed','processing','on-hold','pending')
 
-	    $query_terms = "SELECT id FROM {$wpdb->prefix}posts AS posts
-	                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-	                                                            ON term_relationships.object_id = posts.ID 
-	                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-	                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-	                                            JOIN {$wpdb->prefix}terms AS terms 
-	                                                            ON term_taxonomy.term_id = terms.term_id
-	                            WHERE terms.name IN ('completed','processing','on-hold')
-	                                AND posts.post_status IN ('publish')";
+	    $query_terms = "SELECT  term_taxonomy.term_taxonomy_id
+	    						FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                 JOIN {$wpdb->prefix}terms AS terms 
+	                                 	ON term_taxonomy.term_id = terms.term_id
+	                            WHERE terms.name IN ('completed','processing','on-hold')";
 	                  
-	    $terms_post = $wpdb->get_col($query_terms);
+	    $terms_taxonomy_ids = $wpdb->get_col($query_terms);
 	    $rows_terms_post =  $wpdb->num_rows;
 
 	    if ($rows_terms_post > 0) {
-	    	$terms_post = implode(",",$terms_post);
+	    	$terms_taxonomy_ids = implode(",",$terms_taxonomy_ids);
 	    } else {
-	    	$terms_post = ''; 
+	    	$terms_taxonomy_ids = ''; 
 	    }
 
 
@@ -1572,7 +1590,7 @@ function sr_number_format($input, $places)
 
 	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y-%m-%d') order by id SEPARATOR '###') AS abandoned_dates";
 
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date",$select_top_prod,$select_top_abandoned_prod,$terms_taxonomy_ids,$post);
 
 	    }
 	    else if ($diff_dates > 30 && $diff_dates <= 365) {
@@ -1585,7 +1603,7 @@ function sr_number_format($input, $places)
 
 	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%b') order by id SEPARATOR '###') AS abandoned_dates";
 
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"month_nm",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"month_nm",$select_top_prod,$select_top_abandoned_prod,$terms_taxonomy_ids,$post);
 	    }
 	    else if ($diff_dates > 365) {
 	        $select = "DATE_FORMAT(MAX(posts.`post_date`), '%Y-%m-%d') AS display_date,
@@ -1597,7 +1615,7 @@ function sr_number_format($input, $places)
 
 	        $select_top_abandoned_prod = ", GROUP_CONCAT(FROM_UNIXTIME(abandoned_cart_time, '%Y') order by id SEPARATOR '###') AS abandoned_dates";
 	        
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"year_nm",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);  
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"year_nm",$select_top_prod,$select_top_abandoned_prod,$terms_taxonomy_ids,$post);  
 	    }
 	    else {
 	        $select = "DATE_FORMAT(posts.`post_date`, '%Y/%m/%d') AS display_date_time,
@@ -1614,7 +1632,7 @@ function sr_number_format($input, $places)
 	                    
 	        // $end_date_query = date('Y-m-d', strtotime($end_date_query .' +1 day'));
 
-        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date_time",$select_top_prod,$select_top_abandoned_prod,$terms_post,$post);  
+        	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date_time",$select_top_prod,$select_top_abandoned_prod,$terms_taxonomy_ids,$post);  
 	    }
 
 	    if (isset($post['option'])) {
@@ -1813,24 +1831,24 @@ function sr_number_format($input, $places)
 		$comparison_month_start   = date("Y-m-d H:i:s", mktime(0,0,0,date('m', strtotime($comparison_to_date)),1,date('Y', strtotime($comparison_to_date))));
 		$comparison_days_in_month = date('t', mktime(0, 0, 0, date('m', strtotime($comparison_to_date)), 1, date('Y', strtotime($comparison_to_date))));
 
-		$query_terms     = "SELECT id FROM {$wpdb->prefix}posts AS posts
-                        JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-                                                    ON term_relationships.object_id = posts.ID 
-                                    JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-                                                    ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-                                    JOIN {$wpdb->prefix}terms AS terms 
-                                                    ON term_taxonomy.term_id = terms.term_id
-                    WHERE terms.name IN ('completed','processing','on-hold')
-                        AND posts.post_status IN ('publish')";
+		$query_terms     = "SELECT term_taxonomy.term_taxonomy_id
+							FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+                                JOIN {$wpdb->prefix}terms AS terms 
+                                    ON term_taxonomy.term_id = terms.term_id
+                    		WHERE terms.name IN ('completed','processing','on-hold')";
           
 		$terms_post      = $wpdb->get_col($query_terms);
 		$rows_terms_post = $wpdb->num_rows;
 
+
+
 		if ($rows_terms_post > 0) {
-		    $terms_post = implode(",",$terms_post);
-		    $cond_terms_post = "AND posts.ID IN ($terms_post)";
+		    $terms_taxonomy_ids = implode(",",$terms_post);
+		    $terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
+        	$cond_terms_post = (!empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';	    										
 		} else {
 		    $cond_terms_post = '';
+		    $terms_post_join = '';
 		}
 
 		$daily_widget_data = array();
@@ -1841,7 +1859,8 @@ function sr_number_format($input, $places)
 
 		$query_today        = "SELECT SUM( postmeta.meta_value ) AS todays_sales 
 		                        FROM `{$wpdb->prefix}postmeta` AS postmeta
-		                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                        	$terms_post_join
 		                        WHERE postmeta.meta_key IN ('_order_total')
 		                            AND posts.post_date LIKE '$today%'
 		                            $cond_terms_post";
@@ -1857,7 +1876,8 @@ function sr_number_format($input, $places)
 
 		$query_yest        = "SELECT SUM( postmeta.meta_value ) AS yesterdays_sales 
 		                    FROM `{$wpdb->prefix}postmeta` AS postmeta
-		                    LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                    	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+		                    	$terms_post_join
 		                    WHERE postmeta.meta_key IN ('_order_total')
 		                        AND posts.post_date LIKE '$yesterday%'
 		                        $cond_terms_post";
@@ -1878,7 +1898,8 @@ function sr_number_format($input, $places)
 		$query_month_to_date_sales = "SELECT COUNT( posts.ID ) as sales_count, 
 											SUM( postmeta.meta_value ) AS month_to_date 
 					                    FROM `{$wpdb->prefix}postmeta` AS postmeta
-					                    LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+					                    	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+					                    	$terms_post_join
 					                    WHERE postmeta.meta_key IN ('_order_total')
 				                        	AND posts.post_date between '$this_month_start' AND '$today_time'
 				                        	$cond_terms_post";
@@ -1903,7 +1924,8 @@ function sr_number_format($input, $places)
 		$query_comparison_month_to_date_sales = "SELECT COUNT( posts.ID ) as sales_count, 
 													SUM( postmeta.meta_value ) AS month_to_date
 							                    FROM `{$wpdb->prefix}postmeta` AS postmeta
-							                    LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+							                    	LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = postmeta.post_id )
+							                    	$terms_post_join
 							                    WHERE postmeta.meta_key IN ('_order_total')
 						                        	AND posts.post_date between '$comparison_month_start' AND '$comparison_to_date'
 						                        	$cond_terms_post";
@@ -1976,6 +1998,7 @@ function sr_number_format($input, $places)
 		    $query_reg_today_count  ="SELECT COUNT(*)
 		                               FROM {$wpdb->prefix}postmeta AS postmeta
 		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+		                                        $terms_post_join
 		                               WHERE postmeta.meta_key IN ('_customer_user')
 		                                     AND postmeta.meta_value IN (".implode(",",$reg_today_ids).")
 		                                     AND posts.post_date LIKE  '$today%'
@@ -1998,7 +2021,8 @@ function sr_number_format($input, $places)
 		if ($rows_reg_yest_ids > 0) {
 		    $query_reg_today_count  ="SELECT COUNT(*)
 		                               FROM {$wpdb->prefix}postmeta AS postmeta
-		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+	                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
+	                                        $terms_post_join
 		                               WHERE postmeta.meta_key IN ('_customer_user')
 		                                     AND postmeta.meta_value IN (".implode(",",$reg_yest_ids).")
 		                                     AND posts.post_date LIKE  '$yesterday%'
@@ -2021,6 +2045,7 @@ function sr_number_format($input, $places)
 		                                JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
 		                                INNER JOIN {$wpdb->prefix}postmeta AS postmeta2
 		                                               ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_customer_user'))
+                                       $terms_post_join
 		                       WHERE postmeta1.meta_key IN ('_billing_email')
 		                             AND postmeta2.meta_value = 0
 		                             AND posts.post_date LIKE  '$today%'
@@ -2059,6 +2084,7 @@ function sr_number_format($input, $places)
 		                                    JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
 		                                    INNER JOIN {$wpdb->prefix}postmeta AS postmeta2
 		                                                   ON (postmeta2.post_ID = postmeta1.post_ID AND postmeta2.meta_key IN ('_customer_user'))
+		                                    $terms_post_join
 		                           WHERE postmeta1.meta_key IN ('_billing_email')
 		                                 AND postmeta2.meta_value = 0
 		                                 AND posts.post_date LIKE  '$yesterday%'
