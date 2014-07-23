@@ -32,7 +32,7 @@ Ext.notification = function(){
 
 Ext.onReady(function() {
 	
-	// SR                       =  new Object;
+	SR                       =  new Object;
 
 	SR.searchTextField 	  = '';
 	var monthTitle		  = new Array( "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" );

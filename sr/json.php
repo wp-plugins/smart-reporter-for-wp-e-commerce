@@ -1,5 +1,7 @@
 <?php
 
+ob_start();
+
 include_once ('../../../../wp-load.php');
 include_once ('../../../../wp-includes/wp-db.php');
 include_once (ABSPATH . WPINC . '/functions.php');
@@ -360,5 +362,10 @@ if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] =
 
 
 }
+
+while(ob_get_contents()) {
+	   ob_clean();
+}
+
 echo json_encode ( $encoded );
 ?>
