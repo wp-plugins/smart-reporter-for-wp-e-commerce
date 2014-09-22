@@ -6,11 +6,11 @@ global $wpdb, $_wp_admin_css_colors;
 
 $orders_details_url = '';
 
-if (defined('WPSC_RUNNING') && WPSC_RUNNING === true) {
+if (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) {
     $currency_type = get_option( 'currency_type' );   //Maybe
     $wpsc_currency_data = $wpdb->get_row( "SELECT `symbol`, `symbol_html`, `code` FROM `" . WPSC_TABLE_CURRENCY_LIST . "` WHERE `id` = '" . $currency_type . "' LIMIT 1", ARRAY_A );
     $currency_sign = $wpsc_currency_data['symbol'];   //Currency Symbol in Html
-    if ( IS_WPSC388 )   
+    if ( SR_IS_WPSC388 )   
         $orders_details_url = ADMIN_URL . "index.php?page=wpsc-purchase-logs&c=item_details&id=";
     else
         $orders_details_url = ADMIN_URL . "index.php?page=wpsc-sales-logs&purchaselog_id=";
@@ -26,6 +26,14 @@ $sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
 $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
 $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
 $sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
+$sr_is_woo22 = defined('SR_IS_WOO22') ? SR_IS_WOO22 : '';
+
+if (!empty($sr_is_woo22) && $sr_is_woo22 == "true") {
+    // $sr_woo_order_search_url = "&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&paged=1&mode=list&action2=-1";
+    $sr_woo_order_search_url = "&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&paged=1&mode=list&action2=-1";
+} else {
+    $sr_woo_order_search_url = "&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+}
 
 // include_once (WP_PLUGIN_DIR . '/smart-reporter-for-wp-e-commerce/pro/sr.js');
 // include_once (ABSPATH . WPINC . '/functions.php');
@@ -41,6 +49,7 @@ function sr_dashboard_widget_kpi() {
     $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
     $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
     $sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
+    $sr_is_woo22 = defined('SR_IS_WOO22') ? SR_IS_WOO22 : '';
 
     ?>
     <script type="text/javascript">
@@ -51,7 +60,7 @@ function sr_dashboard_widget_kpi() {
             
                 $.ajax({
                         type : 'POST',
-                        url : '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                        url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
                         dataType:"text",
                         async: false,
                         data: {
@@ -60,7 +69,8 @@ function sr_dashboard_widget_kpi() {
                             SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
                             SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                             SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                            SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>"
+                            SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
+                            SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
                         },
                         success: function(response) {
                             daily_widget_data = $.parseJSON(response);
@@ -330,7 +340,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
         
         $.ajax({
                 type : 'POST',
-                url : '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
                 dataType:"text",
                 async: false,
                 data: {
@@ -339,7 +349,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                     SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
                     SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                     SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                    SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>"
+                    SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
+                    SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
                 },
                 success: function(response) {
                     daily_widget_data = $.parseJSON(response);
@@ -1409,7 +1420,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
         var display_orders = function (ids) {
             var post_ids = ids.split(",");
-            document.cookie = "post_ids=" + post_ids;
+            document.cookie = "sr_woo_search_post_ids=" + post_ids;
         }
 
 
@@ -1424,7 +1435,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                   var link_id = "link_" + i;
                   var cust_name = '';
                   var cust_name_trimmed = "";
-                  var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_cust_data'][i].billing_email+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+                  var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_cust_data'][i].billing_email+"<?php echo $sr_woo_order_search_url?>";
 
                   if (resp['top_cust_data'][i].name) {
                      cust_name = resp['top_cust_data'][i].name;
@@ -1503,7 +1514,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                   var link_id = "link_" + i;
                   var coupon_name = '';
                   var coupon_name_trimmed = "";
-                  var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_coupon_data'][i].coupon_name+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+                  var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_coupon_data'][i].coupon_name+"<?php echo $sr_woo_order_search_url?>";
 
                   if (resp['top_coupon_data'][i].coupon_name) {
                      coupon_name = resp['top_coupon_data'][i].coupon_name;
@@ -1657,17 +1668,17 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
               $.ajax({
                     type : 'POST',
-                    url : '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                    url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
                     dataType:"text",
                     async: false,
                     action: 'get_monthly_sales',
                     data: {
-                                cmd: 'monthly',
-                                top_prod_option: opt_id,
-                                option : 1,
-                                start_date : $("#startdate").val(),
-                                end_date : $("#enddate").val(),
-                                
+                        cmd: 'monthly',
+                        top_prod_option: opt_id,
+                        option : 1,
+                        start_date : $("#startdate").val(),
+                        end_date : $("#enddate").val(),
+                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"        
                     },
                     success: function(response) {
                         var myJsonObj    = $.parseJSON(response);
@@ -2092,7 +2103,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
               var gateway_name = resp['top_gateway_data'][i].payment_method;
 
               var link_id = "link_" + i;
-              var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+              var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"<?php echo $sr_woo_order_search_url?>";
 
               var gateway_name_trimmed = "";
               var gateway_sales_display = resp['top_gateway_data'][i].gateway_sales_display + ' • '
@@ -2561,8 +2572,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
                     <?php if (defined('SRPRO') && SRPRO === true) {?>
                         var iframe = document.createElement("iframe");
-                        // iframe.src = '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/pro/sr-summary-mails.php"); ?>' + "?cmd=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val();
-                        iframe.src = ajaxurl + "?action=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val();
+                        // iframe.src = '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/pro/sr-summary-mails.php"); ?>' + "?cmd=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val();
+                        iframe.src = ajaxurl + "?action=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val() + "&SR_IS_WOO22=<?php echo $sr_is_woo22; ?>";
                         iframe.style.display = "none";
                         document.body.appendChild(iframe);
                     <?php }else {?>
@@ -2591,7 +2602,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
               var abandoned_prod_name = resp['cumm_top_abandoned_products'][i].prod_name;
 
               // var link_id = "link_" + i;
-              // var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+              // var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"<?php echo $sr_woo_order_search_url?>";
 
               var abandoned_prod_name_trimmed = "";
               var abandoned_sales_display = resp['cumm_top_abandoned_products'][i].price + ' • '
@@ -2622,6 +2633,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
               }
               
               top_abandoned_prod_graph_data[i] = cumm_abandoned_graph_data;
+
+
 
               top_abandoned_prod_data[i] = resp['cumm_top_abandoned_products'][i].abondoned_qty;
               top_abandoned_prod_data[i] = resp['cumm_top_abandoned_products'][i].max_count;
@@ -2701,7 +2714,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
                         if (resp['cumm_sales_billing_country_tooltip'].hasOwnProperty(code) && tooltip_code.hasOwnProperty('order_ids')) {
                             display_orders(tooltip_code.order_ids); // code for storing the ids in cookie
-                            var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+code+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+                            var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+code+"<?php echo $sr_woo_order_search_url?>";
                             window.open(site_url,'_newtab');
                         }
 
@@ -2790,7 +2803,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
               var shipping_method_name = resp['top_shipping_method_data'][i].shipping_method;
 
               var link_id = "link_" + i;
-              var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_shipping_method_data'][i].shipping_method+"&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&shop_order_status&_customer_user&paged=1&mode=list&action2=-1";
+              var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_shipping_method_data'][i].shipping_method+"<?php echo $sr_woo_order_search_url?>";
 
               var shipping_method_name_trimmed = "";
               var shipping_method_sales_display = resp['top_shipping_method_data'][i].shipping_method_sales_display + ' • '
@@ -2956,7 +2969,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 var daily_summary_report = function() {
 
                     var iframe = document.createElement("iframe");
-                    iframe.src = '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>' + "?cmd=daily_summary_report";
+                    iframe.src = '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>' + "?cmd=daily_summary_report";
                     iframe.style.display = "none";
                     document.body.appendChild(iframe);
                 };
@@ -2976,7 +2989,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
                       $.ajax({
                             type : 'POST',
-                            url : '<?php echo site_url("/wp-content/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                            url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
                             dataType:"text",
                             async: false,
                             action: 'get_monthly_sales',
@@ -2989,7 +3002,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                         SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>"
+                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
                                 },
                             success: function(response) {
 
@@ -3310,11 +3324,11 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
     // $fileExists = (SRPRO === true) ? 1 : 0;
     // $selectedDateValue = (SRPRO === true) ? 'THIS_MONTH' : 'LAST_SEVEN_DAYS';
 
-    if ( defined('WPSC_RUNNING') && WPSC_RUNNING === true ) {
+    if ( defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true ) {
         $currency_type = get_option( 'currency_type' );   //Maybe
         $wpsc_currency_data = $wpdb->get_row( "SELECT `symbol`, `symbol_html`, `code` FROM `" . WPSC_TABLE_CURRENCY_LIST . "` WHERE `id` = '" . $currency_type . "' LIMIT 1", ARRAY_A );
         $currency_sign = $wpsc_currency_data['symbol'];   //Currency Symbol in Html
-        if ( defined('IS_WPSC388') && IS_WPSC388 === true )   
+        if ( defined('SR_IS_WPSC388') && SR_IS_WPSC388 === true )   
             $orders_details_url = ADMIN_URL . "index.php?page=wpsc-purchase-logs&c=item_details&id=";
         else
             $orders_details_url = ADMIN_URL . "index.php?page=wpsc-sales-logs&purchaselog_id=";
@@ -3322,9 +3336,11 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
         $currency_sign = get_woocommerce_currency_symbol();
     }
 
+    $file_url = '';
+
     if ($fileExists){
 
-        if ( defined('WPSC_RUNNING') && WPSC_RUNNING === true ) {
+        if ( defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true ) {
             $file_name =  SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php';
             $file_url =  WP_PLUGIN_URL.'/smart-reporter-for-wp-e-commerce/pro/sr.php';
         } else {
@@ -3382,7 +3398,7 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
         var adminUrl             = '" .ADMIN_URL. "';
         var SR                       =  new Object;";
 
-            if ( WPSC_RUNNING === true ) {
+            if ( SR_WPSC_RUNNING === true ) {
                 echo "SR.defaultCurrencySymbol = '" .$currency_sign. "';";
             } else {
                 echo "SR.defaultCurrencySymbol = '" . get_woocommerce_currency_symbol() . "';";

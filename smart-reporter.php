@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.7.1
+Version: 2.7.2
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
@@ -13,23 +13,51 @@ Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
 register_activation_hook ( __FILE__, 'sr_activate' );
 register_deactivation_hook ( __FILE__, 'sr_deactivate' );
 
-define ( 'IS_WOO16', version_compare ( get_option( 'woocommerce_version' ), '2.0', '<' ) ); // Flag for Handling Woo 2.0 and above
+//Defining globals
+if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) )) {
+
+	$woo_version = get_option('woocommerce_version');
+
+	if (version_compare ( $woo_version, '2.2.0', '<' )) {
+
+		if (version_compare ( $woo_version, '2.0', '<' )) { // Flag for Handling Woo 2.0 and above
+
+			if (version_compare ( $woo_version, '1.4', '<' )) {
+				define ( 'SR_IS_WOO13', "true" );
+				define ( 'SR_IS_WOO16', "false" );
+			} else {
+				define ( 'SR_IS_WOO13', "false" );
+				define ( 'SR_IS_WOO16', "true" );
+			}
+        } else {
+        	define ( 'SR_IS_WOO16', "false" );
+        }
+
+        define ( 'SR_IS_WOO22', "false" );
+	} else {
+		define ( 'SR_IS_WOO13', "false" );
+		define ( 'SR_IS_WOO16', "false" );
+		define ( 'SR_IS_WOO22', "true" );
+	}
+}
+
+
+// Function for custom order searches
 
 function woocommerce_shop_order_search_custom_fields1( $wp ) {
     global $pagenow, $wpdb;
 
+    // if(empty($_COOKIE['sr_woo_search_post_ids']))
     if(!(isset($_GET['source']) && $_GET['source'] == 'sr'))
     	return;
-    
-    remove_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1' );
 
-    $post_ids = (isset($_COOKIE['post_ids'])) ? explode(",",$_COOKIE['post_ids']) : 0;
+    $post_ids = (!empty($_COOKIE['sr_woo_search_post_ids'])) ? explode(",",$_COOKIE['sr_woo_search_post_ids']) : 0;
 
     // Remove s - we don't want to search order name
     unset( $wp->query_vars['s'] );
 
     // Remove the post_ids from $_COOKIE
-    unset($_COOKIE['post_ids']);
+    unset($_COOKIE['sr_woo_search_post_ids']);
 
     // so we know we're doing this
     $wp->query_vars['shop_order_search'] = true;
@@ -37,17 +65,14 @@ function woocommerce_shop_order_search_custom_fields1( $wp ) {
     // Search by found posts
     $wp->query_vars['post__in'] = $post_ids;
 
-    add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1' );
-
 }
-add_filter( 'parse_query', 'woocommerce_shop_order_search_custom_fields1',5 );
-
+add_action( 'parse_request', 'woocommerce_shop_order_search_custom_fields1' );
 
 /**
  * Registers a plugin function to be run when the plugin is activated.
  */
 function sr_activate() {
-	global $wpdb, $blog_id;        
+	global $wpdb, $blog_id;
 	
         if ( false === get_site_option( 'sr_is_auto_refresh' ) ) {
             update_site_option( 'sr_is_auto_refresh', 'no' );
@@ -408,41 +433,41 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
 		$ext_version 	= '4.0.1';
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) && (!defined('WPSC_WOO_ACTIVATED'))) {
-			define('WPSC_WOO_ACTIVATED',true);
+		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) && (!defined('SR_WPSC_WOO_ACTIVATED'))) {
+			define('SR_WPSC_WOO_ACTIVATED',true);
 		} elseif ( defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
-			define('WPSC_ACTIVATED',true);
+			define('SR_WPSC_ACTIVATED',true);
 		} elseif (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
-			define('WOO_ACTIVATED', true);
+			define('SR_WOO_ACTIVATED', true);
 		}
 		
 		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
 		if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
 			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
-			if (!defined('WPSC_RUNNING')) {
-				define('WPSC_RUNNING', true);	
+			if (!defined('SR_WPSC_RUNNING')) {
+				define('SR_WPSC_RUNNING', true);	
 			}
 			
-			if (!defined('WOO_RUNNING')) {
-				define('WOO_RUNNING', false);
+			if (!defined('SR_WOO_RUNNING')) {
+				define('SR_WOO_RUNNING', false);
 			}
 			// checking the version for WPSC plugin
 
-			if (!defined('IS_WPSC37')) {
-				define ( 'IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
+			if (!defined('SR_IS_WPSC37')) {
+				define ( 'SR_IS_WPSC37', version_compare ( WPSC_VERSION, '3.8', '<' ) );
 			}
 
-			if (!defined('IS_WPSC38')) {
-				define ( 'IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
+			if (!defined('SR_IS_WPSC38')) {
+				define ( 'SR_IS_WPSC38', version_compare ( WPSC_VERSION, '3.8', '>=' ) );
 			}
 
-			if ( IS_WPSC38 ) {		// WPEC 3.8.7 OR 3.8.8
-				if (!defined('IS_WPSC387')) {
-					define('IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.8', '<' ));
+			if ( SR_IS_WPSC38 ) {		// WPEC 3.8.7 OR 3.8.8
+				if (!defined('SR_IS_WPSC387')) {
+					define('SR_IS_WPSC387', version_compare ( WPSC_VERSION, '3.8.8', '<' ));
 				}
 
-				if (!defined('IS_WPSC388')) {
-					define('IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
+				if (!defined('SR_IS_WPSC388')) {
+					define('SR_IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
 				}
 			}
 		} else if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') )  {
@@ -450,16 +475,14 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
 			}
 
-			if (!defined('WPSC_RUNNING')) {
-				define('WPSC_RUNNING', false);
+			if (!defined('SR_WPSC_RUNNING')) {
+				define('SR_WPSC_RUNNING', false);
 			}
 
-			if (!defined('WOO_RUNNING')) {
-				define('WOO_RUNNING', true);
+			if (!defined('SR_WOO_RUNNING')) {
+				define('SR_WOO_RUNNING', true);
 			}
-			// checking the version for WooCommerce plugin
-			define ( 'IS_WOO13', version_compare ( WOOCOMMERCE_VERSION, '1.4', '<' ) );                          
-
+			
 			//WooCommerce Currency Constants
 			define ( 'SR_CURRENCY_SYMBOL', get_woocommerce_currency_symbol());
 			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
@@ -630,9 +653,18 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 	function sr_woo_refresh_order( $order_id ) {
 		sr_woo_remove_order( $order_id );
-		$order_status = wp_get_object_terms( $order_id, 'shop_order_status', array('fields' => 'slugs') );
-		if ( $order_status[0] == 'on-hold' || $order_status[0] == 'processing' || $order_status[0] == 'completed' )
+
+		//Condn for woo 2.2 compatibility
+		if (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") {
+			$order_status = wc_get_order_status_name(get_post_status( $order_id ));
+		} else {
+			$order_status = wp_get_object_terms( $order_id, 'shop_order_status', array('fields' => 'slugs') );
+			$order_status = (!empty($order_status)) ? $order_status[0] : '';
+		}
+
+		if ( $order_status == 'on-hold' || $order_status == 'processing' || $order_status == 'completed' ) {
 			sr_woo_add_order( $order_id );
+		}
 	}
         
         function sr_get_attributes_name_to_slug() {
@@ -720,11 +752,10 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         function sr_items_to_values( $all_order_items = array() ) {
             global $wpdb;
 
-            if ( count( $all_order_items ) <= 0 || !defined( 'IS_WOO16' ) ) return $all_order_items;
+            if ( count( $all_order_items ) <= 0 || !defined( 'SR_IS_WOO16' ) || !defined( 'SR_IS_WOO22' ) ) return $all_order_items;
             $values = array();
             $attributes_name_to_slug = sr_get_attributes_name_to_slug();
-            $prefix = ( defined( 'IS_WOO16' ) && IS_WOO16 ) ? '' : '_';
-
+            $prefix = ( (defined( 'SR_IS_WOO16' ) && SR_IS_WOO16 == "true") ) ? '' : '_';
 
             foreach ( $all_order_items as $order_id => $order_items ) {
                 foreach ( $order_items as $item ) {
@@ -735,11 +766,13 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                         if( ! function_exists( 'get_product' ) ) {
                             $product_id = ( !empty( $prefix ) && isset( $item[$prefix.'id'] ) ) ? $item[$prefix.'id'] : $item['id'];
                         } else {
-                            $product_id = ( !empty( $prefix ) && isset( $item[$prefix.'product_id'] ) ) ? $item[$prefix.'product_id'] : $item['product_id'];
+                        	$product_id = (isset($item['product_id'])) ? $item['product_id'] : '';
+                            $product_id = ( !empty( $prefix ) && isset( $item[$prefix.'product_id'] ) ) ? $item[$prefix.'product_id'] : $product_id;
                         }// end if
 
                         $order_item['product_name'] = get_the_title( $product_id );
-                        $variation_id = ( !empty( $prefix ) && isset( $item[$prefix.'variation_id'] ) ) ? $item[$prefix.'variation_id'] : $item['variation_id'];
+                        $variation_id = (isset( $item['variation_id'] ) ) ? $item['variation_id'] : '';
+                        $variation_id = ( !empty( $prefix ) && isset( $item[$prefix.'variation_id'] ) ) ? $item[$prefix.'variation_id'] : $variation_id;
                         $order_item['product_id'] = ( $variation_id > 0 ) ? $variation_id : $product_id;
 
                         if ( $variation_id > 0 ) {
@@ -761,10 +794,13 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                                 $order_item['product_name'] .= ' (' . woocommerce_get_formatted_variation( $variation_name, true ) . ')'; 
                         }
 
-                        $order_item['quantity'] = ( !empty( $prefix ) && isset( $item[$prefix.'qty'] ) ) ? $item[$prefix.'qty'] : $item['qty'];
-                        $line_total = ( !empty( $prefix ) && isset( $item[$prefix.'line_total'] ) ) ? $item[$prefix.'line_total'] : $item['line_total'];
+                        $qty = (isset( $item['qty'] ) ) ? $item['qty']: '';
+                        $order_item['quantity'] = ( !empty( $prefix ) && isset( $item[$prefix.'qty'] ) ) ? $item[$prefix.'qty'] : $qty;
+                        $line_total = ( isset( $item['line_total'] ) ) ? $item['line_total'] : '' ;
+                        $line_total = ( !empty( $prefix ) && isset( $item[$prefix.'line_total'] ) ) ? $item[$prefix.'line_total'] : $line_total;
                         $order_item['sales'] = $line_total;
-                        $line_subtotal = ( !empty( $prefix ) && isset( $item[$prefix.'line_subtotal'] ) ) ? $item[$prefix.'line_subtotal'] : $item['line_subtotal'];
+                        $line_subtotal = ( isset( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
+                        $line_subtotal = ( !empty( $prefix ) && isset( $item[$prefix.'line_subtotal'] ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
                         $order_item['discount'] = $line_subtotal - $line_total;
 
                         if ( empty( $order_item['product_id'] ) || empty( $order_item['order_id'] ) || empty( $order_item['quantity'] ) ) 
@@ -772,26 +808,27 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                         $values[] = "( {$order_item['product_id']}, {$order_item['order_id']}, '{$order_item['product_name']}', {$order_item['quantity']}, " . (empty($order_item['sales']) ? 0 : $order_item['sales'] ) . ", " . (empty($order_item['discount']) ? 0 : $order_item['discount'] ) . " )";
                 }
             }
+
             return $values;
         }
         
         function sr_woo_add_order( $order_id ) {
 
-            	global $wpdb;
-		$order = new WC_Order( $order_id );
+        	global $wpdb;
+			$order = new WC_Order( $order_id );
 
-		$order_items = array( $order_id => $order->get_items() );
+			$order_items = array( $order_id => $order->get_items() );
 		
 
-		$insert_query = "INSERT INTO {$wpdb->prefix}sr_woo_order_items 
+			$insert_query = "INSERT INTO {$wpdb->prefix}sr_woo_order_items 
 							( `product_id`, `order_id`, `product_name`, `quantity`, `sales`, `discount` ) VALUES ";
                 
-                $values = sr_items_to_values( $order_items );
-                
-                if ( count( $values ) > 0 ) {
-                    $insert_query .= implode( ',', $values );                                   
-                    $wpdb->query( $insert_query );
-                }
+            $values = sr_items_to_values( $order_items );
+            
+            if ( count( $values ) > 0 ) {
+                $insert_query .= implode( ',', $values );                                   
+                $wpdb->query( $insert_query );
+            }
         }
 	
 	function sr_woo_remove_order( $order_id ) {
@@ -802,88 +839,99 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	// Function to load table sr_woo_order_items
 	function load_sr_woo_order_items( $wpdb ) {
 
-                $insert_query = "REPLACE INTO {$wpdb->prefix}sr_woo_order_items 
-                                                                ( `product_id`, `order_id`, `product_name`, `quantity`, `sales`, `discount` ) VALUES ";
+        $insert_query = "REPLACE INTO {$wpdb->prefix}sr_woo_order_items 
+                            ( `product_id`, `order_id`, `product_name`, `quantity`, `sales`, `discount` ) VALUES ";
 
-                $all_order_items = array();
-                
+        $all_order_items = array();
+
 		// WC's code to get all order items
-                if( IS_WOO16 ) {
-                    $results = $wpdb->get_results ("
-                            SELECT meta.post_id AS order_id, meta.meta_value AS items FROM {$wpdb->posts} AS posts
+        if( defined('SR_IS_WOO16') && SR_IS_WOO16 == "true" ) {
+            $results = $wpdb->get_results ("
+                    SELECT meta.post_id AS order_id, meta.meta_value AS items 
+                    FROM {$wpdb->posts} AS posts
+	                    LEFT JOIN {$wpdb->postmeta} AS meta ON posts.ID = meta.post_id
+	                    LEFT JOIN {$wpdb->term_relationships} AS rel ON posts.ID=rel.object_ID
+	                    LEFT JOIN {$wpdb->term_taxonomy} AS tax USING( term_taxonomy_id )
+	                    LEFT JOIN {$wpdb->terms} AS term USING( term_id )
 
-                            LEFT JOIN {$wpdb->postmeta} AS meta ON posts.ID = meta.post_id
-                            LEFT JOIN {$wpdb->term_relationships} AS rel ON posts.ID=rel.object_ID
-                            LEFT JOIN {$wpdb->term_taxonomy} AS tax USING( term_taxonomy_id )
-                            LEFT JOIN {$wpdb->terms} AS term USING( term_id )
+                    WHERE 	meta.meta_key 		= '_order_items'
+                    AND 	posts.post_type 	= 'shop_order'
+                    AND 	posts.post_status 	= 'publish'
+                    AND 	tax.taxonomy		= 'shop_order_status'
+                    AND		term.slug			IN ('completed', 'processing', 'on-hold')
+            		", 'ARRAY_A');
 
-                            WHERE 	meta.meta_key 		= '_order_items'
-                            AND 	posts.post_type 	= 'shop_order'
-                            AND 	posts.post_status 	= 'publish'
-                            AND 	tax.taxonomy		= 'shop_order_status'
-                            AND		term.slug			IN ('completed', 'processing', 'on-hold')
-                    ", 'ARRAY_A');
-
-                    foreach ( $results as $result ) {
-                            $all_order_items[ $result['order_id'] ] = maybe_unserialize( $result['items'] ); 
-                    }
+            foreach ( $results as $result ) {
+                    $all_order_items[ $result['order_id'] ] = maybe_unserialize( $result['items'] ); 
+            }
                     
-                } else {
-                        $results = $wpdb->get_col ("
-                                SELECT posts.ID AS order_id FROM {$wpdb->posts} AS posts
+        } else {
+        	if( defined('SR_IS_WOO22') && SR_IS_WOO22 == "true" ) {
 
-                                LEFT JOIN {$wpdb->term_relationships} AS rel ON posts.ID=rel.object_ID
-                                LEFT JOIN {$wpdb->term_taxonomy} AS tax USING( term_taxonomy_id )
-                                LEFT JOIN {$wpdb->terms} AS term USING( term_id )
+        		$results = $wpdb->get_col ("
+	                            SELECT posts.ID AS order_id 
+	                            FROM {$wpdb->posts} AS posts
+	                            WHERE 	posts.post_type LIKE 'shop_order'
+		                            AND posts.post_status IN ('wc-completed', 'wc-processing', 'wc-on-hold')
+	                            ");
+        	} else {
+        		$results = $wpdb->get_col ("
+	                            SELECT posts.ID AS order_id 
+	                            FROM {$wpdb->posts} AS posts
+		                            LEFT JOIN {$wpdb->term_relationships} AS rel ON posts.ID=rel.object_ID
+		                            LEFT JOIN {$wpdb->term_taxonomy} AS tax USING( term_taxonomy_id )
+		                            LEFT JOIN {$wpdb->terms} AS term USING( term_id )
 
-                                WHERE 	posts.post_type 	= 'shop_order'
-                                AND 	posts.post_status 	= 'publish'
-                                AND 	tax.taxonomy		= 'shop_order_status'
-                                AND	term.slug	IN ('completed', 'processing', 'on-hold')
-                                ");
-                      
-                        $order_id = implode( ", ", $results);
-                        $order_id = trim( $order_id );
-                        
-                        if ( !empty( $order_id ) ) {
-	                        $query_order_items = "SELECT order_items.order_item_id,
-	                                                    order_items.order_id    ,
-	                                                    order_items.order_item_name AS order_prod,
-	                                            GROUP_CONCAT(order_itemmeta.meta_key
-	                                            ORDER BY order_itemmeta.meta_id
-	                                            SEPARATOR '###' ) AS meta_key,
-	                                            GROUP_CONCAT(order_itemmeta.meta_value
-	                                            ORDER BY order_itemmeta.meta_id
-	                                            SEPARATOR '###' ) AS meta_value
-	                                            FROM {$wpdb->prefix}woocommerce_order_items AS order_items
-	                                            LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS order_itemmeta
-	                                            ON (order_items.order_item_id = order_itemmeta.order_item_id)
-	                                            WHERE order_items.order_id IN ($order_id)
-	                                            GROUP BY order_items.order_item_id
-	                                            ORDER BY FIND_IN_SET(order_items.order_id,'$order_id')";
-	                                        
-	                        $results  = $wpdb->get_results ( $query_order_items , 'ARRAY_A');          
-	                        
-	                        foreach ( $results as $result ) {
-	                            $order_item_meta_values = explode('###', $result ['meta_value'] );
-	                            $order_item_meta_key = explode('###', $result ['meta_key'] );
-	                            if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
-	                                continue; 
-	                            $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
-	                            if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
-	                                $all_order_items[ $result['order_id'] ] = array();
-	                            }
-	                            $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
-	                        }
-	                    }
-                } //end if
-              
-                $values = sr_items_to_values( $all_order_items );
-                
-                if ( count( $values ) > 0 ) {
-                    $insert_query .= implode( ',', $values );
-                    $wpdb->query( $insert_query );
+	                            WHERE 	posts.post_type 	= 'shop_order'
+		                            AND 	posts.post_status 	= 'publish'
+		                            AND 	tax.taxonomy		= 'shop_order_status'
+		                            AND	term.slug	IN ('completed', 'processing', 'on-hold')
+	                            ");
+        	}
+
+        	if ( !empty( $results ) ) {
+        		$order_id = implode( ", ", $results);
+	            $order_id = trim( $order_id );
+
+                $query_order_items = "SELECT order_items.order_item_id,
+                                            order_items.order_id    ,
+                                            order_items.order_item_name AS order_prod,
+		                                    GROUP_CONCAT(order_itemmeta.meta_key
+		                                    ORDER BY order_itemmeta.meta_id
+		                                    SEPARATOR '###' ) AS meta_key,
+		                                    GROUP_CONCAT(order_itemmeta.meta_value
+		                                    ORDER BY order_itemmeta.meta_id
+		                                    SEPARATOR '###' ) AS meta_value
+                                    FROM {$wpdb->prefix}woocommerce_order_items AS order_items
+                                    	LEFT JOIN {$wpdb->prefix}woocommerce_order_itemmeta AS order_itemmeta
+                                    		ON (order_items.order_item_id = order_itemmeta.order_item_id)
+                                    WHERE order_items.order_id IN ($order_id)
+                                    GROUP BY order_items.order_item_id
+                                    ORDER BY FIND_IN_SET(order_items.order_id,'$order_id')";
+                                
+                $results  = $wpdb->get_results ( $query_order_items , 'ARRAY_A');          
+
+                foreach ( $results as $result ) {
+                    $order_item_meta_values = explode('###', $result ['meta_value'] );
+                    $order_item_meta_key = explode('###', $result ['meta_key'] );
+                    if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
+                        continue; 
+                    $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
+                    if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
+                        $all_order_items[ $result['order_id'] ] = array();
+                    }
+                    $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
                 }
+            }
+
+        } //end if
+              
+	    $values = sr_items_to_values( $all_order_items );
+	    
+	    if ( count( $values ) > 0 ) {
+	        $insert_query .= implode( ',', $values );
+	        $wpdb->query( $insert_query );
+	    }
 	}
 	
 
@@ -902,9 +950,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		</style>    
 		<?php 
 		
-		if (WPSC_RUNNING === true) {
+		if (SR_WPSC_RUNNING === true) {
 			$json_filename = 'json';
-		} else if (WOO_RUNNING === true) {
+		} else if (SR_WOO_RUNNING === true) {
 			$json_filename = 'json-woo';
 		}
 		define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/$json_filename.php" );
@@ -940,9 +988,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	   	<span style="float: right;margin-right: 2.25em;"> <?php
 			if ( SRPRO === true && ! is_multisite() ) {
 				
-				if (WPSC_RUNNING == true) {
+				if (SR_WPSC_RUNNING == true) {
 					$plug_page = 'wpsc';
-				} elseif (WOO_RUNNING == true) {
+				} elseif (SR_WOO_RUNNING == true) {
 					$plug_page = 'woo';
 				}
 			} else {
@@ -1015,9 +1063,8 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 
 				if (is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
 	                require_once (WPSC_FILE_PATH . '/wp-shopping-cart.php');
-	                
-	                
-	                	if ( IS_WPSC37 || IS_WPSC38 ) {
+	                	if ( ((defined('SR_IS_WPSC37')) && SR_IS_WPSC37) || (defined('SR_IS_WPSC38') && SR_IS_WPSC38) ) {
+
 	                        if (file_exists( $base_path . 'reporter-console.php' )) {
 	                                include_once ($base_path . 'reporter-console.php');
 	                                return;
@@ -1030,7 +1077,7 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
                 }
 
 			} else if (is_plugin_active( 'woocommerce/woocommerce.php' )) {
-                if (IS_WOO13) {
+                if ((defined('SR_IS_WOO13')) && SR_IS_WOO13 == "true") {
                         $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
                 } else {
                     if (file_exists( $base_path . 'reporter-console.php' )) {
@@ -1047,7 +1094,7 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
                     } else if (file_exists( WP_PLUGIN_DIR . '/wp-e-commerce/wp-shopping-cart.php' )) {
                         if (is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
                             require_once (WPSC_FILE_PATH . '/wp-shopping-cart.php');
-                            if (IS_WPSC37 || IS_WPSC38) {
+                            if ((defined('SR_IS_WPSC37') && SR_IS_WPSC37) || (defined('SR_IS_WPSC38') && SR_IS_WPSC38)) {
                                 if (file_exists( $base_path . 'reporter-console.php' )) {
                                         include_once ($base_path . 'reporter-console.php');
                                         return;
@@ -1062,7 +1109,7 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
                         }
                     } else if (file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' )) {
                         if (is_plugin_active( 'woocommerce/woocommerce.php' )) {
-                            if (IS_WOO13) {
+                            if ((defined('SR_IS_WOO13')) && SR_IS_WOO13 == "true") {
                                     $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
                             } else {
                                 if (file_exists( $base_path . 'reporter-console.php' )) {

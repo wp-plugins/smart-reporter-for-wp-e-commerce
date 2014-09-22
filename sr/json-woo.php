@@ -78,7 +78,7 @@ function sr_number_format($input, $places)
 
 
 	//Function to get the abandoned Products
-	function sr_get_abandoned_products(&$start_date,&$end_date_query,&$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_taxonomy_ids) {
+	function sr_get_abandoned_products(&$start_date,&$end_date_query,&$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_taxonomy_ids,$sr_is_woo22) {
 		
 		global $wpdb;
 
@@ -145,8 +145,13 @@ function sr_number_format($input, $places)
 
 		    // if (empty($limit)) {
 
-		    	$terms_post_join = (!empty($terms_taxonomy_ids)) ? ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish") ' : '';
-        		$terms_post_cond = (!empty($terms_taxonomy_ids) && !empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';
+		    	if (!empty($sr_is_woo22) && $sr_is_woo22 == 'true') {
+		    		$terms_post_join = '';
+		    		$terms_post_cond = "AND posts.post_status IN ('wc-completed','wc-processing','wc-on-hold')";
+		    	} else {
+		    		$terms_post_join = (!empty($terms_taxonomy_ids)) ? ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish") ' : '';
+        			$terms_post_cond = (!empty($terms_taxonomy_ids) && !empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';	
+		    	}
 
 		    	// $terms_post_cond = (!empty($terms_post)) ? 'AND posts.ID IN ('.$terms_post.')' : '';
 
@@ -373,8 +378,16 @@ function sr_number_format($input, $places)
 	    
 	    // $terms_postmeta_cond = (!empty($terms_post)) ? 'AND post_id IN ('.$terms_post.')' : '';
 
-	    $terms_post_join = (!empty($terms_taxonomy_ids)) ? ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish") ' : '';
-        $terms_post_cond = (!empty($terms_taxonomy_ids) && !empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';	    												
+	    $sr_is_woo22 = (!empty($post['SR_IS_WOO22'])) ? $post['SR_IS_WOO22'] : '';
+
+	    if (!empty($sr_is_woo22) && $sr_is_woo22 == 'true') {
+	    	$terms_post_join = '';
+	    	$terms_post_cond = "AND posts.post_status IN ('wc-completed','wc-processing','wc-on-hold')";
+	    } else {
+	    	$terms_post_join = (!empty($terms_taxonomy_ids)) ? ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish") ' : '';
+        	$terms_post_cond = (!empty($terms_taxonomy_ids) && !empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';
+	    }
+	    
 
 	    //Query for getting the cumm sales
 
@@ -1116,12 +1129,12 @@ function sr_number_format($input, $places)
 		$total_abandoned_cart_count    = $wpdb->get_col ( $query_total_abandoned_cart );
 		$rows_total_abandoned_cart 	 = $wpdb->num_rows; 
 
-	    if ( $total_cart_count[0] > 0) {
+
+	    if ( !empty($total_cart_count) && $total_cart_count[0] > 0) {
 	    	$cumm_cart_abandoned_rate = round(($total_abandoned_cart_count[0]/$total_cart_count[0])*100, get_option( 'woocommerce_price_num_decimals' )); 		
 	    } else {
 	    	$cumm_cart_abandoned_rate = 0;
 	    }
-
 
 	    //Query for getting the countries wise sales
 
@@ -1328,17 +1341,18 @@ function sr_number_format($input, $places)
 	    }
 	    
 
+	    //Fix for woo22
+	    if (!empty($sr_is_woo22) && $sr_is_woo22 == 'true') {
+    		$terms_post_join = '';
+    	} else {
+    		$terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
+    	}
+
 	    //Query to get the placed order ids
 	    $query_orders_placed = "SELECT DISTINCT id as completed_order_ids
 	    							FROM {$wpdb->prefix}posts AS posts
-	                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-	                                                            ON term_relationships.object_id = posts.ID 
-	                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-	                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-	                                            JOIN {$wpdb->prefix}terms AS terms 
-	                                                            ON term_taxonomy.term_id = terms.term_id
-		                            WHERE posts.post_status IN ('publish')
-		                                AND posts.post_type IN ('shop_order')
+	                                	$terms_post_join
+		                            WHERE posts.post_type IN ('shop_order')
 		                                AND (posts.post_date BETWEEN '$start_date' AND '$end_date_query')";
 	                  
 	    $results_orders_placed = $wpdb->get_col($query_orders_placed);
@@ -1363,19 +1377,34 @@ function sr_number_format($input, $places)
 			$cumm_sales_funnel['products_purchased_count'] = 0;
 	    }
 
+	    //Fix for woo22
+	    if (!empty($sr_is_woo22) && $sr_is_woo22 == 'true') {
+    		$terms_post_join = '';
+    		$terms_post_cond = " AND posts.post_status IN ('wc-completed')";
+    	} else {
+
+    		$query_terms     = "SELECT term_taxonomy.term_taxonomy_id
+								FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                JOIN {$wpdb->prefix}terms AS terms 
+	                                    ON term_taxonomy.term_id = terms.term_id
+	                    		WHERE terms.name IN ('completed')";
+	          
+			$terms_post      = $wpdb->get_col($query_terms);
+			$rows_terms_post = $wpdb->num_rows;
+
+			if ($rows_terms_post > 0) {
+			    $terms_taxonomy_ids = implode(",",$terms_post);
+			    $terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
+	        	$cond_terms_post = ' term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')';	
+			}
+    	}
 
 	    //Query to get the completed order ids
 	    $query_orders_completed = "SELECT DISTINCT id as completed_order_ids
 	    							FROM {$wpdb->prefix}posts AS posts
-	                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-	                                                            ON term_relationships.object_id = posts.ID 
-	                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-	                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-	                                            JOIN {$wpdb->prefix}terms AS terms 
-	                                                            ON term_taxonomy.term_id = terms.term_id
-		                            WHERE terms.name IN ('completed')
-		                                AND posts.post_status IN ('publish')
-		                                AND posts.post_type IN ('shop_order')
+	                                	$terms_post_join
+		                            WHERE posts.post_type IN ('shop_order')
+		                            	$terms_post_cond
 		                                AND (posts.post_date BETWEEN '$start_date' AND '$end_date_query')";
 	                  
 	    $results_orders_completed = $wpdb->get_col($query_orders_completed);
@@ -1455,7 +1484,7 @@ function sr_number_format($input, $places)
 	        $results [13] = $tax_data;
 
 	        // $results [14] = $results_top_abandoned_products;
-	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_taxonomy_ids),true);
+	        $results [14] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,"LIMIT 5",$terms_taxonomy_ids,$sr_is_woo22),true);
 	        
 	        $results [15] = ($min_abandoned_date != '' && $min_abandoned_date <= $start_date ) ? $cumm_cart_abandoned_rate : '';
 
@@ -1565,21 +1594,22 @@ function sr_number_format($input, $places)
 
 	    // WHERE terms.name IN ('completed','processing','on-hold','pending')
 
-	    $query_terms = "SELECT  term_taxonomy.term_taxonomy_id
-	    						FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-	                                 JOIN {$wpdb->prefix}terms AS terms 
-	                                 	ON term_taxonomy.term_id = terms.term_id
-	                            WHERE terms.name IN ('completed','processing','on-hold')";
-	                  
-	    $terms_taxonomy_ids = $wpdb->get_col($query_terms);
-	    $rows_terms_post =  $wpdb->num_rows;
+	    $terms_taxonomy_ids = '';
 
-	    if ($rows_terms_post > 0) {
-	    	$terms_taxonomy_ids = implode(",",$terms_taxonomy_ids);
-	    } else {
-	    	$terms_taxonomy_ids = ''; 
+	    if (!(!empty($post['SR_IS_WOO22']) && $post['SR_IS_WOO22'] == 'true')) {
+			$query_terms = "SELECT  term_taxonomy.term_taxonomy_id
+    						FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+                                 JOIN {$wpdb->prefix}terms AS terms 
+                                 	ON term_taxonomy.term_id = terms.term_id
+                            WHERE terms.name IN ('completed','processing','on-hold')";
+		                  
+		    $terms_taxonomy_ids = $wpdb->get_col($query_terms);
+		    $rows_terms_post =  $wpdb->num_rows;
+
+		    if ($rows_terms_post > 0) {
+		    	$terms_taxonomy_ids = implode(",",$terms_taxonomy_ids);
+		    }	
 	    }
-
 
 	    if ($diff_dates > 0 && $diff_dates <= 30) {
 	        $select = "DATE_FORMAT(posts.`post_date`, '%Y-%m-%d') AS display_date";
@@ -1831,24 +1861,30 @@ function sr_number_format($input, $places)
 		$comparison_month_start   = date("Y-m-d H:i:s", mktime(0,0,0,date('m', strtotime($comparison_to_date)),1,date('Y', strtotime($comparison_to_date))));
 		$comparison_days_in_month = date('t', mktime(0, 0, 0, date('m', strtotime($comparison_to_date)), 1, date('Y', strtotime($comparison_to_date))));
 
-		$query_terms     = "SELECT term_taxonomy.term_taxonomy_id
-							FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-                                JOIN {$wpdb->prefix}terms AS terms 
-                                    ON term_taxonomy.term_id = terms.term_id
-                    		WHERE terms.name IN ('completed','processing','on-hold')";
-          
-		$terms_post      = $wpdb->get_col($query_terms);
-		$rows_terms_post = $wpdb->num_rows;
 
+		$cond_terms_post = '';
+	    $terms_post_join = '';
 
+		if (!empty($_POST['SR_IS_WOO22']) && $_POST['SR_IS_WOO22'] == "true") {
 
-		if ($rows_terms_post > 0) {
-		    $terms_taxonomy_ids = implode(",",$terms_post);
-		    $terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
-        	$cond_terms_post = (!empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';	    										
-		} else {
-		    $cond_terms_post = '';
+			$cond_terms_post = "AND posts.post_status IN ('wc-completed','wc-processing','wc-on-hold')";
 		    $terms_post_join = '';
+
+		} else {
+			$query_terms     = "SELECT term_taxonomy.term_taxonomy_id
+								FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                JOIN {$wpdb->prefix}terms AS terms 
+	                                    ON term_taxonomy.term_id = terms.term_id
+	                    		WHERE terms.name IN ('completed','processing','on-hold')";
+	          
+			$terms_post      = $wpdb->get_col($query_terms);
+			$rows_terms_post = $wpdb->num_rows;
+
+			if ($rows_terms_post > 0) {
+			    $terms_taxonomy_ids = implode(",",$terms_post);
+			    $terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
+	        	$cond_terms_post = (!empty($terms_post_join)) ? 'AND term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')' : '';	    										
+			}
 		}
 
 		$daily_widget_data = array();
@@ -1873,6 +1909,7 @@ function sr_number_format($input, $places)
 		else {
 			$daily_widget_data['sales_today'] = 0;
 		}
+
 
 		$query_yest        = "SELECT SUM( postmeta.meta_value ) AS yesterdays_sales 
 		                    FROM `{$wpdb->prefix}postmeta` AS postmeta
@@ -2125,15 +2162,35 @@ function sr_number_format($input, $places)
 		// Todays Returns
 		// ================================================
 
+
+		$cond_terms_post = '';
+	    $terms_post_join = '';
+
+		if (!empty($_POST['SR_IS_WOO22']) && $_POST['SR_IS_WOO22'] == "true") {
+
+			$cond_terms_post = " posts.post_status IN ('wc-refunded')";
+		    $terms_post_join = '';
+
+		} else {
+			$query_terms     = "SELECT term_taxonomy.term_taxonomy_id
+								FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                JOIN {$wpdb->prefix}terms AS terms 
+	                                    ON term_taxonomy.term_id = terms.term_id
+	                    		WHERE terms.name IN ('refunded')";
+	          
+			$terms_post      = $wpdb->get_col($query_terms);
+			$rows_terms_post = $wpdb->num_rows;
+
+			if ($rows_terms_post > 0) {
+			    $terms_taxonomy_ids = implode(",",$terms_post);
+			    $terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
+	        	$cond_terms_post = ' term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')';	
+			}
+		}
+
 		$query_terms_refund         = "SELECT id FROM {$wpdb->prefix}posts AS posts
-		                            JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-		                                                        ON term_relationships.object_id = posts.ID 
-		                                        JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-		                                                        ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-		                                        JOIN {$wpdb->prefix}terms AS terms 
-		                                                        ON term_taxonomy.term_id = terms.term_id
-		                            WHERE terms.name IN ('refunded')
-		                            AND posts.post_status IN ('publish')";
+		                            		$terms_post_join
+			                            WHERE $cond_terms_post";
 
 		$terms_refund_post          = $wpdb->get_col($query_terms_refund);
 		$rows_terms_refund_post     = $wpdb->num_rows;
@@ -2202,15 +2259,32 @@ function sr_number_format($input, $places)
 
 		$daily_widget_data['rows_physical_prod'] = $rows_physical_prod;
 
+		//Woo 2.2 Fix
+		if (!empty($_POST['SR_IS_WOO22']) && $_POST['SR_IS_WOO22'] == "true") {
+
+			$cond_terms_post = " posts.post_status IN ('wc-processing')";
+		    $terms_post_join = '';
+
+		} else {
+			$query_terms     = "SELECT term_taxonomy.term_taxonomy_id
+								FROM {$wpdb->prefix}term_taxonomy AS term_taxonomy 
+	                                JOIN {$wpdb->prefix}terms AS terms 
+	                                    ON term_taxonomy.term_id = terms.term_id
+	                    		WHERE terms.name IN ('processing')";
+	          
+			$terms_post      = $wpdb->get_col($query_terms);
+			$rows_terms_post = $wpdb->num_rows;
+
+			if ($rows_terms_post > 0) {
+			    $terms_taxonomy_ids = implode(",",$terms_post);
+			    $terms_post_join = ' JOIN '.$wpdb->prefix.'term_relationships AS term_relationships ON (term_relationships.object_id = posts.ID AND posts.post_status = "publish")';
+	        	$cond_terms_post = ' term_relationships.term_taxonomy_id IN ('.$terms_taxonomy_ids.')';	
+			}
+		}
+
 		$query_order_fulfillment_today  = "SELECT count(id) FROM {$wpdb->prefix}posts AS posts
-		                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-		                                                            ON term_relationships.object_id = posts.ID 
-		                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-		                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-		                                            JOIN {$wpdb->prefix}terms AS terms 
-		                                                            ON term_taxonomy.term_id = terms.term_id
-		                                WHERE terms.name IN ('processing')
-		                                    AND posts.post_status IN ('publish')
+		                                	$terms_post_join
+		                                WHERE $cond_terms_post
 		                                    AND (posts.post_modified LIKE '$today%'
 		                                        OR posts.post_date LIKE '$today%')";
 		          
@@ -2225,14 +2299,8 @@ function sr_number_format($input, $places)
 		}
 
 		$query_order_fulfillment_yest   = "SELECT count(id) FROM {$wpdb->prefix}posts AS posts
-		                                JOIN {$wpdb->prefix}term_relationships AS term_relationships 
-		                                                            ON term_relationships.object_id = posts.ID 
-		                                            JOIN {$wpdb->prefix}term_taxonomy AS term_taxonomy 
-		                                                            ON term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id 
-		                                            JOIN {$wpdb->prefix}terms AS terms 
-		                                                            ON term_taxonomy.term_id = terms.term_id
-		                                WHERE terms.name IN ('processing')
-		                                    AND posts.post_status IN ('publish')
+		                                	$terms_post_join
+		                                WHERE $cond_terms_post
 		                                    AND (posts.post_modified LIKE '$yesterday%'
 		                                        OR posts.post_date LIKE '$yesterday%')";
 		          
@@ -2254,7 +2322,7 @@ function sr_number_format($input, $places)
 	}
 
 	if (isset ( $_POST ['cmd'] ) && ($_POST ['cmd'] == 'daily')) {
-		
+
 		while(ob_get_contents()) {
          	   ob_clean();
 		}
@@ -2703,7 +2771,7 @@ function sr_number_format($input, $places)
 	if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
 		
 	        if ( defined('SRPRO') && SRPRO == true ) {
-	            if ( WPSC_RUNNING === true ) {
+	            if ( SR_WPSC_RUNNING === true ) {
 			if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' ) ) include( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' );
 	            } else {
 	                if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php' ) ) include_once( SR_PLUGIN_DIR_ABSPATH. '/pro/sr-woo.php' );
@@ -2854,7 +2922,6 @@ function sr_number_format($input, $places)
 			$encoded = get_graph_data( $_GET ['id'], $where_date, $parts );
 			
 		}
-
 		while(ob_get_contents()) {
          	   ob_clean();
 		}

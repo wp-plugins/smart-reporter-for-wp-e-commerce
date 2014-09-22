@@ -210,6 +210,8 @@ function get_last_few_order_details_wpec( $product_id, $select, $from, $group_by
 
 if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
 
+	$group_by = '';
+
 	if (isset ( $_GET ['fromDate'] )) {
 		$from ['date'] = strtotime ( $_GET ['fromDate'] );
 		$to ['date'] = strtotime ( $_GET ['toDate'] );
