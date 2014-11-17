@@ -203,8 +203,8 @@ function sr_number_format($input, $places)
 		    }
 
 	    	foreach ($results_top_abandoned_products as &$results_top_abandoned_product) {
-	    		$abandoned_quantity = explode('###', $results_top_abandoned_product['abandoned_quantity']);
-                $abandoned_dates = explode('###', $results_top_abandoned_product['abandoned_dates']);
+	    		$abandoned_quantity = (!empty($results_top_abandoned_product['abandoned_quantity'])) ? explode('###', $results_top_abandoned_product['abandoned_quantity']) : array();
+                $abandoned_dates = (!empty($results_top_abandoned_product['abandoned_dates'])) ? explode('###', $results_top_abandoned_product['abandoned_dates']) : array();
                 $max = 0;
 
                 if ($group_by == "display_date_time") {
@@ -262,8 +262,8 @@ function sr_number_format($input, $places)
 
                 if (empty($limit)) {
                 	// $results_top_abandoned_product['orders_placed'] = $results_prod_abandoned_rate[$j]['orders_placed'];
-                	$results_top_abandoned_product['orders_placed'] = sr_number_format($results_last_order_date[$j]['order_count'] ,$sr_decimal_places);
-                	$results_top_abandoned_product['last_order_date'] = $results_last_order_date[$j]['last_order_date']; 
+                	$results_top_abandoned_product['orders_placed'] = (!empty($results_last_order_date[$j]['order_count'])) ? sr_number_format( $results_last_order_date[$j]['order_count'],$sr_decimal_places) : '';
+                	$results_top_abandoned_product['last_order_date'] = (!empty($results_last_order_date[$j]['last_order_date'])) ? $results_last_order_date[$j]['last_order_date'] : ''; 
                 }
 
                 // $abandoned_rate = ($results_top_abandoned_product['abondoned_qty']/$results_prod_abandoned_rate[$j]['abondoned_rate'])*100;
@@ -922,7 +922,8 @@ function sr_number_format($input, $places)
 	            $top_payment_gateway[] = $results_top_payment_gateway1 ['payment_method'];
 	        
 	            if (isset($post['top_prod_option'])) {
-                    $results_top_payment_gateway1 ['gateway_sales_display'] = $sr_currency_symbol . sr_number_format($results_top_payment_gateway1 ['sales_total'],$sr_decimal_places);
+                    // $results_top_payment_gateway1 ['gateway_sales_display'] = $sr_currency_symbol . sr_number_format($results_top_payment_gateway1 ['sales_total'],$sr_decimal_places);
+                    $results_top_payment_gateway1 ['gateway_sales_display'] = $sr_currency_symbol . $results_top_payment_gateway1 ['sales_total'];
                     $results_top_payment_gateway1 ['gateway_sales_percent'] = sr_number_format((($results_top_payment_gateway1 ['sales_total'] / $total_monthly_sales) * 100),$sr_decimal_places) . '%';
 	            }
 

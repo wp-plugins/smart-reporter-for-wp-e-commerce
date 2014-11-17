@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.7.2
+Version: 2.7.3
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014 Store Apps All rights reserved.
@@ -81,10 +81,10 @@ function sr_activate() {
         }
         
         if ( is_multisite() ) {
-		$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}", 0 );
-	} else {
-		$blog_ids = array( $blog_id );
-	}
+			$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}", 0 );
+		} else {
+			$blog_ids = array( $blog_id );
+		}
 
 	foreach ( $blog_ids as $blog_id ) {
 		if ( ( file_exists ( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ) ) && ( is_plugin_active ( 'woocommerce/woocommerce.php' ) ) ) {
@@ -246,6 +246,8 @@ function is_pro_updated() {
 		$order_id = $order->id;
 		$order_items = $order->get_items();
 
+		if (empty($order_items)) return;
+
 		foreach ( $order_items as $item ) {
 
 			$product_id = (!empty($item['variation_id'])) ? $item['variation_id'] : ((version_compare ( WOOCOMMERCE_VERSION, '2.0', '<' )) ? $item['id'] : $item['product_id']);
@@ -292,6 +294,7 @@ function is_pro_updated() {
 		$cart_cut_off_time = $cut_off_time * 60;
 		$compare_time = $current_time - $cart_cut_off_time;
 
+		$cart_contents = array();
 		$cart_contents = $woocommerce->cart->cart_contents;
 
 
@@ -648,9 +651,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	add_action( 'woocommerce_order_status_processing', 	'sr_woo_add_order' );
 	add_action( 'woocommerce_order_status_complete', 	'sr_woo_add_order' );
 
-
-		
-
 	function sr_woo_refresh_order( $order_id ) {
 		sr_woo_remove_order( $order_id );
 
@@ -678,14 +678,17 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                       WHERE meta_key LIKE '_product_attributes'
                     ";
             $results = $wpdb->get_results( $query, 'ARRAY_A' );
-            
-            foreach ( $results as $result ) {
-                $attributes = maybe_unserialize( $result['product_attributes'] );
-                if ( count( $attributes ) > 0 ) {
-                    foreach ( $attributes as $slug => $attribute ) {
-                        $attributes_name_to_slug[ $result['product_id'] ][ $attribute['name'] ] = $slug;
-                    }
-                }
+            $num_rows = $wpdb->num_rows;
+
+            if ($num_rows > 0) {
+            	foreach ( $results as $result ) {
+	                $attributes = maybe_unserialize( $result['product_attributes'] );
+	                if ( count( $attributes ) > 0 ) {
+	                    foreach ( $attributes as $slug => $attribute ) {
+	                        $attributes_name_to_slug[ $result['product_id'] ][ $attribute['name'] ] = $slug;
+	                    }
+	                }
+	            }	
             }
             
             return $attributes_name_to_slug;
@@ -706,13 +709,18 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                       $where
                     ";
             $results = $wpdb->get_results( $query, 'ARRAY_A' );
+            $num_rows = $wpdb->num_rows;
+
             $term_name_to_slug = array();
-            foreach ( $results as $result ) {
-                if ( count( $result ) <= 0 ) continue;
-                if ( !isset( $term_name_to_slug[ $result['taxonomy'] ] ) ) {
-                    $term_name_to_slug[ $result['taxonomy'] ] = array();
-                }
-                $term_name_to_slug[ $result['taxonomy'] ][ $result['name'] ] = $result['slug'];
+
+            if ($num_rows > 0) {
+            	foreach ( $results as $result ) {
+	                if ( count( $result ) <= 0 ) continue;
+	                if ( !isset( $term_name_to_slug[ $result['taxonomy'] ] ) ) {
+	                    $term_name_to_slug[ $result['taxonomy'] ] = array();
+	                }
+	                $term_name_to_slug[ $result['taxonomy'] ][ $result['name'] ] = $result['slug'];
+	            }	
             }
             
             return $term_name_to_slug;
@@ -861,8 +869,12 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                     AND		term.slug			IN ('completed', 'processing', 'on-hold')
             		", 'ARRAY_A');
 
-            foreach ( $results as $result ) {
-                    $all_order_items[ $result['order_id'] ] = maybe_unserialize( $result['items'] ); 
+            $num_rows = $wpdb->num_rows;
+
+            if ($num_rows > 0) {
+            	foreach ( $results as $result ) {
+	                    $all_order_items[ $result['order_id'] ] = maybe_unserialize( $result['items'] ); 
+	            }	
             }
                     
         } else {
@@ -910,18 +922,22 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                                     ORDER BY FIND_IN_SET(order_items.order_id,'$order_id')";
                                 
                 $results  = $wpdb->get_results ( $query_order_items , 'ARRAY_A');          
+                $num_rows = $wpdb->num_rows;
 
-                foreach ( $results as $result ) {
-                    $order_item_meta_values = explode('###', $result ['meta_value'] );
-                    $order_item_meta_key = explode('###', $result ['meta_key'] );
-                    if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
-                        continue; 
-                    $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
-                    if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
-                        $all_order_items[ $result['order_id'] ] = array();
-                    }
-                    $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
+                if ($num_rows > 0) {
+                	foreach ( $results as $result ) {
+	                    $order_item_meta_values = explode('###', $result ['meta_value'] );
+	                    $order_item_meta_key = explode('###', $result ['meta_key'] );
+	                    if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
+	                        continue; 
+	                    $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
+	                    if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
+	                        $all_order_items[ $result['order_id'] ] = array();
+	                    }
+	                    $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
+	                }	
                 }
+                
             }
 
         } //end if
