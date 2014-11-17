@@ -997,18 +997,18 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
             $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
             $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
 
-            if(screen.width >= 1001 && screen.width <= 1150) {
-                // $('body').css('font-size','0.655em');    
-                $('body').css('font-size','63%');
-                $('#sr_cumm_top_cust_coupons').css('width','27em');    
-                $('#sr_cumm_sales_countries').css('margin-left','-27em');
-            }
-            else if(screen.width >= 1151 && screen.width <= 1300) {
+            // if(screen.width >= 1001 && screen.width <= 1150) {
+            //     // $('body').css('font-size','0.655em');    
+            //     $('body').css('font-size','66.5%');
+            //     $('#sr_cumm_top_cust_coupons').css({'width':'53.7em !important'});    
+            //     $('#sr_cumm_sales_countries').css('margin-left','-27em');
+            // }
+            // else if(screen.width >= 1151 && screen.width <= 1300) {
 
-            }
-            else if(screen.width >= 1301) {
-                $('body').css('font-size','1.1em');       
-            }
+            // }
+            // else if(screen.width >= 1301) {
+            //     $('body').css('font-size','1.1em');       
+            // }
         }
         else {
 
@@ -1019,18 +1019,18 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
             $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
             $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
 
-            if(screen.width >= 1001 && screen.width <= 1150) {
-                // $('body').css('font-size','0.745em');
-                $('body').css('font-size','73%');
-                $('#sr_cumm_top_cust_coupons').css('width','53.7em');    
-                $('#sr_cumm_sales_countries').css('margin-left','0em');
-            }
-            else if(screen.width >= 1151 && screen.width <= 1300) {
-                $('body').css('font-size','0.88em');
-            }
-            else if(screen.width >= 1301) {
-                $('body').css('font-size','1.2em');       
-            }
+            // if(screen.width >= 1001 && screen.width <= 1150) {
+            //     // $('body').css('font-size','0.745em');
+            //     $('body').css('font-size','73%');
+            //     $('#sr_cumm_top_cust_coupons').css('width','53.7em');    
+            //     $('#sr_cumm_sales_countries').css('margin-left','0em');
+            // }
+            // else if(screen.width >= 1151 && screen.width <= 1300) {
+            //     $('body').css('font-size','0.88em');
+            // }
+            // else if(screen.width >= 1301) {
+            //     $('body').css('font-size','1.2em');       
+            // }
         }
     
 
@@ -1048,18 +1048,18 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
                 // $('#sr_cumm_date1').css('width','21em');
 
-                if(screen.width >= 1001 && screen.width <= 1150) {
-                    // $('body').css('font-size','0.655em');
-                    $('body').css('font-size','63%');
-                    $('#sr_cumm_top_cust_coupons').css('width','27em');    
-                    $('#sr_cumm_sales_countries').css('margin-left','-27em');    
-                }
-                else if(screen.width >= 1151 && screen.width <= 1300) {
-                    $('body').css('font-size','76.6%');
-                }
-                else if(screen.width >= 1301) {
-                    $('body').css('font-size','1.1em');       
-                }
+                // if(screen.width >= 1001 && screen.width <= 1150) {
+                //     // $('body').css('font-size','0.655em');
+                //     $('body').css('font-size','66.5%');
+                //     $('#sr_cumm_top_cust_coupons').css({'width':'53.7em !important'});    
+                //     $('#sr_cumm_sales_countries').css('margin-left','-27em');    
+                // }
+                // else if(screen.width >= 1151 && screen.width <= 1300) {
+                //     $('body').css('font-size','76.6%');
+                // }
+                // else if(screen.width >= 1301) {
+                //     $('body').css('font-size','1.1em');       
+                // }
                 
             }
             else {            
@@ -1069,18 +1069,18 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                 $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
                 // $('#sr_cumm_date1').css('width','20.8em');
 
-                if(screen.width >= 1001 && screen.width <= 1150) {
-                    // $('body').css('font-size','0.745em');
-                    $('body').css('font-size','73%');
-                    $('#sr_cumm_top_cust_coupons').css('width','53.7em');    
-                    $('#sr_cumm_sales_countries').css('margin-left','0em');
-                }
-                else if(screen.width >= 1151 && screen.width <= 1300) {
-                    $('body').css('font-size','0.88em');
-                }
-                else if(screen.width >= 1301) {
-                    $('body').css('font-size','1.2em');       
-                }
+                // if(screen.width >= 1001 && screen.width <= 1150) {
+                //     // $('body').css('font-size','0.745em');
+                //     $('body').css('font-size','73%');
+                //     $('#sr_cumm_top_cust_coupons').css({'width':'53.7em !important'});  
+                //     $('#sr_cumm_sales_countries').css('margin-left','0em');
+                // }
+                // else if(screen.width >= 1151 && screen.width <= 1300) {
+                //     $('body').css('font-size','0.88em');
+                // }
+                // else if(screen.width >= 1301) {
+                //     $('body').css('font-size','1.2em');       
+                // }
                 
             }
 
@@ -1333,88 +1333,45 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 // ================================================
 // Top Customer & Coupons Widget
 // ================================================
- -->
-
-<!-- <div id="sr_cumm_top_cust_coupons" class="cumm_widget"> -->
-
-    <!-- 
-    // ================================================
-    // Top Customer Widget
-    // ================================================
-     -->
-
-    <!-- <div id="sr_cumm_top_cust" class="cumm_widget_top_cust">     -->
-
-<div id = "sr_cumm_top_cust_coupons" class="cumm_widget_top_cust_coupons">
-
-
-    <!-- 
+    
 // ================================================
 // Avg. Order Total & Avg. Order Items Widget
 // ================================================
  -->
-    
-    <div id="sr_cumm_avg_order_tot" class = "sr_cumm_small_widget">
-        <div id="sr_cumm_avg_order_tot_value" class="average_order_total_amt">
-            <div id="sr_cumm_avg_order_tot_content" class="sr_cumm_small_widget_content"></div>
-            <p id="average_order_tot_title" class="average_order_total_text"> Avg Order Total </p>
+    <div id="sr_cumm_small_widget_cust" class="sr_cumm_small_widget_parent"> 
+        <div id="sr_cumm_avg_order_tot" class = "sr_cumm_small_widget">
+            <div id="sr_cumm_avg_order_tot_value" class="average_order_total_amt">
+                <div id="sr_cumm_avg_order_tot_content" class="sr_cumm_small_widget_content"></div>
+                <p id="average_order_tot_title" class="average_order_total_text"> Avg Order Total </p>
+            </div>
         </div>
-    </div>
 
 
-    <div id="sr_cumm_avg_order_count" class = "sr_cumm_small_widget">
-        <div id="sr_cumm_avg_order_items_value" class="average_order_total_amt">
-            <div id="sr_cumm_avg_order_items_content" class="sr_cumm_small_widget_content"> </div>
-            <p id="average_order_items_title" class="average_order_items_text"> Avg Items Per Customer </p>
+        <div id="sr_cumm_avg_order_count" class = "sr_cumm_small_widget">
+            <div id="sr_cumm_avg_order_items_value" class="average_order_total_amt">
+                <div id="sr_cumm_avg_order_items_content" class="sr_cumm_small_widget_content"> </div>
+                <p id="average_order_items_title" class="average_order_items_text"> Avg Items Per Customer </p>
+            </div>
         </div>
-    </div>
 
-    <!-- 
-// ================================================
-// Cart Abandonment Rate
-// ================================================
- -->
+        <!-- 
+        // ================================================
+        // % Top Customers Widget
+        // ================================================
+         -->
+        <div id="sr_cumm_top_cust" class="cumm_widget" style="height: 12.5em;" >    
+              <!-- <div class="cumm_header_top_cust_coupons" style="width: 55%; margin-top: 0.25em" > -->
+              <div class="cumm_header">
+                  <i class = "fa fa-group icon_cumm_widgets"> </i>
 
-    <div id="sr_cumm_cart_abandanment" class = "sr_cumm_small_widget" style = "margin-right: 1.68em;">
-        <div id="sr_cumm_cart_abandanment_rate" class="average_order_total_amt">
-            <div id="sr_cumm_cart_abandanment_content" class="sr_cumm_small_widget_content"></div>
-            <p id="sr_cumm_cart_abandanment_title" class="average_order_items_text"> Cart Abandonment Rate </p>
+                  Top Customers
+              
+              </div>
+
+              <div id = "top_cust_data" class= "cumm_widget_table_data" >
+
+              </div>
         </div>
-    </div>
-
-<!-- 
-// ================================================
-// % Of Orders Containing Coupons
-// ================================================
- -->
-
-    <div id="sr_cumm_order_coupons_count" class = "sr_cumm_small_widget" style = "margin-right: 1.64em">
-        <div id="sr_cumm_order_coupons_value" class="average_order_total_amt">
-            <div id="sr_cumm_order_coupons_content" class="sr_cumm_small_widget_content"></div>
-            <p id="average_order_items_title" class="average_order_items_text"> Sales with Coupons </p>
-        </div>
-    </div>
-
-
-<!-- 
-// ================================================
-// % Top Customers Widget
-// ================================================
- -->
-
-    <div id="sr_cumm_top_cust" class="cumm_widget" style="height: 12.5em;" >    
-          <!-- <div class="cumm_header_top_cust_coupons" style="width: 55%; margin-top: 0.25em" > -->
-          <div class="cumm_header">
-              <i class = "fa fa-group icon_cumm_widgets"> </i>
-
-              Top Customers
-          
-          </div>
-
-          <div id = "top_cust_data" class= "cumm_widget_table_data" >
-
-          </div>
-    </div>
 
         <script type="text/javascript">
 
@@ -1485,14 +1442,41 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
           }
 
           </script>
-        
+
+
+    </div>
+
+        <!-- 
+    // ================================================
+    // Cart Abandonment Rate
+    // ================================================
+     -->
+     <div id="sr_cumm_small_widget_coupons" class="sr_cumm_small_widget_parent">
+        <div id="sr_cumm_cart_abandanment" class = "sr_cumm_small_widget" style = "margin-right: 1.68em;">
+            <div id="sr_cumm_cart_abandanment_rate" class="average_order_total_amt">
+                <div id="sr_cumm_cart_abandanment_content" class="sr_cumm_small_widget_content"></div>
+                <p id="sr_cumm_cart_abandanment_title" class="average_order_items_text"> Cart Abandonment Rate </p>
+            </div>
+        </div>
+
+    <!-- 
+    // ================================================
+    // % Of Orders Containing Coupons
+    // ================================================
+     -->
+
+        <div id="sr_cumm_order_coupons_count" class = "sr_cumm_small_widget" style = "margin-right: 1.64em">
+            <div id="sr_cumm_order_coupons_value" class="average_order_total_amt">
+                <div id="sr_cumm_order_coupons_content" class="sr_cumm_small_widget_content"></div>
+                <p id="average_order_items_title" class="average_order_items_text"> Sales with Coupons </p>
+            </div>
+        </div>
+
         <!-- 
         // ================================================
         // Top Coupons Widget
         // ================================================
          -->
-
-        <!-- <div id="sr_cumm_top_coupons" class="cumm_widget" style="margin-left:26.9em;height: 12.5em;margin-top: -12.8em;"> -->
         <div id="sr_cumm_top_coupons" class="cumm_widget" style="height: 12.5em;">
 
             <div class="cumm_header">
@@ -1557,7 +1541,10 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
           }
 
         </script>
-</div>
+    </div>
+
+
+<!-- </div> -->
 <!-- 
 // ================================================
 // Top Products Widget
@@ -3302,7 +3289,9 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
         
         $("#sr_cumm_top_abandoned_products").insertAfter("#sr_cumm_date");
 
-        $("#sr_cumm_top_cust_coupons").insertAfter("#sr_cumm_date");
+        $("#sr_cumm_small_widget_coupons").insertAfter("#sr_cumm_date");
+
+        $("#sr_cumm_small_widget_cust").insertAfter("#sr_cumm_date");
 
         $("#sr_cumm_top_prod").insertAfter("#sr_cumm_date");
         $("#sr_cumm_sales_funnel").insertAfter("#sr_cumm_date");
