@@ -1261,5 +1261,29 @@ pre.code{
   background-image: linear-gradient(to bottom, #B3BAC0, #85888A);
 }
 
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+/* CSS for all elements in Top Products Detailed View Widget */
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/*for Expand icon span*/
+.top_prod_detailed_view {
+  float:right;
+  padding: 0 0.35em 0 0.35em;
+  cursor: pointer;
+}
+
+/* for magnific popup*/
+.white-popup {
+position: relative;
+display:block;
+background: #FFF;
+padding: 20px;
+width: auto;
+height: auto;
+max-width:1000px; 
+max-height: 450px;
+margin: 20px auto;
+overflow: hidden;
+}
 
 
