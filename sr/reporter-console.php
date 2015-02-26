@@ -1841,6 +1841,10 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
             Top Products
 
+                <span id="sr_cumm_top_prod_detailed_view" title="Expand" class="top_prod_detailed_view" >
+                    <i id="sr_cumm_top_prod_detailed_view_icon" class= "fa fa-expand icon_cumm_widgets" style="color:#B1ADAD" ></i>
+                </span>
+
                 <div class="switch switch-blue">
                   <input type="radio" class="switch-input" name="top_prod_toggle_price_option_nm" value="sr_opt_top_prod_price" id="sr_opt_top_prod_price" style="display:none">
                   <label id="sr_opt_top_prod_price_label" for="sr_opt_top_prod_price" class="switch-label switch-label_price switch-label-on">Price</label>
@@ -1857,7 +1861,58 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
     </div>
 
+<!-- 
+// ================================================
+// Top Products Detailed View Widget
+// ================================================
+ -->
+<a title="Top Products Detailed View" class="ajax-popup-link" id="detailed_view_link"></a>
+<div id="top_prod_detailed_view_widget" class="white-popup mfp-hide no_data_text">
+    <div style="font-size:3em !important; margin-top:0.3em! important; margin-bottom:0.3em! important"> Coming Soon </div>
+</div>
+
   <script type="text/javascript">
+
+
+      jQuery(function($) {
+            $("#sr_cumm_top_prod_detailed_view").on('mouseenter',function() {
+                $('#sr_cumm_top_prod_detailed_view_icon').css("color","#ffffff");
+            });
+
+            $("#sr_cumm_top_prod_detailed_view").on('mouseleave',function() {
+                $('#sr_cumm_top_prod_detailed_view_icon').css("color","#B1ADAD");
+            });
+
+            //code to display Top Product Detailed View Widget
+            $("#sr_cumm_top_prod_detailed_view").on('click', function() {
+                <?php if (defined('SRPRO') && SRPRO === true) {?>
+                    $('a#detailed_view_link').trigger('click');
+                  <?php }else {?>
+                    alert("Sorry! Detailed View functionality is available only in Pro version");
+                <?php }?>
+            });
+
+            $('.ajax-popup-link').magnificPopup({
+                items: {
+                  src: '#top_prod_detailed_view_widget',
+                  type: 'inline'
+                },
+                closeBtnInside: true,
+                callbacks:{
+                    open: function() {
+                        $.ajax({
+                                    type : 'POST',
+                                    url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                                    dataType:"text",
+                                    action: 'get_monthly_sales',
+                                    data: {
+                                        cmd: 'product_detailed_view_track',
+                                    }
+                                });
+                        }  
+                    }
+            });
+        });
 
     //Function to handle the display part of the Top Products Widget
     var top_prod_display = function(resp) {
@@ -2534,7 +2589,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
       <span id="sr_cumm_top_abandoned_products_export" title="Export" class="top_abandoned_prod_export">
         <!-- <input type="button" name="top_abandoned_prod_export" id="top_abandoned_prod_export" value="Export" onclick="top_ababdoned_products_export()"> -->
         <!-- <i id="sr_cumm_top_abandoned_products_export_icon" class = "fa fa-download-alt icon_cumm_widgets" style="color:#B1ADAD"> </i> -->
-        <i id="sr_cumm_top_abandoned_products_export_icon" class = "fa fa-download icon_cumm_widgets" style="color:#ffffff"> </i>
+        <i id="sr_cumm_top_abandoned_products_export_icon" class = "fa fa-download icon_cumm_widgets" style="color:#B1ADAD"> </i>
       </span>
     </div>
 
@@ -2898,12 +2953,13 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
             <span id ="sr_smart_date" class="sr_cumm_date_picker"> 
                 <label id ="sr_smart_date_select_label" for="sr_smart_date_select" style:"display:none;"> Smart Date: </label>
-                <select id ="sr_smart_date_select" style="height:1.7em;padding:0px;margin-left:1em;margin-top:-0.05em;">
+                <select id ="sr_smart_date_select" style="height:1.7em;padding:0px;margin-left:1em;margin-top:-0.05em;" >
+                  <option value="" style="display:none;color: #333 !important;" selected> Select Date </option>
                   <option value="TODAY">Today</option>
                   <option value="YESTERDAY">Yesterday</option>
                   <option value="THIS_WEEK">This Week</option>
                   <option value="LAST_WEEK">Last Week</option>
-                  <option value="THIS_MONTH" selected>This Month</option>
+                  <option value="THIS_MONTH" <?php echo ($fileExists) ? 'selected' : ''; ?> >This Month</option>
                   <option value="LAST_MONTH">Last Month</option>
                   <option value="3_MONTHS">3 Months</option>
                   <option value="6_MONTHS">6 Months</option>
@@ -3129,10 +3185,12 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
             //Code for the display part of DatePicker
 
             jQuery(function($){
+
+                var date = new Date();
+
                 $('#startdate_display').datepick({dateFormat: date_format,
                     altField  : '#startdate',
                     altFormat : 'yyyy-mm-dd',
-                    defaultDate: '-1m', // sets the defalut date to 1 month back
                     selectDefaultDate: true, // sets the default date visible in the text box
                     autoSize: true,
                     yearRange: '1900:' + new Date().getFullYear(),
@@ -3201,13 +3259,12 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                           <?php if ($fileExists) { ?>
                               if(date) {
                                     strt_date = date.split("-");
-                                    start_max_date = new Date(strt_date[0], strt_date[1]-1, strt_date[2]);
+                                    start_max_date = new Date(strt_date[0], strt_date[1]-1, '1');
                               }
                               else {
 
                                     var date = new Date();
-                                    date.setDate(date.getDate() - 30);
-                                    start_max_date = date;
+                                    start_max_date = new Date(date.getFullYear(), date.getMonth(), 1);
                               }
 
                               if(flag == 0) {

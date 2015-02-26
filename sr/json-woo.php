@@ -406,6 +406,8 @@ function sr_number_format($input, $places)
 
 	    //Query for Top 5 Customers
 
+	    $index = 0;
+
 	    //Reg Customers
 	    $query_reg_cumm = "SELECT ID FROM `$wpdb->users` 
 	                        WHERE user_registered BETWEEN '$start_date' AND '$end_date_query'";
@@ -441,13 +443,13 @@ function sr_number_format($input, $places)
 
 	    if($rows_cumm_top_cust_guest > 0) {
 
-	        $post_id = array();
+	        $post_id_max = array();
 	        
 	        foreach ($results_cumm_top_cust_guest as $results_cumm_top_cust_guest1) {
-	            $post_id[] = $results_cumm_top_cust_guest1 ['post_id_max'];
+	            $post_id_max [] = $results_cumm_top_cust_guest1 ['post_id_max'];
 	        }
 
-	        $post_id_imploded = implode(",",$post_id);
+	        $post_id_imploded = implode(",",$post_id_max);
 
 	        $query_cumm_top_cust_guest_detail = "SELECT postmeta.post_id as post_id,
 	                                                GROUP_CONCAT(postmeta.meta_key
@@ -457,33 +459,42 @@ function sr_number_format($input, $places)
 	                                            FROM {$wpdb->prefix}postmeta AS postmeta
 	                                            WHERE postmeta.post_id IN ($post_id_imploded)
 	                                                AND postmeta.meta_key IN ('_billing_first_name' , '_billing_last_name')
-	                                            GROUP BY postmeta.post_id
-	                                            ORDER BY FIND_IN_SET(postmeta.post_id,'$post_id_imploded')";
+	                                            GROUP BY postmeta.post_id";
 
 	        $results_cumm_top_cust_guest_detail   =  $wpdb->get_results ( $query_cumm_top_cust_guest_detail, 'ARRAY_A' );    
+	        $results_cumm_top_cust_guest_detail_rows = $wpdb->num_rows;
 
-	        for ($i=0; $i<sizeof($results_cumm_top_cust_guest_detail); $i++) {
+	        $top_cust_guest_detail = array();
 
-	            $results_cumm_top_cust[$i] = array();
+	        if ($results_cumm_top_cust_guest_detail_rows > 0) {
+	        	foreach ( $results_cumm_top_cust_guest_detail as $cumm_top_cust_guest_detail ) {
+	        		$guest_meta_values = explode('###', $cumm_top_cust_guest_detail['meta_value']);
+		            $guest_meta_key = explode('###', $cumm_top_cust_guest_detail['meta_key']);
+		            if (count($guest_meta_values) != count($guest_meta_key))
+		                continue;
+		            unset($cumm_top_cust_guest_detail['meta_value']);
+		            unset($cumm_top_cust_guest_detail['meta_key']);
+		            $guest_meta_key_values = array_combine($guest_meta_key, $guest_meta_values);
 
-	            $guest_meta_values = explode('###', $results_cumm_top_cust_guest_detail[$i]['meta_value']);
-	            $guest_meta_key = explode('###', $results_cumm_top_cust_guest_detail[$i]['meta_key']);
-	            if (count($guest_meta_values) != count($guest_meta_key))
-	                continue;
-	            unset($results_cumm_top_cust_guest_detail[$i]['meta_value']);
-	            unset($results_cumm_top_cust_guest_detail[$i]['meta_key']);
-	            $guest_meta_key_values = array_combine($guest_meta_key, $guest_meta_values);
-
-	            $results_cumm_top_cust [$i]['total'] = $sr_currency_symbol . sr_number_format($results_cumm_top_cust_guest[$i]['total'],$sr_decimal_places);
-	            $results_cumm_top_cust [$i]['calc_total'] = floatval($results_cumm_top_cust_guest[$i]['total']); // value used only for sorting purpose
-	            $results_cumm_top_cust [$i]['name'] = $guest_meta_key_values['_billing_first_name'] . " " . $guest_meta_key_values['_billing_last_name'];
-	            $results_cumm_top_cust [$i]['billing_email'] = $results_cumm_top_cust_guest [$i]['billing_email'];
-	            $results_cumm_top_cust [$i]['post_ids'] = json_encode($results_cumm_top_cust_guest [$i]['post_id']);
+	        		$top_cust_guest_detail [$cumm_top_cust_guest_detail['post_id']] = $guest_meta_key_values['_billing_first_name'] . " " . $guest_meta_key_values['_billing_last_name'];
+	        	}
 	        }
 
+	        foreach ($results_cumm_top_cust_guest as $cumm_top_cust_guest) {
+
+	            $results_cumm_top_cust[$index] = array();
+
+	            $post_id = $cumm_top_cust_guest['post_id_max'];
+
+	            $results_cumm_top_cust [$index]['total'] = $sr_currency_symbol . sr_number_format($cumm_top_cust_guest['total'],$sr_decimal_places);
+	            $results_cumm_top_cust [$index]['calc_total'] = floatval($cumm_top_cust_guest['total']); // value used only for sorting purpose
+	            $results_cumm_top_cust [$index]['name'] = ( !empty($top_cust_guest_detail[$post_id]) ) ? $top_cust_guest_detail[$post_id] : '-';
+	            $results_cumm_top_cust [$index]['billing_email'] = $cumm_top_cust_guest['billing_email'];
+	            $results_cumm_top_cust [$index]['post_ids'] = json_encode($cumm_top_cust_guest['post_id']);
+
+	            $index++;
+	        }
 	    }
-
-
 
 	    $query_cumm_top_cust_reg ="SELECT postmeta1.meta_value AS user_id,
 	                                GROUP_CONCAT(DISTINCT postmeta1.post_id
@@ -508,6 +519,8 @@ function sr_number_format($input, $places)
 	    $results_cumm_top_cust_reg   =  $wpdb->get_results ( $query_cumm_top_cust_reg, 'ARRAY_A' );    
 	    $rows_cumm_top_cust_reg    =  $wpdb->num_rows;
 
+	    $user_id = array();
+
 	    if ($rows_cumm_top_cust_reg > 0) {
 
 	        foreach ($results_cumm_top_cust_reg as $results_cumm_top_cust_reg1) {
@@ -518,7 +531,6 @@ function sr_number_format($input, $places)
 	        	$user_ids_imploded = implode(",",$user_id);	
 	        }
 	        
-
 	        $query_reg_details = "SELECT users.ID as cust_id,
 	                                users.user_email as email,
 	                                GROUP_CONCAT(usermeta.meta_key
@@ -529,27 +541,42 @@ function sr_number_format($input, $places)
 	                                    JOIN $wpdb->usermeta as usermeta ON (users.ID = usermeta.user_id)
 	                              WHERE users.ID IN ($user_ids_imploded)
 	                                    AND usermeta.meta_key IN ('first_name','last_name')
-	                              GROUP BY users.ID
-	                              ORDER BY FIND_IN_SET('users.ID','$user_ids_imploded')";
+	                              GROUP BY users.ID";
+
 	        $results_reg_details =  $wpdb->get_results ( $query_reg_details, 'ARRAY_A' );
+	        $results_reg_details_rows =  $wpdb->num_rows;
 
-	        for ($i=sizeof($results_cumm_top_cust), $j=0; $j<sizeof($results_reg_details); $i++, $j++) {
+	        $reg_cust_details = array();
 
-	            $results_cumm_top_cust[$i] = array();
+	        if ($results_reg_details_rows > 0) {
+	        	foreach ( $results_reg_details as $result_reg_cust ) {
 
-	            $reg_meta_values = explode('###', $results_reg_details [$j]['meta_value']);
-	            $reg_meta_key = explode('###', $results_reg_details [$j]['meta_key']);
-	            if (count($reg_meta_values) != count($reg_meta_key))
-	                continue;
-	            unset($results_reg_details [$j]['meta_value']);
-	            unset($results_reg_details [$j]['meta_key']);
-	            $reg_meta_key_values = array_combine($reg_meta_key, $reg_meta_values);
+	        		$reg_meta_values = explode('###', $result_reg_cust['meta_value']);
+		            $reg_meta_key = explode('###', $result_reg_cust['meta_key']);
+		            if (count($reg_meta_values) != count($reg_meta_key))
+		                continue;
+		            unset($result_reg_cust['meta_value']);
+		            unset($result_reg_cust['meta_key']);
+		            $reg_meta_key_values = array_combine($reg_meta_key, $reg_meta_values);
 
-	            $results_cumm_top_cust [$i]['total'] = $sr_currency_symbol . sr_number_format($results_cumm_top_cust_reg[$j]['total'],$sr_decimal_places);
-	            $results_cumm_top_cust [$i]['calc_total'] = floatval($results_cumm_top_cust_reg[$j]['total']); // value used only for sorting purpose
-	            $results_cumm_top_cust [$i]['name'] = $reg_meta_key_values['first_name'] . " " . $reg_meta_key_values['last_name'];
-	            $results_cumm_top_cust [$i]['billing_email'] = $results_reg_details [$j]['email'];
-	            $results_cumm_top_cust [$i]['post_ids'] = json_encode($results_cumm_top_cust_reg [$j]['post_id']);
+	        		$reg_cust_details [$result_reg_cust['cust_id']] = array();
+	        		$reg_cust_details [$result_reg_cust['cust_id']] ['name'] = $reg_meta_key_values['first_name'] . " " . $reg_meta_key_values['last_name'];
+	        		$reg_cust_details [$result_reg_cust['cust_id']] ['email'] = $result_reg_cust['email'];
+	        	}
+	        }
+
+	        foreach ($results_cumm_top_cust_reg as $result_cumm_top_cust_reg) {
+
+	            $results_cumm_top_cust[$index] = array();
+	            $user_id = $result_cumm_top_cust_reg['user_id'];
+
+	            $results_cumm_top_cust [$index]['total'] = $sr_currency_symbol . sr_number_format($result_cumm_top_cust_reg['total'],$sr_decimal_places);
+	            $results_cumm_top_cust [$index]['calc_total'] = floatval($result_cumm_top_cust_reg['total']); // value used only for sorting purpose
+	            $results_cumm_top_cust [$index]['name'] = ( !empty($reg_cust_details[$user_id]) ) ? $reg_cust_details[$user_id]['name'] : '-';
+	            $results_cumm_top_cust [$index]['billing_email'] = ( !empty($reg_cust_details[$user_id]) ) ? $reg_cust_details[$user_id]['email'] : '-';
+	            $results_cumm_top_cust [$index]['post_ids'] = json_encode($result_cumm_top_cust_reg['post_id']);
+
+	            $index++;
 	        }
 
 	    }
@@ -746,8 +773,7 @@ function sr_number_format($input, $places)
 		                                WHERE postmeta.meta_key IN ('_customer_user')
 		                                    AND postmeta.meta_value > 0
 		                                    AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                                    $terms_post_cond
-		                                GROUP BY postmeta.meta_value";
+		                                    $terms_post_cond";
 
 	    $results_cumm_reg_cust_count = $wpdb->get_col ( $query_cumm_reg_cust_count );
 	    $rows_cumm_reg_cust_count	 = $wpdb->num_rows;
@@ -759,7 +785,6 @@ function sr_number_format($input, $places)
 	        $reg_cust_count = 0;
 	    }
 
-
 	    $query_cumm_guest_cust_count 	="SELECT COUNT(DISTINCT postmeta1.meta_value) AS cust_orders
 		                                    FROM {$wpdb->prefix}postmeta AS postmeta1
 		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta1.post_id)
@@ -769,8 +794,7 @@ function sr_number_format($input, $places)
 		                                    WHERE postmeta1.meta_key IN ('_billing_email')
 		                                        AND postmeta2.meta_value = 0
 		                                        AND posts.post_date BETWEEN '$start_date' AND '$end_date_query'
-		                                        $terms_post_cond
-		                                    GROUP BY postmeta1.meta_value";
+		                                        $terms_post_cond";
 
 	    $results_cumm_guest_cust_count 	=  $wpdb->get_col ( $query_cumm_guest_cust_count );
 	    $rows_cumm_guest_cust_count	 	= $wpdb->num_rows;
@@ -922,8 +946,7 @@ function sr_number_format($input, $places)
 	            $top_payment_gateway[] = $results_top_payment_gateway1 ['payment_method'];
 	        
 	            if (isset($post['top_prod_option'])) {
-                    // $results_top_payment_gateway1 ['gateway_sales_display'] = $sr_currency_symbol . sr_number_format($results_top_payment_gateway1 ['sales_total'],$sr_decimal_places);
-                    $results_top_payment_gateway1 ['gateway_sales_display'] = $sr_currency_symbol . $results_top_payment_gateway1 ['sales_total'];
+                    $results_top_payment_gateway1 ['gateway_sales_display'] = (!empty($results_top_payment_gateway1 ['sales_total'])) ? $sr_currency_symbol . sr_number_format($results_top_payment_gateway1 ['sales_total'],$sr_decimal_places) : $sr_currency_symbol . '0';
                     $results_top_payment_gateway1 ['gateway_sales_percent'] = sr_number_format((($results_top_payment_gateway1 ['sales_total'] / $total_monthly_sales) * 100),$sr_decimal_places) . '%';
 	            }
 
@@ -1456,6 +1479,7 @@ function sr_number_format($input, $places)
 	            $results [5] = floatval(0);             
 	        }
 	        else {
+
 	            if ($total_cumm_cust_count == 0) {
 	                $results [5] = floatval($tot_cumm_orders_qty);       
 	            }
@@ -1463,6 +1487,8 @@ function sr_number_format($input, $places)
 	                $results [5] = floatval($tot_cumm_orders_qty/$total_cumm_cust_count);
 	            }
 	        }
+
+
 
 	        $results [6] = floatval($max_sales+100);
 
@@ -2033,21 +2059,20 @@ function sr_number_format($input, $places)
 		$rows_reg_today_ids = $wpdb->num_rows;
 
 		if ($rows_reg_today_ids > 0) {
-		    $query_reg_today_count  ="SELECT COUNT(*)
+		    $query_reg_today_count  ="SELECT DISTINCT postmeta.meta_value
 		                               FROM {$wpdb->prefix}postmeta AS postmeta
 		                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
 		                                        $terms_post_join
 		                               WHERE postmeta.meta_key IN ('_customer_user')
 		                                     AND postmeta.meta_value IN (".implode(",",$reg_today_ids).")
 		                                     AND posts.post_date LIKE  '$today%'
-		                                     $cond_terms_post
-		                               GROUP BY postmeta.meta_value";
+		                                     $cond_terms_post";
 
 		    $reg_today              = $wpdb->get_col ( $query_reg_today_count ); 
-		    $rows_reg_today         = $wpdb->num_rows;   
+		    $rows_reg_today         = $wpdb->num_rows;
 
 		    if($rows_reg_today > 0) {
-		        $reg_today_count = $reg_today[0];
+		        $reg_today_count = sizeof($reg_today);
 		    }
 		}
 
@@ -2057,21 +2082,20 @@ function sr_number_format($input, $places)
 		$rows_reg_yest_ids   = $wpdb->num_rows;
 
 		if ($rows_reg_yest_ids > 0) {
-		    $query_reg_today_count  ="SELECT COUNT(*)
+		    $query_reg_today_count  ="SELECT DISTINCT postmeta.meta_value
 		                               FROM {$wpdb->prefix}postmeta AS postmeta
 	                                        JOIN {$wpdb->prefix}posts AS posts ON (posts.ID = postmeta.post_id)
 	                                        $terms_post_join
 		                               WHERE postmeta.meta_key IN ('_customer_user')
 		                                     AND postmeta.meta_value IN (".implode(",",$reg_yest_ids).")
 		                                     AND posts.post_date LIKE  '$yesterday%'
-		                                     $cond_terms_post
-		                               GROUP BY postmeta.meta_value";
+		                                     $cond_terms_post";
 
 		    $reg_yest               = $wpdb->get_col ( $query_reg_today_count );  
 		    $rows_reg_yest          = $wpdb->num_rows;   
 
 		    if($rows_reg_yest > 0) {
-		        $reg_yest_count = $reg_yest[0];
+		        $reg_yest_count = sizeof($reg_yest);
 		    }
 
 		}
@@ -2330,6 +2354,11 @@ function sr_number_format($input, $places)
 
 		echo json_encode (sr_get_daily_kpi_data());
 	}
+
+	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'product_detailed_view_track') )) {
+		$result = wp_remote_post('http://www.storeapps.org/?utm_source=SR&utm_medium=pro&utm_campaign=product_detailed_view');
+	}
+
 
 	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'monthly') )) {
 
@@ -2605,21 +2634,40 @@ function sr_number_format($input, $places)
 			} else {
 				$count = 0 ;
 				$grid_data = array();
-					$grid_data [$count] ['sales']    = '';
-					$grid_data [$count] ['discount'] = '';
-					$grid_data [$count] ['products'] = 'All Products';
-					$grid_data [$count] ['period']   = 'selected period';
-					$grid_data [$count] ['category'] = 'All Categories';
-					$grid_data [$count] ['id'] 	     = '';
-					$grid_data [$count] ['quantity'] = 0;
-					$grid_data [$count] ['image'] = $woo_default_image;		//../wp-content/plugins/wp-e-commerce/wpsc-theme/wpsc-images/noimage.png
+				$grid_data [$count] ['sales']    = '';
+				$grid_data [$count] ['discount'] = '';
+				$grid_data [$count] ['products'] = 'All Products';
+				$grid_data [$count] ['period']   = 'selected period';
+				$grid_data [$count] ['category'] = 'All Categories';
+				$grid_data [$count] ['id'] 	     = '';
+				$grid_data [$count] ['quantity'] = 0;
+				$grid_data [$count] ['image'] = $woo_default_image;		//../wp-content/plugins/wp-e-commerce/wpsc-theme/wpsc-images/noimage.png
 
-					foreach ( $results as $result ) {
-						$grid_data [$count] ['quantity'] = $grid_data[$count] ['quantity'] + $result ['quantity'];
-						$grid_data [$count] ['sales'] = $grid_data[$count] ['sales'] + $result ['sales'];
-						$grid_data [$count] ['discount'] = $grid_data[$count] ['discount'] + $result ['discount'];
+
+				//Code to get the thumnail_id
+
+				$query_thumbnail_id = "SELECT postmeta.post_id AS id,
+										   postmeta.meta_value AS thumbnail
+									FROM {$wpdb->prefix}postmeta AS postmeta
+										JOIN {$wpdb->prefix}posts AS posts ON (postmeta.post_id = posts.id AND postmeta.meta_key = '_thumbnail_id')
+									WHERE posts.post_type IN ('product', 'product_variation')";
+				$results_thumnail_id = $wpdb->get_results($query_thumbnail_id, 'ARRAY_A');
+				$rows_thumbnail_id = $wpdb->num_rows;
+
+				$prod_thumnail_ids = array();
+
+				if ( $rows_thumbnail_id > 0 ) {
+					foreach ( $results_thumnail_id as $result_thumnail_id ) {
+						$prod_thumnail_ids [$result_thumnail_id['id']] = $result_thumnail_id['thumbnail'];
 					}
-					$count++;
+				}
+
+				foreach ( $results as $result ) {
+					$grid_data [$count] ['quantity'] = $grid_data[$count] ['quantity'] + $result ['quantity'];
+					$grid_data [$count] ['sales'] = $grid_data[$count] ['sales'] + $result ['sales'];
+					$grid_data [$count] ['discount'] = $grid_data[$count] ['discount'] + $result ['discount'];
+				}
+				$count++;
 				
 				foreach ( $results as $result ) {
 					$grid_data [$count] ['products'] = $result ['products'];
@@ -2629,7 +2677,8 @@ function sr_number_format($input, $places)
 					$grid_data [$count] ['category'] = $result ['category'];
 					$grid_data [$count] ['id'] 	 	 = $result ['id'];
 					$grid_data [$count] ['quantity'] = $result ['quantity'];
-					$thumbnail = isset( $result ['thumbnail'] ) ? wp_get_attachment_image_src( $result ['thumbnail'], 'admin-product-thumbnails' ) : '';
+					// $thumbnail = isset( $result ['thumbnail'] ) ? wp_get_attachment_image_src( $result ['thumbnail'], 'admin-product-thumbnails' ) : '';
+					$thumbnail = !empty( $prod_thumnail_ids [$result ['id']] ) ? wp_get_attachment_image_src( $prod_thumnail_ids [$result ['id']], 'admin-product-thumbnails' ) : '';
 					$grid_data [$count] ['image']    = ( !empty($thumbnail[0]) && $thumbnail[0] != '' ) ? $thumbnail[0] : $woo_default_image;
 					$count++;
 				}
@@ -2866,11 +2915,10 @@ function sr_number_format($input, $places)
 		
 		$static_select = "SELECT order_item.product_id AS id,
 						 order_item.product_name AS products,
-						 category,
+						 prod_categories.category AS category,
 						 SUM( order_item.quantity ) AS quantity,
 						 SUM( order_item.sales ) AS sales,
-						 SUM( order_item.discount ) AS discount,
-						 image_postmeta.meta_value AS thumbnail
+						 SUM( order_item.discount ) AS discount
 						";
 			
 		$from = " FROM {$wpdb->prefix}sr_woo_order_items AS order_item
@@ -2880,8 +2928,6 @@ function sr_number_format($input, $places)
 						JOIN {$wpdb->prefix}term_taxonomy AS wtt ON (wtr.term_taxonomy_id = wtt.term_taxonomy_id and taxonomy = 'product_cat')
 						JOIN {$wpdb->prefix}terms AS wt ON (wtt.term_id = wt.term_id)
 						GROUP BY wtr.object_id) AS prod_categories on (products.id = prod_categories.object_id OR products.post_parent = prod_categories.object_id)
-				  LEFT JOIN {$wpdb->prefix}postmeta as image_postmeta ON (products.ID = image_postmeta.post_id 
-						AND image_postmeta.meta_key = '_thumbnail_id')
 				  LEFT JOIN {$wpdb->prefix}posts as posts ON ( posts.ID = order_item.order_id )
 				  ";
 			
