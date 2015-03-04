@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.8
+Version: 2.8.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -835,6 +835,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                 
             $values = sr_items_to_values( $order_items );
             if ( count( $values ) > 0 ) {
+            	$insert_query .= implode(",",$values);
                 $wpdb->query( $insert_query );
             }
         }
