@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 4.1.1
-Stable tag: 2.8
+Stable tag: 2.8.1
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -48,6 +48,9 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.8.1 =
+* Fix: Orders not syncing properly (WooCommerce)
 
 = 2.8 =
 * Update: Compatibility with new versions of WordPress, WP e-Commerce & WooCommerce (v2.3 or greater)
@@ -176,6 +179,9 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 
 
 == Upgrade Notice ==
+
+= 2.8.1 =
+Fix related to WooCommerce orders not syncing properly, recommended upgrade.
 
 = 2.8 =
 Compatibility with new versions of WordPress, WP e-Commerce & WooCommerce (v2.3 or greater) along with some important Fixes and improvements, recommended upgrade.
