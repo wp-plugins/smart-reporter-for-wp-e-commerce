@@ -1277,13 +1277,208 @@ pre.code{
 position: relative;
 display:block;
 background: #FFF;
-padding: 20px;
+/*padding: 1.250em;*/
 width: auto;
 height: auto;
-max-width:1000px; 
-max-height: 450px;
-margin: 20px auto;
+max-width:75em; 
+max-height:35em;
+margin: 1.250em auto;
 overflow: hidden;
 }
 
+.prod_details {
+float:left;
+height:auto;
+max-height: 35em;     
+width: 40%;
+overflow: overlay;
+}
 
+.prod_sales_details{
+float:right;
+height:auto;
+max-height: 35em;     
+width:60%;
+overflow: hidden;
+}
+
+.details_table {
+ width:97%;
+ height:100%;
+ border-collapse:collapse;
+ 
+}
+
+.details_table tr{
+  line-height: 1.17em;
+ padding:5px 0px 5px 0px;
+}
+
+.details_table td {
+ font-size: 0.9em;
+ color: #7C7C86;
+ font-weight: 500; 
+ font-family: Helvetica, Arial, sans-serif; 
+}
+
+/* for displaying product name, category, sku, sales, qty in vertical align middle*/
+.details_display{
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.sales_highlight {
+	color: black;
+	font-size:1.2em;
+}
+
+.kpi_details{
+	height:3em;
+	width:100%;
+}
+
+.kpi_table{
+	height: 100%;
+	width:95%;
+	margin:0.92em;
+}
+
+.kpi_table tr{
+	font-size:0.9em;
+	font-family: Helvetica, Arial, sans-serif; 
+}
+
+.kpi_table td{
+	padding: 0px;
+	text-align: center;
+}
+
+.kpi_widgets_price {
+  font-size:1.4em;
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 600;
+  margin-top: 0.9em;
+}
+
+.kpi_widgets_text {
+  font-family: Helvetica, Arial, sans-serif;
+  color: #727277;
+  font-weight: 500;
+  font-size: 0.8em;
+}
+
+.recent_orders{
+	height:7em;
+	width: 100%;
+}
+
+.recent_orders_heading{
+	display: none;
+	text-align:left;
+	font-size: 0.8em;
+	line-height: 0.8em;
+	font-weight: bold;
+	color: #727277;
+	margin: 0.92em 0.92em 0px 0.92em;
+	font-family: Helvetica, Arial, sans-serif;
+}
+
+.recent_orders_table {
+	width: 95%;
+	height: 95%;
+	margin: 0.3em 0.92em 0.92em 0.92em;
+	font-family: Helvetica, Arial, sans-serif;
+	color: #727277;
+}
+
+.recent_orders_table tr {
+	font-size: 0.8em;
+	width: 100%;
+	padding: 8px;
+}
+
+.recent_orders_table td {
+	padding: 0px;
+}
+
+.sales_graph_funnel{
+	height: 13em;
+	width: 100%;
+}
+
+.draw_sales_graph{
+	float: left;
+	margin-top: 3em;
+	margin-left: 0.92em;
+	height:70%;
+	width: 55%;
+}
+
+.sales_graph_donut_title{
+	text-align : left !important;
+	font-size : 0.8em;
+	font-family : Helvetica, Arial, sans-serif;
+	font-weight: bold;
+}
+
+.draw_sales_funnel{
+	float: right;
+	margin-top:3em;
+	right: 9em;
+	height:13em;
+	width:25%;
+}
+
+.sales_funnel_title{
+	font-size: 0.8em;
+	top:-1em !important;
+	text-align: left !important;
+	left: 1.2em !important;
+	font-family : Helvetica, Arial, sans-serif;
+	font-weight: bold;
+}
+
+.sales_funnel_table-legend{
+	margin-right: 0px !important;
+	left : 13em !important;
+	top : 1em !important;
+	font-family : Helvetica, Arial, sans-serif;
+	border: 0px solid #ccc !important;
+}
+
+.funnel_donut_table-legend-swatch{
+	-moz-border-radius: 50px/50px;
+	-webkit-border-radius: 50px 50px;
+	border-radius: 50px/50px;
+	border-width: 6px;
+}
+
+.prod_sales_donuts{
+	height:11em;
+	width: 100%;
+}
+
+.sales_donut{
+	margin-top:0em;
+	float: left;
+	margin-top: 2em;
+	margin-left: 0.92em;
+	height:100%;
+	width:50%;
+}
+
+.sales_donut_table-legend{
+	margin-right: 0px !important;
+	left : 24em !important;
+	top : 0em !important;
+	font-family : Helvetica, Arial, sans-serif;
+	border: 0px solid #ccc !important;
+}
+
+.qty_donut{
+	bottom: 3em;
+	float:right;
+	height:100%;
+	width:50%;
+}

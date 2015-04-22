@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.8.1
+Version: 2.9
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -95,7 +95,11 @@ function sr_activate() {
 				CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}sr_woo_order_items` (
 				  `product_id` bigint(20) unsigned NOT NULL default '0',
 				  `order_id` bigint(20) unsigned NOT NULL default '0',
+				  `order_date` datetime NOT NULL default '0000-00-00 00:00:00',
+				  `order_status` text NOT NULL,
 				  `product_name` text NOT NULL,
+				  `sku` text NOT NULL,
+				  `category` text NOT NULL,
 				  `quantity` int(10) unsigned NOT NULL default '0',
 				  `sales` decimal(11,2) NOT NULL default '0.00',
 				  `discount` decimal(11,2) NOT NULL default '0.00',
@@ -488,6 +492,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			
 			//WooCommerce Currency Constants
 			define ( 'SR_CURRENCY_SYMBOL', get_woocommerce_currency_symbol());
+			define ( 'SR_CURRENCY_POS' , get_woocommerce_price_format());
 			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
 		}
 		wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
@@ -647,7 +652,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	// Actions on order change
 	add_action( 'woocommerce_order_status_pending', 	'sr_woo_remove_order' );
 	add_action( 'woocommerce_order_status_failed', 		'sr_woo_remove_order' );
-	add_action( 'woocommerce_order_status_refunded', 	'sr_woo_remove_order' );
+	// add_action( 'woocommerce_order_status_refunded', 	'sr_woo_remove_order' );
 	add_action( 'woocommerce_order_status_cancelled', 	'sr_woo_remove_order' );
 	add_action( 'woocommerce_order_status_on-hold', 	'sr_woo_add_order' );
 	add_action( 'woocommerce_order_status_processing', 	'sr_woo_add_order' );
@@ -766,6 +771,19 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             $values = array();
             $attributes_name_to_slug = sr_get_attributes_name_to_slug();
             $prefix = ( (defined( 'SR_IS_WOO16' ) && SR_IS_WOO16 == "true") ) ? '' : '_';
+            
+            if( isset( $all_order_items['order_date'] ) ){
+            
+            $order_date = $all_order_items['order_date'];
+            
+            }
+            if( isset( $all_order_items['order_status'] ) ){
+            
+            $order_status = $all_order_items['order_status'];
+            
+            }
+            unset($all_order_items['order_date']);
+            unset($all_order_items['order_status']);
 
             foreach ( $all_order_items as $order_id => $order_items ) {
                 foreach ( $order_items as $item ) {
@@ -781,9 +799,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                         }// end if
 
                         $order_item['product_name'] = get_the_title( $product_id );
-                        $variation_id = (isset( $item['variation_id'] ) ) ? $item['variation_id'] : '';
-                        $variation_id = ( !empty( $prefix ) && isset( $item[$prefix.'variation_id'] ) ) ? $item[$prefix.'variation_id'] : $variation_id;
-                        $order_item['product_id'] = ( $variation_id > 0 ) ? $variation_id : $product_id;
+                        $variation_id 				= (isset( $item['variation_id'] ) ) ? $item['variation_id'] : '';
+                        $variation_id 				= ( !empty( $prefix ) && isset( $item[$prefix.'variation_id'] ) ) ? $item[$prefix.'variation_id'] : $variation_id;
+                        $order_item['product_id'] 	= ( $variation_id > 0 ) ? $variation_id : $product_id;
 
                         if ( $variation_id > 0 ) {
                                 $variation_name = array();
@@ -807,18 +825,38 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                                 $order_item['product_name'] .= ' (' . woocommerce_get_formatted_variation( $variation_name, true ) . ')'; 
                         }
 
-                        $qty = (isset( $item['qty'] ) ) ? $item['qty']: '';
-                        $order_item['quantity'] = ( !empty( $prefix ) && isset( $item[$prefix.'qty'] ) ) ? $item[$prefix.'qty'] : $qty;
-                        $line_total = ( isset( $item['line_total'] ) ) ? $item['line_total'] : '' ;
-                        $line_total = ( !empty( $prefix ) && isset( $item[$prefix.'line_total'] ) ) ? $item[$prefix.'line_total'] : $line_total;
-                        $order_item['sales'] = $line_total;
-                        $line_subtotal = ( isset( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
-                        $line_subtotal = ( !empty( $prefix ) && isset( $item[$prefix.'line_subtotal'] ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
-                        $order_item['discount'] = $line_subtotal - $line_total;
+                        $qty 						= (isset( $item['qty'] ) ) ? $item['qty']: '';
+                        $order_item['quantity'] 	= ( !empty( $prefix ) && isset( $item[$prefix.'qty'] ) ) ? $item[$prefix.'qty'] : $qty;
+                        $line_total             	= ( isset( $item['line_total'] ) ) ? $item['line_total'] : '' ;
+                        $line_total             	= ( !empty( $prefix ) && isset( $item[$prefix.'line_total'] ) ) ? $item[$prefix.'line_total'] : $line_total;
+                        $order_item['sales']    	= $line_total;
+                        $line_subtotal          	= ( isset( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
+                        $line_subtotal              = ( !empty( $prefix ) && isset( $item[$prefix.'line_subtotal'] ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
+                        $order_item['order_date']   = (isset($item['order_date'])) ? $item['order_date'] : $order_date;
+                        $order_item['order_status'] = (isset($item['order_status'])) ? $item['order_status'] : $order_status;
+                        $order_item['discount']     = $line_subtotal - $line_total;
+                       
+                        if(isset($item['sku'])) {
+                        	$order_item['sku'] = $item['sku'];
+                        }
+                        else {
+                        		
+                        		$prod_sku = get_post_meta($product_id, '_sku' , true);
+                        	    $order_item['sku'] = !empty($prod_sku) ? $prod_sku: '';
+                        }
+
+                        if(isset($item['category'])) {
+                        	$order_item['category'] = $item['category'];
+                        }
+                        else {
+                        		
+                        		$category = get_the_terms($product_id, 'product_cat');
+                        	    $order_item['category'] = !empty( $category ) ? $category[0]->name : '';
+                        }
 
                         if ( empty( $order_item['product_id'] ) || empty( $order_item['order_id'] ) || empty( $order_item['quantity'] ) ) 
                             continue;
-                        $values[] = "( {$order_item['product_id']}, {$order_item['order_id']}, '{$order_item['product_name']}', {$order_item['quantity']}, " . (empty($order_item['sales']) ? 0 : $order_item['sales'] ) . ", " . (empty($order_item['discount']) ? 0 : $order_item['discount'] ) . " )";
+                        $values[] = "( {$order_item['product_id']}, {$order_item['order_id']},'{$order_item['order_date']}', '{$order_item['order_status']}', '{$order_item['product_name']}', '{$order_item['sku']}' , '{$order_item['category']}' , {$order_item['quantity']}, " . (empty($order_item['sales']) ? 0 : $order_item['sales'] ) . ", " . (empty($order_item['discount']) ? 0 : $order_item['discount'] ) . " )";
                 }
             }
 
@@ -826,12 +864,15 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
         }
         
         function sr_woo_add_order( $order_id ) {
-        	global $wpdb;
+       global $wpdb;
 			$order = new WC_Order( $order_id );
 			$order_items = array( $order_id => $order->get_items() );
-		
+
+			$order_items['order_date'] = $order->order_date;
+			$order_items['order_status'] = $order->post_status;
+
 			$insert_query = "INSERT INTO {$wpdb->prefix}sr_woo_order_items 
-							( `product_id`, `order_id`, `product_name`, `quantity`, `sales`, `discount` ) VALUES ";
+							( `product_id`, `order_id`, `order_date`, `order_status`, `product_name`, `sku`, `category`, `quantity`, `sales`, `discount` ) VALUES ";
                 
             $values = sr_items_to_values( $order_items );
             if ( count( $values ) > 0 ) {
@@ -849,7 +890,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	function load_sr_woo_order_items( $wpdb ) {
 
         $insert_query = "REPLACE INTO {$wpdb->prefix}sr_woo_order_items 
-                            ( `product_id`, `order_id`, `product_name`, `quantity`, `sales`, `discount` ) VALUES ";
+                            ( `product_id`, `order_id`, `order_date`, `order_status`, `product_name`, `sku`, `category`, `quantity`, `sales`, `discount` ) VALUES ";
 
         $all_order_items = array();
 
@@ -879,31 +920,48 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             }
                     
         } else {
+
+        	$select_posts = 'SELECT posts.ID AS order_id,
+        					posts.post_date AS order_date,
+        					posts.post_status AS order_status';
+
         	if( defined('SR_IS_WOO22') && SR_IS_WOO22 == "true" ) {
 
-        		$results = $wpdb->get_col ("
-	                            SELECT posts.ID AS order_id 
-	                            FROM {$wpdb->prefix}posts AS posts
-	                            WHERE 	posts.post_type LIKE 'shop_order'
-		                            AND posts.post_status IN ('wc-completed', 'wc-processing', 'wc-on-hold')
-	                            ");
+        		// AND posts.post_status IN ('wc-completed', 'wc-processing', 'wc-on-hold')
+        		$query_orders = $select_posts ." FROM {$wpdb->prefix}posts AS posts
+	                            WHERE 	posts.post_type = 'shop_order'";
+        		
         	} else {
-        		$results = $wpdb->get_col ("
-	                            SELECT posts.ID AS order_id 
-	                            FROM {$wpdb->prefix}posts AS posts
+
+        		// AND	term.slug	IN ('completed', 'processing', 'on-hold')
+        		$query_orders = $select_posts ." FROM {$wpdb->posts} AS posts
 		                            LEFT JOIN {$wpdb->prefix}term_relationships AS rel ON posts.ID=rel.object_ID
 		                            LEFT JOIN {$wpdb->prefix}term_taxonomy AS tax USING( term_taxonomy_id )
 		                            LEFT JOIN {$wpdb->prefix}terms AS term USING( term_id )
 
 	                            WHERE 	posts.post_type 	= 'shop_order'
 		                            AND 	posts.post_status 	= 'publish'
-		                            AND 	tax.taxonomy		= 'shop_order_status'
-		                            AND	term.slug	IN ('completed', 'processing', 'on-hold')
-	                            ");
+		                            AND 	tax.taxonomy		= 'shop_order_status'";
         	}
 
-        	if ( !empty( $results ) ) {
-        		$order_id = implode( ", ", $results);
+        	$results = $wpdb->get_results ($query_orders,'ARRAY_A');
+        	$orders_num_rows = $wpdb->num_rows;
+        	
+        	
+        	if ( $orders_num_rows > 0 ) {
+
+        		$order_ids = $order_post_details = array();
+
+        		foreach ($results as $result) {
+
+        			$order_ids[] = $result['order_id'];
+
+        			$order_post_details [$result['order_id']] = array();
+        			$order_post_details [$result['order_id']] ['order_date'] = $result['order_date'];
+        			$order_post_details [$result['order_id']] ['order_status'] = $result['order_status'];
+        		}
+
+        		$order_id = implode( ", ", $order_ids);
 	            $order_id = trim( $order_id );
 
                 $query_order_items = "SELECT order_items.order_item_id,
@@ -925,6 +983,50 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                 $results  = $wpdb->get_results ( $query_order_items , 'ARRAY_A');          
                 $num_rows = $wpdb->num_rows;
 
+
+
+                // query to fetch sku of all prodcut's 
+                $query_sku = "SELECT post_id, meta_value
+                			  FROM {$wpdb->prefix}postmeta 
+                			  WHERE meta_key ='_sku' 
+                			  ORDER BY post_id ASC";
+				
+				$skus = $wpdb->get_results($query_sku, 'ARRAY_A');
+
+                // query to fetch category of all prodcut's
+                $query_catgry = "SELECT posts.ID AS product_id,
+                				 	terms.name as category 
+                				 FROM {$wpdb->prefix}posts AS posts
+	                				 JOIN {$wpdb->prefix}term_relationships AS rel ON (posts.ID = rel.object_ID) 
+	                				 JOIN {$wpdb->prefix}term_taxonomy AS tax ON (rel.term_taxonomy_id = tax.term_taxonomy_id) 
+	                				 JOIN {$wpdb->prefix}terms AS terms ON (tax.term_taxonomy_id = terms.term_id) 
+                				 WHERE tax.taxonomy = 'product_cat' ";
+				
+				$category = $wpdb->get_results($query_catgry, 'ARRAY_A');
+							
+				$catgry_data = array();
+									
+				foreach($skus as $sku){ // to make post_id as index & sku as value
+					
+					if(!empty($sku['meta_value'])){
+
+					$sku_data[$sku['post_id']] = $sku['meta_value'];
+
+					}
+				}
+				
+				foreach ($category as $cat) { // to make product_id as index & category as value
+					
+						$key = $cat['product_id'];
+					if(array_key_exists($key, $catgry_data)){ //if sub category exists then assign category in (parent, sub) format. 
+						
+						$catgry_data[$cat['product_id']] .= ', '.$cat['category'];
+					
+					} else{
+							$catgry_data[$cat['product_id']] = $cat['category'];
+					}
+				}
+
                 if ($num_rows > 0) {
                 	foreach ( $results as $result ) {
 	                    $order_item_meta_values = explode('###', $result ['meta_value'] );
@@ -932,6 +1034,28 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	                    if ( count( $order_item_meta_values ) != count( $order_item_meta_key ) )
 	                        continue; 
 	                    $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
+	                    
+	                    if( isset( $order_item_meta_key_values['_product_id'] ) ){
+
+	                    $key = $order_item_meta_key_values['_product_id'];
+	                   	
+	                   	}
+
+	                    if(array_key_exists($key, $sku_data)){ // if key exists then assign it's sku
+
+	                    	$order_item_meta_key_values['sku'] = $sku_data[$key];
+	                    }
+	                    
+	                    if(array_key_exists($key, $catgry_data)){ // if key exists then assign it's category
+
+	                    	$order_item_meta_key_values['category'] = $catgry_data[$key];
+	                    }
+	                    
+	                    if ( !empty($order_post_details [$result['order_id']]) ) {
+	                    	$order_item_meta_key_values ['order_date'] = $order_post_details [$result['order_id']] ['order_date'];
+	                    	$order_item_meta_key_values ['order_status'] = $order_post_details [$result['order_id']] ['order_status'];
+	                    }	                    
+
 	                    if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
 	                        $all_order_items[ $result['order_id'] ] = array();
 	                    }
@@ -942,7 +1066,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             }
 
         } //end if
-              
+
 	    $values = sr_items_to_values( $all_order_items );
 	    
 	    if ( count( $values ) > 0 ) {
