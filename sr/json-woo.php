@@ -176,6 +176,7 @@ function sr_number_format($input, $places)
 
 		    // }
 
+		    if(!isset($_POST['detailed_view'])){
 
 		    //Query to get the variation Attributes in a formatted manner
 
@@ -202,7 +203,17 @@ function sr_number_format($input, $places)
                 
 		    }
 
+		}
+
 	    	foreach ($results_top_abandoned_products as &$results_top_abandoned_product) {
+                
+                	    		
+			if(isset($_POST['detailed_view'])){
+
+				unset($results_top_abandoned_product['abandoned_quantity']);
+                unset($results_top_abandoned_product['abandoned_dates']);
+			} else{
+			
 	    		$abandoned_quantity = (!empty($results_top_abandoned_product['abandoned_quantity'])) ? explode('###', $results_top_abandoned_product['abandoned_quantity']) : array();
                 $abandoned_dates = (!empty($results_top_abandoned_product['abandoned_dates'])) ? explode('###', $results_top_abandoned_product['abandoned_dates']) : array();
                 $max = 0;
@@ -249,6 +260,7 @@ function sr_number_format($input, $places)
                 }
 
                 $results_top_abandoned_product['max_count'] = $max;
+            }
 
                 $results_top_abandoned_product['price'] = get_post_meta($results_top_abandoned_product['id'],'_price',true) * $results_top_abandoned_product['abondoned_qty'];
 
@@ -270,6 +282,9 @@ function sr_number_format($input, $places)
                 $abandoned_rate = (!empty($results_last_order_date[$j]['tot_qty_sold']) && !empty($results_top_abandoned_product['abondoned_qty'])) ? ($results_top_abandoned_product['abondoned_qty']/($results_last_order_date[$j]['tot_qty_sold'] + $results_top_abandoned_product['abondoned_qty']))*100 : '';
                 $results_top_abandoned_product['abandoned_rate'] = sr_number_format($abandoned_rate ,$sr_decimal_places) . "%";
 
+                if(!isset($_POST['detailed_view'])){
+
+
                 //Code for formatting the product name
 
                 $post_parent = wp_get_post_parent_id($results_top_abandoned_product['id']);
@@ -282,6 +297,7 @@ function sr_number_format($input, $places)
                 }
 
                 $results_top_abandoned_product ['prod_name'] = sanitize_title($results_top_abandoned_product ['prod_name']);
+            }
 
                 $total_prod_abandoned_qty = $total_prod_abandoned_qty + $results_top_abandoned_product['abondoned_qty'];
                 $total_prod_qty = $total_prod_qty + $results_prod_abandoned_rate[$j]['abondoned_rate'];
@@ -589,14 +605,24 @@ function sr_number_format($input, $places)
 	        $results_cumm_top_cust = "";
 	    }
 
-	    //Top 5 Products
+	    //Top 5 Products OR Top 50 Products Detail View
 
-	    //Query to get the Top 5 Products
+	    //Query to get the Top 5 Products OR Top 50 Products Detail View
+	    if( isset($_POST['detailed_view']) && $_POST['detailed_view'] = '1'){
+
+	    	$limit = 50;
+	    } else{
+	    		$limit = 5;
+	    }
 
 	    $query_top_prod      		= "SELECT order_item.product_id as product_id,
 	                                    order_item.product_name as product_name,
+	                                    order_item.sku as sku,
+	                                    order_item.category as category,
 	                                    SUM( order_item.sales ) AS product_sales ,
-	                                    SUM( order_item.quantity ) AS product_qty
+	                                    COUNT( order_item.sales ) AS sales_count ,
+	                                    SUM( order_item.quantity ) AS product_qty,
+	                                    SUM( order_item.discount) AS discount 
 	                                    FROM `{$wpdb->prefix}sr_woo_order_items` AS order_item
 	                                        LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
 	                                        $terms_post_join
@@ -604,11 +630,12 @@ function sr_number_format($input, $places)
 	                                        $terms_post_cond
 	                                    GROUP BY order_item.product_id
 	                                    ORDER BY product_sales DESC
-	                                    LIMIT 5";
+	                                    LIMIT ".$limit;
 	    $results_top_prod    		= $wpdb->get_results ( $query_top_prod, 'ARRAY_A' );
 	    $rows_top_prod   		  	= $wpdb->num_rows;
 
-	    if($rows_top_prod > 0) {
+
+		if($rows_top_prod > 0) {
 	        foreach (array_keys($results_top_prod) as $results_top_prod1) {
 	            $top_prod_ids[] = $results_top_prod [$results_top_prod1]['product_id'];
 	        
@@ -623,7 +650,7 @@ function sr_number_format($input, $places)
 	        }
 	        
 
-	        //Query to get the Top 5 Products graph related data
+	        //Query to get the Top 5 Products graph related data OR Top 50 Products Detail View graph related data
 
 	        $query_top_prod_graph   = "SELECT order_item.product_id as product_id,
 	                                        SUM( order_item.sales ) AS product_sales,
@@ -763,7 +790,192 @@ function sr_number_format($input, $places)
 	            $index++;
 	        }    
 	    }
+	    
+	    if(isset($post['detailed_view'])){ // for Top Product Detail View Widget
 
+	    	// Query for total quantity
+	    	$query_total_quantity = "SELECT SUM(quantity)
+	    							 FROM {$wpdb->prefix}sr_woo_order_items 
+	    							 WHERE order_date BETWEEN '$start_date' AND '$end_date_query' 
+	    							 AND order_status IN ('wc-on-hold','wc-processing','wc-completed','wc-refunded')";
+
+	    	$total_quantity = $wpdb->get_var($query_total_quantity);
+	    	$results_top_prod['total_quantity_sold'] = $total_quantity;
+
+	    	// Per Product Sales funnel
+	    	$query_added_qty = "SELECT product_id, SUM(quantity) AS added_qty 
+								FROM  {$wpdb->prefix}sr_woo_abandoned_items
+								WHERE abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."' 
+								GROUP BY product_id";
+				
+			$added_qty = $wpdb->get_results($query_added_qty, 'ARRAY_A');
+			$num_rows = $wpdb->num_rows;
+			$total_added_qty = array();
+						
+			if($num_rows > 0){
+				foreach ($added_qty as $item) {
+						
+						$total_added_qty[ $item['product_id'] ]['added_qty'] = $item['added_qty'];
+	                }
+			}
+			
+			$query_ordered_qty = "SELECT product_id, SUM( quantity ) AS ordered_qty  
+								  FROM  {$wpdb->prefix}sr_woo_abandoned_items 
+								  WHERE order_id !='NULL'
+								  AND abandoned_cart_time BETWEEN '".strtotime($start_date)."' AND '". strtotime($end_date_query)."' 
+								  GROUP BY product_id";
+						
+			$ordered_qty = $wpdb->get_results($query_ordered_qty, 'ARRAY_A');
+			$num_rows = $wpdb->num_rows;
+			$total_ordered_qty= array();
+			
+			if($num_rows > 0){
+				foreach ($ordered_qty as $item) {
+						$total_ordered_qty[ $item['product_id'] ]['ordered_qty'] = $item['ordered_qty'];
+	                }
+			}
+			
+			$query_completed_qty = "SELECT items.product_id AS product_id, SUM(items.quantity) AS completed_qty 
+									FROM  {$wpdb->prefix}sr_woo_abandoned_items AS items
+										   JOIN {$wpdb->prefix}sr_woo_order_items AS sr_order ON ( sr_order.order_id = items.order_id AND sr_order.product_id = items.product_id ) 
+									WHERE sr_order.order_status = 'wc-completed' 
+									AND sr_order.order_date BETWEEN '$start_date' AND '$end_date_query' 
+									GROUP BY items.product_id";
+			
+			
+			$completed_qty = $wpdb->get_results($query_completed_qty, 'ARRAY_A');
+			$num_rows = $wpdb->num_rows;
+			$total_completed_qty= array();
+						
+			if($num_rows > 0){
+				foreach ($completed_qty as $item) {
+						$total_completed_qty[ $item['product_id'] ]['completed_qty'] = $item['completed_qty'];
+	                }
+			}
+			
+			$total_sales_funnel=array();
+
+			// code merged all the required data for sales funnel in single array.
+			foreach ($added_qty as $item) {
+				
+				 $total_sales_funnel[ $item['product_id'] ]['added_qty'] =  floatval($item['added_qty']);
+
+				 if(array_key_exists($item['product_id'], $total_ordered_qty)){
+
+					$total_sales_funnel[ $item['product_id'] ]['ordered_qty'] =  floatval($total_ordered_qty[ $item['product_id'] ]['ordered_qty']);
+				 	
+				 } else {
+				 	
+					$total_sales_funnel[ $item['product_id'] ]['ordered_qty'] = 0;
+				 }
+				 
+				if(array_key_exists($item['product_id'], $total_completed_qty)){
+
+					$total_sales_funnel[ $item['product_id'] ]['completed_qty'] = floatval($total_completed_qty[ $item['product_id'] ]['completed_qty']);
+				
+				} else {
+					
+					$total_sales_funnel[ $item['product_id'] ]['completed_qty'] = 0;
+
+				}
+			}
+			
+			$results_top_prod['sales_funnel_data'] = $total_sales_funnel;
+			
+	    	// Query for refund data
+	    	$query_refund_data = "SELECT GROUP_CONCAT( itemmeta.meta_value SEPARATOR  ',' ) AS meta_value,
+	    								GROUP_CONCAT( itemmeta.meta_key SEPARATOR  ',' ) AS meta_key
+								  FROM {$wpdb->prefix}woocommerce_order_itemmeta AS itemmeta
+										JOIN {$wpdb->prefix}woocommerce_order_items AS items ON ( itemmeta.order_item_id = items.order_item_id ) 
+										JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = items.order_id AND posts.post_status = 'wc-refunded' AND posts.post_date BETWEEN '$start_date' AND '$end_date_query' ) 
+								  WHERE itemmeta.meta_key IN ('_qty',  '_product_id',  '_variation_id', '_line_total') 
+								  GROUP BY items.order_item_id ";
+
+			
+			$refunds = $wpdb->get_results($query_refund_data, 'ARRAY_A' );
+			$num_rows = $wpdb->num_rows;
+
+			$refund_item_meta_key_values = array();
+			
+			if ($num_rows > 0) {
+                	foreach ( $refunds as $refund ) {
+	                    $refund_item_meta_values = explode(',', $refund ['meta_value'] );
+	                    $refund_item_meta_key = explode(',', $refund ['meta_key'] );
+                    
+
+	                    if ( count(  $refund_item_meta_values ) != count( $refund_item_meta_key ) )
+	                        continue; 
+	                    $refund_item_meta_key_values[] = array_combine($refund_item_meta_key, $refund_item_meta_values);
+	                    
+	                }
+	         }
+	         $refund_data = array();
+	         $total_ref_qty = 0;
+	         $total_ref_sales=0;
+         
+	         foreach ($refund_item_meta_key_values as $item){
+                
+                if( isset($item['_variation_id'] ) && $item['_variation_id'] > 0 ){ // if variation exists then use variation id as product id.
+                   	$item['_product_id'] = $item['_variation_id'];
+                	unset($item['_variation_id']);
+                }
+                
+                $key = $item['_product_id'];
+
+            	if ( !empty( $refund_data ) && array_key_exists($key, $refund_data) ){
+
+            		$refund_data[$key]['_qty'] += floatval($item['_qty']);
+            		$refund_data[$key]['_sales'] += floatval($item['_line_total']);
+            		
+            	} else{
+
+            		$refund_data[$key]['_qty'] = floatval($item['_qty']);
+            		$refund_data[$key]['_sales'] = floatval($item['_line_total']);
+            			
+            	}
+            	$total_ref_qty += $item['_qty'];
+            	$total_ref_sales+= $item['_line_total'];
+            }
+
+             foreach ($refund_data as &$product) {
+            
+            	$product['percent_of_total_ref_qty'] = sr_number_format(($product['_qty']/$total_ref_qty) * 100 , $sr_decimal_places ).'%';
+
+            }
+
+            $results_top_prod['refund_data'] = $refund_data;
+            
+            // discounted sales & qty
+
+            $query_discount_sales = "SELECT product_id, SUM(quantity) AS qty , SUM(sales) AS sales  
+            						 FROM {$wpdb->prefix}sr_woo_order_items 
+            						 WHERE order_date BETWEEN '$start_date' AND '$end_date_query' 
+	    							 AND order_status IN ('wc-on-hold','wc-processing','wc-completed')
+	    							 AND discount > 0
+	    							 GROUP BY product_id";
+	    	$discount_sales = $wpdb->get_results($query_discount_sales, 'ARRAY_A');
+	    	$num_rows = $wpdb->num_rows;
+	    	$total_discount_sales = array();
+
+	    	if($num_rows > 0) {
+	    		foreach ($discount_sales as $item) {
+
+	    			$total_discount_sales[$item['product_id']]['disc_qty'] = floatval($item['qty']);
+	    			$total_discount_sales[$item['product_id']]['disc_sales'] = floatval($item['sales']);
+	    		}
+	    	}
+
+	    	$results_top_prod['total_discount_sales'] = $total_discount_sales;
+
+	    	$results_top_prod['total_monthly_sales'] = $total_monthly_sales;
+	    	$limit = "";
+	    	$results_top_prod['abandoned_data'] = json_decode(sr_get_abandoned_products($start_date,$end_date_query,$group_by,$sr_currency_symbol,$sr_decimal_places,$date_series,$select_top_abandoned_prod,$limit,$terms_taxonomy_ids,$sr_is_woo22),true);
+	    	
+	    	$results[0] = $results_top_prod;
+	    	return $results;
+            
+	    }
+	    
 	    //Query for Avg. Items Per Customer
 
 	    $query_cumm_reg_cust_count 	="SELECT COUNT(DISTINCT postmeta.meta_value) AS cust_orders
@@ -1488,8 +1700,6 @@ function sr_number_format($input, $places)
 	            }
 	        }
 
-
-
 	        $results [6] = floatval($max_sales+100);
 
 	        if($total_discount_sales > 0) {
@@ -1692,7 +1902,8 @@ function sr_number_format($input, $places)
         	$results =  sr_query_sales($start_date,$end_date_query,$date_series,$select,"display_date_time",$select_top_prod,$select_top_abandoned_prod,$terms_taxonomy_ids,$post);  
 	    }
 
-	    if (isset($post['option'])) {
+
+	    if (isset($post['option']) || isset($post['detailed_view'])) { // for Top Product Detail View Widget
 	        $results[1] = $min_date_sales;
 	        $results[2] = $max_date_sales;
 	    }
@@ -2354,15 +2565,10 @@ function sr_number_format($input, $places)
 
 		echo json_encode (sr_get_daily_kpi_data());
 	}
-
-	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'product_detailed_view_track') )) {
-		$result = wp_remote_post('http://www.storeapps.org/?utm_source=SR&utm_medium=pro&utm_campaign=product_detailed_view');
-	}
-
-
 	if (isset ( $_POST ['cmd'] ) && (($_POST ['cmd'] == 'monthly') )) {
 
 		$sr_currency_symbol = isset($_POST['SR_CURRENCY_SYMBOL']) ? $_POST['SR_CURRENCY_SYMBOL'] : '';
+	    $sr_currency_pos	= isset($_POST['SR_CURRENCY_POS']) ? $_POST['SR_CURRENCY_POS'] : '';
 	    $sr_decimal_places = isset($_POST['SR_DECIMAL_PLACES']) ? $_POST['SR_DECIMAL_PLACES'] : '';
 
 		//Get the converted dates    
@@ -2390,7 +2596,151 @@ function sr_number_format($input, $places)
 
 	    $actual_cumm_sales = sr_get_sales ($start_date,$end_date,$diff_dates,$_POST);
 
-	    if (isset($_POST['option'])) { // Condition to handle the change of graph on option select
+	     if(isset($_POST['detailed_view'])){ // for Top Product Detail View Widget 
+
+			$encoded['days'] = $comparison_diff_dates;
+			
+			// Code for calculating the sales frequency days
+			$date_diff_detail = round((strtotime($comparison_end_date)-strtotime($comparison_start_date)) / 60);
+			$frequency_diff_detail_days = $date_diff_detail / 1440;
+			
+			$tot_quantity_sold = $actual_cumm_sales[0]['total_quantity_sold'];
+			unset($actual_cumm_sales[0]['total_quantity_sold']);
+			$encoded['total_quantity_sold'] = $tot_quantity_sold; 
+
+			$tot_sales_funnel = $actual_cumm_sales[0]['sales_funnel_data'];
+			unset($actual_cumm_sales[0]['sales_funnel_data']);
+			$encoded['total_sales_funnel'] = $tot_sales_funnel;
+
+
+			$refund_items = $actual_cumm_sales[0]['refund_data'];
+			unset($actual_cumm_sales[0]['refund_data']);
+			$encoded['refund_data'] = $refund_items;
+
+			$tot_discount_sales = $actual_cumm_sales[0]['total_discount_sales'];
+			unset($actual_cumm_sales[0]['total_discount_sales']);
+			$encoded['total_discount_sales'] = $tot_discount_sales;
+
+			$tot_month_sales = $actual_cumm_sales[0]['total_monthly_sales'];
+			unset($actual_cumm_sales[0]['total_monthly_sales']);
+			$encoded['total_monthly_sales'] = $tot_month_sales;
+			
+			$abandoned_data = $actual_cumm_sales[0]['abandoned_data'];
+			unset($actual_cumm_sales[0]['abandoned_data']);
+			// $encoded['abandoned_data']= $abandoned_data;
+			
+			$formatted_abandoned_data = array();
+
+			foreach ($abandoned_data as $product) {
+
+				$formatted_abandoned_data[$product['id']]= array('abandoned_rate' => $product['abandoned_rate'],
+																  'abondoned_qty' => $product['abondoned_qty'],
+																	'price'=> $product['price']);
+				
+			}
+			
+			$encoded['sales_min_date']= $actual_cumm_sales[1];
+			$encoded['sales_max_date']= $actual_cumm_sales[2];
+			$encoded['top_prod_detail_view_data'] = $actual_cumm_sales[0];
+			
+			$where_date 	   = " AND (posts.`post_date` between '" .$encoded['sales_min_date']. "' AND '" . $encoded['sales_max_date']. "')";			
+			$size 			   = 'thumbnail';
+			$attr 			   = array( 'style' => 'max-height:50px;width:50px;' );
+			
+			$woo_default_thumb = WP_PLUGIN_URL . '/smart-reporter-for-wp-e-commerce/resources/themes/images/woo_default_image.png';
+			
+			foreach ($encoded['top_prod_detail_view_data'] as &$item){
+
+				// code for calculating the 'one sales every' frequency for each product.
+				$sales_detail_frequency = (!empty($item['sales_count'])) ? ($frequency_diff_detail_days / $item['sales_count']) : '0';
+				$item['one_sale_every'] = sr_get_frequency_formatted($sales_detail_frequency);
+
+				// code for fetching thumbnail image of product
+				$image         = get_the_post_thumbnail( $item['product_id'], $size, $attr );
+				$item['image'] = (!empty($image)) ? $image : '<img style="max-width:50px; max-height:50px;" src="'. $woo_default_thumb .'">';
+
+				$item['discount']= $sr_currency_symbol . sr_number_format($item['discount'], $sr_decimal_places);
+				$item['percent_of_total_quantity'] = sr_number_format(($item['product_qty'] / $tot_quantity_sold ) * 100 , $sr_decimal_places).'%';
+				// $item['product_qty'] = sr_number_format($item['product_qty'], $sr_decimal_places);
+				$item['product_qty'] = floatval($item['product_qty']);
+								
+				$item['per_day_sales']  = sprintf( $sr_currency_pos , $sr_currency_symbol , sr_number_format( $item['product_sales'] / $comparison_diff_dates , $sr_decimal_places) );
+				
+				$item['percent_of_total_sales'] = sr_number_format(($item['product_sales'] / $tot_month_sales ) * 100 , $sr_decimal_places).'%';
+				$item['product_sales'] = floatval($item['product_sales']);
+				$item['product_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format($item['product_sales'], $sr_decimal_places) );
+
+				// code for fetching last few orders of every product.
+				$item['last_few_orders'] = get_last_few_order_details($item['product_id'], $where_date);
+				
+				// code for assigning abandonment rate, qty & price to every product.
+				if( array_key_exists( $item['product_id'] , $formatted_abandoned_data ) ) {
+
+				$item['abandonment_rate'] = $formatted_abandoned_data[ $item['product_id'] ]['abandoned_rate'];
+				$item['abandoned_qty']  = $formatted_abandoned_data[ $item['product_id'] ]['abondoned_qty'];
+				$item['abandoned_price']= $formatted_abandoned_data[ $item['product_id'] ]['price'];
+				
+				} else {
+						$item['abandonment_rate'] = 0.00.'%';
+						$item['abandoned_qty']    = 0.00;
+						$item['abandoned_price']  = 0.00;
+				}
+
+				// code for assigning refund qty, refund sales, refund rate
+				if( array_key_exists( $item['product_id'] , $refund_items ) ) {
+
+					$item['refund_qty']   = $refund_items[ $item['product_id'] ]['_qty'];
+					$item['refund_qty_show'] = sr_number_format($refund_items[ $item['product_id'] ]['_qty'], $sr_decimal_places);
+					$item['refund_sales'] = $refund_items[ $item['product_id'] ]['_sales'];
+					$item['refund_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format($refund_items[ $item['product_id'] ]['_sales'], $sr_decimal_places) );
+					$item['refund_rate']  = $refund_items[ $item['product_id'] ]['percent_of_total_ref_qty'];
+					$item['total_sales'] = $item['product_sales'] + $item['refund_sales'];
+
+				
+				} else {
+						$item['refund_qty']   = 0.00;
+						$item['refund_qty_show']   = 0.00;
+						$item['refund_sales'] = 0.00;
+						$item['refund_sales_show'] = 0.00;
+						$item['refund_rate']  = 0.00.'%';
+						$item['total_sales'] = $item['product_sales'];
+
+				}
+
+				// code to assigned sales funnel
+				if( array_key_exists( $item['product_id'] , $tot_sales_funnel ) ) {
+					$item['sales_funnel'] = $tot_sales_funnel[ $item['product_id'] ];
+					
+				} else {
+					$item['sales_funnel'] = 0;
+						
+				}
+
+				// code to assigned discount qty, discount sales
+				if( array_key_exists( $item['product_id'] , $tot_discount_sales ) ) {
+					$item['discount_qty'] 	= $tot_discount_sales[ $item['product_id'] ]['disc_qty'];
+					$item['discount_qty_show'] 	= sr_number_format($tot_discount_sales[ $item['product_id'] ]['disc_qty'], $sr_decimal_places);
+					$item['non_discount_qty'] 	= $item['product_qty'] - $item['discount_qty'];
+					$item['non_discount_qty_show'] 	= sr_number_format($item['non_discount_qty'], $sr_decimal_places);
+					$item['discount_sales'] = $tot_discount_sales[ $item['product_id'] ]['disc_sales'];
+					$item['discount_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format($tot_discount_sales[ $item['product_id'] ]['disc_sales']) );
+					$item['non_discount_sales'] = $item['product_sales'] - $tot_discount_sales[ $item['product_id'] ]['disc_sales'];
+					$item['non_discount_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format( $item['product_sales'] - $tot_discount_sales[ $item['product_id'] ]['disc_sales'], $sr_decimal_places) );
+					
+					
+				} else{
+					$item['discount_qty'] = 0;
+					$item['discount_qty_show'] = 0;
+					$item['non_discount_qty'] 	= $item['product_qty'];
+					$item['non_discount_qty_show'] 	= sr_number_format($item['product_qty'], $sr_decimal_places);
+					$item['discount_sales'] = 0;
+					$item['discount_sales_show'] = 0;
+					$item['non_discount_sales'] = $item['product_sales'];
+					$item['non_discount_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format( $item['product_sales'], $sr_decimal_places) );
+				}
+			}
+
+		} elseif ( isset( $_POST['option'] ) ) { // Condition to handle the change of graph on option select
 	        $encoded['graph_data'] = $actual_cumm_sales[0];
 	        $encoded['cumm_sales_min_date'] = $actual_cumm_sales[1];
 	        $encoded['cumm_sales_max_date'] = $actual_cumm_sales[2];
@@ -2771,6 +3121,7 @@ function sr_number_format($input, $places)
 							  GROUP_CONCAT( distinct postmeta.meta_value
 									ORDER BY postmeta.meta_id 
 									SEPARATOR ' ' ) AS cname,
+							  ( SELECT post_meta.meta_value FROM {$wpdb->prefix}postmeta AS post_meta WHERE post_meta.post_id = order_item.order_id AND post_meta.meta_key = '_billing_country' ) AS country,
 							  ( SELECT post_meta.meta_value FROM {$wpdb->prefix}postmeta AS post_meta WHERE post_meta.post_id = order_item.order_id AND post_meta.meta_key = '_order_total' ) AS totalprice
 					  ";
 			
@@ -2805,7 +3156,28 @@ function sr_number_format($input, $places)
 				foreach ( $results as $result ) { // put within condition	
 					$order_data [$cnt] ['purchaseid'] = $result ['order_id'];
 					$order_data [$cnt] ['date']       = date( "d-M-Y",strtotime( $result ['date'] ) ); 
+
+					if(isset($_POST['detailed_view'])){ // for detailed view widget
+						
+						$order_data [$cnt] ['totalprice'] 	  = sprintf( $_POST['SR_CURRENCY_POS'] , $_POST['SR_CURRENCY_SYMBOL'] , sr_number_format($result ['totalprice'], $_POST['SR_DECIMAL_PLACES']) );
+						$order_data [$cnt] ['country_code']	  = $result ['country'];
+
+						if (!empty($_POST['SR_IS_WOO22']) && $_POST['SR_IS_WOO22'] == "true") {
+
+							$countries = WC()->countries->get_countries();
+						}
+						elseif ( !empty($_POST['SR_IS_WOO22'] ) && $_POST['SR_IS_WOO22'] == "false" ) {
+							global $woocommerce;
+							$countries = $woocommerce->countries->get_countries();
+						}
+						$order_data [$cnt] ['country_name'] = html_entity_decode($countries[ $result['country'] ]);
+					
+					} else{
+
 					$order_data [$cnt] ['totalprice'] = woocommerce_price( $result ['totalprice'] );
+
+					}
+
 					$order_data [$cnt] ['cname']      = $result ['cname'];
 					$orders [] = $order_data [$cnt];				
 					$cnt++;

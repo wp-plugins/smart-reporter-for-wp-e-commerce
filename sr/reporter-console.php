@@ -22,6 +22,7 @@ $selectedDateValue = (defined('SRPRO') && SRPRO === true) ? 'THIS_MONTH' : 'LAST
 
 //Global Variables
 $sr_currency_symbol = defined('SR_CURRENCY_SYMBOL') ? SR_CURRENCY_SYMBOL : '';
+$sr_currency_pos   = defined('SR_CURRENCY_POS') ? SR_CURRENCY_POS : '';
 $sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
 $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
 $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
@@ -1842,7 +1843,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
             Top Products
 
                 <span id="sr_cumm_top_prod_detailed_view" title="Expand" class="top_prod_detailed_view" >
-                    <i id="sr_cumm_top_prod_detailed_view_icon" class= "fa fa-expand icon_cumm_widgets" style="color:#B1ADAD" ></i>
+                    <i id="sr_cumm_top_prod_detailed_view_icon" class= "fa fa-ellipsis-h icon_cumm_widgets" style="color:#B1ADAD" ></i>
                 </span>
 
                 <div class="switch switch-blue">
@@ -1867,52 +1868,585 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 // ================================================
  -->
 <a title="Top Products Detailed View" class="ajax-popup-link" id="detailed_view_link"></a>
-<div id="top_prod_detailed_view_widget" class="white-popup mfp-hide no_data_text">
-    <div style="font-size:3em !important; margin-top:0.3em! important; margin-bottom:0.3em! important"> Coming Soon </div>
-</div>
+
+<div id="top_prod_detailed_view_widget" class="white-popup mfp-hide" >
+
+<script type="text/javascript">
+
+    jQuery(function($){
+        var sr_detailed_view_html = '<div id="sr_prod_details"  class="prod_details"> \
+                                        <table id="prod_details_table" class="details_table"></table> \
+                                    </div> \
+                                    <div id="sr_prod_sales_details" class="prod_sales_details"> \
+                                        <div id="chartpseudotooltip_detail"></div> \
+                                        <div id="sr_kpi_details" class="kpi_details"> \
+                                        <table id="kpi_display_table" class="kpi_table"></table> \
+                                    </div> \
+                                    <div id="sr_recent_orders" class="recent_orders"> \
+                                    <h3 id="recent_orders_heading" class="recent_orders_heading"><?php _e("Recent Orders" , "smart-reporter"); ?></h3>\
+                                    <table id="recent_orders_table" class="recent_orders_table"></table> \
+                                    </div> \
+                                    <div id="sr_detail_sales_graph_funnel" class="sales_graph_funnel"> \
+                                            <div id="draw_sales_graph" class="draw_sales_graph"></div> \
+                                            <div id="draw_sales_funnel" class="draw_sales_funnel"></div> \
+                                    </div> \
+                                    <div id="sr_prod_sales_donuts" class="prod_sales_donuts"> \
+                                            <div id="sr_sales_donut" class="sales_donut"></div> \
+                                    </div> \
+                                    </div>';
+                   
+                        $("#sr_cumm_top_prod_detailed_view").on('mouseenter',function() {
+                            $('#sr_cumm_top_prod_detailed_view_icon').css("color","#FFFFFF");
+                        });
+
+                        $("#sr_cumm_top_prod_detailed_view").on('mouseleave',function() {
+                            $('#sr_cumm_top_prod_detailed_view_icon').css("color","#B1ADAD");
+                        });
+
+                        //code to display Top Product Detailed View Widget
+                        $("#sr_cumm_top_prod_detailed_view").on('click', function() {
+                            <?php 
+                                    if (defined('SRPRO') && SRPRO === true) {
+                                        ?>
+                                    $('a#detailed_view_link').trigger('click');
+                                    
+                            <?php   }else {?>
+                           
+                                    alert('<?php _e( "Sorry! Expand Detailed View functionality is available only in Pro version" , "smart-reporter" );?>');
+                            <?php   }?>      
+                        });
+
+                        var detail_view_data;// to store all the data for detailed view widget
+                        var currency = '<?php echo $sr_currency_symbol; ?>';
+                        var decimals = '<?php echo $sr_decimal_places; ?>';
+
+                        $('.ajax-popup-link').magnificPopup({
+
+                            items: {
+                              src: '#top_prod_detailed_view_widget',
+                              type: 'inline'
+                          },
+                          closeBtnInside: true,
+						  // closeOnBgClick: true,
+                    	  showCloseBtn  : true,
+                          tError: '<?php _e('The content could not be loaded.', 'smart-reporter' ); ?>',
+                          callbacks:{
+                            open: function() {
+                                $.ajax({
+                                            type : 'POST',
+                                            url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                                            dataType:"text",
+                                            async: false,
+                                            action: 'get_monthly_sales',
+                                            data: {
+                                                cmd: 'monthly',
+                                                detailed_view: 1,
+                                                start_date : $("#startdate").val(),
+                                                end_date : $("#enddate").val(),
+                                                SR_IS_WOO22 : '<?php echo $sr_is_woo22; ?>',
+                                                SR_CURRENCY_SYMBOL : '<?php echo $sr_currency_symbol; ?>',
+                                                SR_CURRENCY_POS    : '<?php echo $sr_currency_pos; ?>',
+                                                SR_DECIMAL_PLACES : '<?php echo $sr_decimal_places; ?>'      
+                                            },
+                                            success: function(response) {
+
+                                                detail_view_data  = $.parseJSON(response);
+                                                //var table_html = '<tr><th colspan="2"><label for="product_name"><?php _e("Products", "smart-reporter"); ?></label></th></tr>';
+                                                var table_html;
+                                                 
+                                                for (var i = 0; i < detail_view_data['top_prod_detail_view_data'].length; i++) {
+                                                      
+                                                      var image = detail_view_data['top_prod_detail_view_data'][i].image;
+                                                      var prod_name = detail_view_data['top_prod_detail_view_data'][i].product_name;
+                                                      var prod_category = detail_view_data['top_prod_detail_view_data'][i].category;
+                                                      var prod_name_trimmed = "";
+                                                      var product_sales_show= detail_view_data['top_prod_detail_view_data'][i].product_sales_show;
+                                                      var prod_qty = detail_view_data['top_prod_detail_view_data'][i].product_qty;
+                                                      var prod_sku= detail_view_data['top_prod_detail_view_data'][i].sku;
+                                                      var prod_sku_cap = prod_sku.toUpperCase();
+                                                       
+                                                      if (prod_name.length >= 52) {
+
+                                                        prod_name_trimmed = prod_name.substring(0,51) + "...";
+                                                      
+                                                      } else {
+                                                          
+                                                          prod_name_trimmed = prod_name;
+                                                      
+                                                      }
+                                                     
+                                                      if (prod_category.length >= 60) {
+
+                                                          prod_category_trimmed = prod_category.substring(0,56) + "...";
+                                                      
+                                                      } else {
+
+                                                          prod_category_trimmed = prod_category;
+                                                      
+                                                      }
+                                                      
+                                                      table_html += '<tr id="'+i+'" ><td title = "'+ prod_name + '" style="width:5%;">' + image + '</td><td>' + '<div style="margin-top: 0.8em; color: #5C5C5C;" class="details_display">' + prod_name_trimmed + '</div>';
+
+                                                      if( prod_category_trimmed != "") {
+                                                         table_html += '<div class="details_display">' + prod_category_trimmed + '</div>';
+                                                      }
+                                                                                                              
+                                                      if( prod_sku != "" ){
+                                                       
+                                                        table_html += '<div style="font-family: monospace;" class="details_display">' + prod_sku_cap + ' • <span class="sales_highlight">' + product_sales_show + '</span> • ' + prod_qty + '</div></td></tr>';
+                                                      
+                                                      } else {
+                                                        
+                                                        table_html += '<div class="details_display"><span class="sales_highlight">'+ product_sales_show + '</span> • ' + prod_qty + '</div></td></tr>';
+                                                      
+                                                      }
+
+                                                };
+
+
+                                                if(detail_view_data['top_prod_detail_view_data'].length > 0) {
+                                                        $('#top_prod_detailed_view_widget').removeClass('no_data_text');
+                                                        $('#top_prod_detailed_view_widget').removeAttr('style');
+                                                        $('#top_prod_detailed_view_widget').html(sr_detailed_view_html);
+                                                        $('#prod_details_table').html(table_html);
+                                                        $('#prod_details_table').css("cursor" , "pointer");
+                                                        $('tr#0').trigger('click'); // defalut load sales & graph data of first row.
+                                                }
+                                                else {
+                                                        $('#top_prod_detailed_view_widget').empty();
+                                                        $('#top_prod_detailed_view_widget').text('No Data');
+                                                        $('#top_prod_detailed_view_widget').addClass('no_data_text');
+                                                        $('#top_prod_detailed_view_widget').css({'margin-top':'6.7em', 'content':'No Data'});
+                                                }
+                                            }
+                                        });// end of ajax
+                                },
+
+                            parseAjax: function(mfpResponse) {
+                            }
+                        }
+                    });
+
+                        // On click of any row display sales data of that associative product
+                            var top_prod_detailed_plot = '';
+                            var index, prod_sales, prod_qty;
+                            var discount_sales, discount_qty, refund_sales, refund_qty;
+                            var non_discount_sales, non_discount_qty,total_sales, total_qty;
+                            
+
+                        $('#prod_details_table tr').live('click', function(){ 
+                            var row     = $(this).attr('id');
+                                index   = detail_view_data['top_prod_detail_view_data'][row];    
+                            var tick_format           = detail_view_data['tick_format'];
+                            var prod_name             = index.product_name;
+                                prod_sales            = index.product_sales;
+                                prod_qty              = index.product_qty;
+                            var discount              = index.discount;
+                                discount_qty          = index.discount_qty;
+                                discount_qty_show          = index.discount_qty_show;
+                                discount_sales        = index.discount_sales;
+                                discount_sales_show        = index.discount_sales_show;
+                            var no_of_orders          = index.sales_count;
+                            var one_sale_every        = index.one_sale_every;
+                            var per_day_sales         = index.per_day_sales;
+                            var percent_of_total_sales= index.percent_of_total_sales;
+                            var percent_of_total_quantity = index.percent_of_total_quantity;
+                            var abandonment_rate        = index.abandonment_rate;
+                                refund_qty            = index.refund_qty;
+                                refund_qty_show       = index.refund_qty_show;
+                                refund_sales          = index.refund_sales;
+                                refund_sales_show     = index.refund_sales_show;
+                            var refund_rate           = index.refund_rate;
+
+                                non_discount_sales    = index.non_discount_sales;
+                                non_discount_sales_show    = index.non_discount_sales_show;
+                                total_sales           = index.total_sales;
+                                non_discount_qty      = index.non_discount_qty;
+                                non_discount_qty_show      = index.non_discount_qty_show;
+                            
+                            table_data = '<tr><td><span class="kpi_widgets_price">'+per_day_sales+'</span><p class ="kpi_widgets_text"><?php _e(" per Day Sales" , "smart-reporter"); ?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+one_sale_every+'</span><p class ="kpi_widgets_text"><?php _e("1 Sale Every" , "smart-reporter"); ?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+no_of_orders+'</span><p class ="kpi_widgets_text"><?php _e( "Orders Placed" , "smart-reporter" );?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+abandonment_rate+'</span><p class ="kpi_widgets_text"><?php _e( "Abandonment Rate" , "smart-reporter"); ?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+refund_rate+'</span><p class ="kpi_widgets_text"><?php _e("Refund Rate " , "smart-reporter"); ?></p></td></tr>';
+
+
+                            $('#kpi_display_table').html(table_data);
+                                                           
+                              
+                            // code to display last few ordes of every product
+                            var last_few_orders='';
+
+                            for(var i = 0; i < index['last_few_orders']['orderDetails'].orderTotalCount; i++ ){
+                                   
+                              var date           = index['last_few_orders']['orderDetails']['order'][i].date;
+                              var cust_name      = index['last_few_orders']['orderDetails']['order'][i].cname;
+                              var cust_name_trimmed = "";
+                              var country_code   = index['last_few_orders']['orderDetails']['order'][i].country_code;
+                              var country_name   = index['last_few_orders']['orderDetails']['order'][i].country_name;
+                              var country_name_trimmed = "";
+                              var price          = index['last_few_orders']['orderDetails']['order'][i].totalprice;
+                              var order_id       = index['last_few_orders']['orderDetails']['order'][i].purchaseid;
+                              var editlink       = '<?php echo admin_url("post.php?post='+order_id+'&action=edit"); ?>';
+                              
+                                  cust_name      = cust_name.replace(/^\s+|\s+$/g,"");
+
+                                  if (cust_name.length >= 25) {
+                                    cust_name_trimmed = cust_name.substring(0,24) + "...";
+                                  }
+                                  else {
+                                   cust_name_trimmed = cust_name;
+                                  }
+
+                                  if(country_name.length >=35){
+                                    country_name_trimmed = country_name.substring(0,34) + "...";
+                                  }
+                                  else{
+                                    country_name_trimmed = country_name;
+                                  }
+                                                           
+                              // last_few_orders +='<tr style="max-height:19px;"><td style ="width:8em;" title = "'+date+'">'+date+'</td><td style ="width:15em;" title ="'+cust_name+'"><a href="'+editlink+'" target="_blank">'+cust_name+'</a></td><td style ="width:3em;" title="'+country_name+'">'+country_code+'</td><td style ="width:10em;" >'+price+'</td></tr>';
+                              last_few_orders +='<tr style="max-height:19px;"><td style ="width:5em;" title = "' + date + '">' + date + '</td><td style ="width:20em;" title ="' + cust_name + '"><a href="' + editlink + '" target="_blank">' + cust_name_trimmed + '</a>' + ' - ' + country_name_trimmed + '</td><td style ="width:5em;" >' + price + '</td></tr>';
+                            }
+                              $( '#recent_orders_heading' ).css( 'display' , 'block' );
+                              $( '#recent_orders_table' ).html( last_few_orders );
+                              $( '#recent_orders_table' ).find('tbody').css('vertical-align', 'top');
+
+                            // code to display sales funnel
+                                var sales_funnel = [];
+
+                                if( index.sales_funnel !== 0 ) {
+
+                                  sales_funnel[ 'total_cart_qty' ]      = index[ 'sales_funnel' ][ 'added_qty' ];
+                                  sales_funnel[ 'total_ordered_qty' ]   = index[ 'sales_funnel' ][ 'ordered_qty' ];
+                                  sales_funnel[ 'total_completed_qty' ] = index[ 'sales_funnel' ][ 'completed_qty' ];
+
+                                } else{
+                                    sales_funnel = 0;
+                                    
+                                }
+
+                                // $('#draw_sales_funnel').empty();
+                                if ( $( '#draw_sales_funnel' ).hasClass( 'no_data_text' ) ) {
+
+                                    $( '#draw_sales_funnel' ).removeClass( 'no_data_text' );
+                                    $( '#draw_sales_funnel' ).removeAttr( 'style' );
+                                    $( '#draw_sales_funnel' ).css( 'height' , '13em' );
+                                    $( '#draw_sales_funnel' ).css( 'width' , '25%' );
+                                    // $('#draw_sales_funnel').css('margin-left' ,'4em');
+                                }
+
+                                if( sales_funnel !== 0) {
+                                    $('#draw_sales_funnel').empty();
+
+                                    $.jqplot('draw_sales_funnel',  [[['Added to Cart', sales_funnel['total_cart_qty']],
+                                                                         ['Orders Placed', sales_funnel['total_ordered_qty']],
+                                                                         ['Orders Completed',sales_funnel['total_completed_qty']]]], {
+                                        title: '<?php _e("Sales Funnel" , "smart-reporter"); ?>',                                        
+                                        grid: {
+                                            backgroundColor: 'transparent',
+                                            drawBorder: false,
+                                            shadow: false
+                                        },
+
+                                        gridPadding: {top:-6.5, bottom:47, left:0, right:0},
+                                        // gridPadding: {top:0, bottom:47, left:0, right:0},
+
+                                            series:[{startAngle: -90,
+                                                  dataLabels: 'percent',
+                                                  padding: 0, 
+                                                  sliceMargin: 4}],
+
+
+                                            cursor: {
+                                              show: false
+                                            },
+                                           
+                                           seriesDefaults: {
+                                               renderer: $.jqplot.FunnelRenderer,
+
+                                               shadow: false,
+                                            
+                                               seriesColors: ['#04c0f0','#a6dba0','#e69a01'], // FINAL
+
+                                                 rendererOptions:{
+                                                         sectionMargin: 5,
+                                                         widthRatio: 0.3,
+                                                         showDataLabels: true,
+                                                        dataLabels: [[sales_funnel['total_cart_qty']],
+                                                                     [sales_funnel['total_ordered_qty']],
+                                                                     [sales_funnel['total_completed_qty']]]
+                                                  }
+                                            },
+
+                                            legend: { 
+                                                show:true,
+                                                placement: 'outsideGrid',                      
+                                                // placement: 'outside',                      
+                                                rendererOptions: {
+                                                    numberRows: 3
+                                                    
+                                                }, 
+                                                location: 'w'
+                                            }
+
+                                    });
+                                
+                                
+                                $('#draw_sales_funnel').find('.jqplot-title').removeClass('jqplot-title').addClass('sales_funnel_title');                                
+                                $('#draw_sales_funnel').find('.jqplot-table-legend').addClass('sales_funnel_table-legend');
+                                
+                                } else {
+                                    $('#draw_sales_funnel').removeAttr('style');
+                                    $('#draw_sales_funnel').text('No Data');
+                                    $('#draw_sales_funnel').addClass('no_data_text');
+                                    $('#draw_sales_funnel').css('margin-top','6.7em');
+                                }
+
+                                $('.jqplot-table-legend-swatch').addClass('sales_funnel_table-legend-swatch');
+                                
+                                var funnel_legend = ["Added to Cart","Orders Placed","Orders Completed"]; 
+
+                                $('td:contains("Added to Cart"), td:contains("Orders Placed")').css({"min-width": "7em"});
+                                $('td:contains("Orders Completed")').css({"min-width": "9em"});
+
+                              // code to load graph data in array format for jqplot
+                              for(var i = 0, len = index['graph_data'].length; i < len; i++) {
+                                    sales_trend[i] = new Array();
+                                    sales_trend[i][0] = index['graph_data'][i].post_date;
+                                    sales_trend[i][1] = index['graph_data'][i].sales;
+                                };
+
+                                var monthly_detail_view_sales_graph = function() { 
+
+                                            if (top_prod_detailed_plot != '') {
+                                                top_prod_detailed_plot.destroy();
+                                            }
+
+                                            top_prod_detailed_plot = $.jqplot('draw_sales_graph',  [sales_trend], {
+                                           title: '<?php _e("Sales Trend" , "smart-reporter"); ?>',
+                                           axes: {
+                                                     yaxis: {  
+                                                          tickOptions: {
+                                                          formatter: tickFormatter,
+                                                        },
+                                                         // label: 'Sales',
+                                                         showTicks: true,
+                                                         // min:-index.max_value/4,
+                                                         min: 0,
+                                                         max: index.max_value + index.max_value/4
+                                                     } ,
+                                                    xaxis: {                    
+                                                        // label: 'Date',
+                                                        renderer:$.jqplot.DateAxisRenderer, 
+                                                        tickOptions:{formatString:tick_format},
+                                                        showTicks: true,
+                                                        min: detail_view_data['sales_min_date'],
+                                                        max: detail_view_data['sales_max_date']
+                                                    }
+                                                },
+                                                axesDefaults: {
+                                                    // labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                                                    rendererOptions: {
+                                                        baselineWidth: 1.5,
+                                                        // drawBaseline: false // property to hide the axes from the graph
+                                                        drawBaseline: true // property to hide the axes from the graph
+                                                    }
+                                                      
+                                                },
+                                                // actual grid outside the graph
+                                                grid: {
+                                                    drawGridlines: false,
+                                                    backgroundColor: 'transparent',
+                                                    borderWidth: 0,
+                                                    shadow: false
+
+                                                },
+                                                
+                                                highlighter: {
+                                                    show: true,
+                                                    sizeAdjust: 0.8,
+                                                    tooltipLocation: 'ne'
+                                                },
+                                                cursor: {
+                                                  show: false
+                                                },
+                                                series: [
+                                                        { markerOptions: { style:"filledCircle" } },
+
+                                                ],
+                                                animate: true,
+                                                animateReplot : true,
+                                                seriesDefaults: {
+                                                    showTooltip:true,
+                                                    rendererOptions: {smooth: true},
+                                                    lineWidth: 2,
+                                                    color : '#368ee0',
+                                                    fillToZero: true,
+                                                    useNegativeColors: false,
+                                                    fillAndStroke: true,
+                                                    fillColor: '#85D1F9',
+                                                    showMarker:true,
+                                                    showLine: true // shows the graph trend line
+                                            }
+                                        });// closing of jqplot
+                                }
+                            
+                            monthly_detail_view_sales_graph();// call function to draw graph 
+
+                            $('#draw_sales_graph').find('.jqplot-title').removeClass("jqplot-title").addClass("sales_graph_donut_title");
+                             $('#draw_sales_graph').find('.sales_graph_donut_title').css({ "top" : "-1em" });                       
+                          
+                            // code to draw sales kpi donut
+
+                            var sales_kpi_donut = function() {
+
+                                var kpi_data = new Array();
+
+                                $('#sr_sales_donut').empty();
+                                
+                                if( prod_sales !== 0) {
+
+                                        $('#sr_sales_donut').empty();
+
+                                        if ($('#sr_sales_donut').hasClass('no_data_text')) {
+                                            
+                                            $('#sr_sales_donut').removeClass('no_data_text');
+                                            $('#sr_sales_donut').removeAttr('style');
+                                            $('#sr_sales_donut').css('height' ,'100%');
+                                            $('#sr_sales_donut').css('width' ,'50%');
+                                        }
+                                                                           
+                                        kpi_data[0]    = new Array();
+                                        kpi_data[0][0] = 'Non-Discount';
+                                        kpi_data[0][1] = non_discount_sales;
+                                        kpi_data[0][2] = precise_round((non_discount_sales/total_sales)*100 , decimals) + '%';
+                                        kpi_data[0][3] = non_discount_qty_show;
+                                        kpi_data[0][4] = non_discount_sales_show;
+
+                                        kpi_data[1]    = new Array();
+                                        kpi_data[1][0] = 'Discount';
+                                        kpi_data[1][1] = discount_sales;
+                                        
+                                        if(discount_sales > 0){
+                                        
+                                        kpi_data[1][2] = precise_round((discount_sales /total_sales)*100 , decimals) + '%';
+                                        
+                                        } else {
+                                            kpi_data[1][2]= 0.00 + '%';
+                                        }
+
+                                        kpi_data[1][3] = discount_qty_show;
+                                        kpi_data[1][4] = discount_sales_show;
+
+                                        kpi_data[2] = new Array();
+                                        kpi_data[2][0] = 'Refund';
+                                        kpi_data[2][1] = refund_sales;
+                                        if(refund_sales > 0){
+                                        
+                                        kpi_data[2][2] = precise_round((refund_sales /total_sales)*100 , decimals) + '%';
+                                        
+                                        } else {
+                                            kpi_data[2][2]= 0.00 + '%';
+                                        }
+                                        
+                                        kpi_data[2][3] = refund_qty_show;
+                                        kpi_data[2][4] = refund_sales_show
+
+
+                                        $.jqplot('sr_sales_donut',  [kpi_data], {
+                                        title: '<?php _e("Sales Distribution", "smart-reporter"); ?>',
+                                            grid: {
+                                                backgroundColor: 'transparent',
+                                                drawBorder: false,
+                                                shadow: false
+
+
+                                            },
+
+                                            gridPadding: {top:-6.5, bottom:47, left:0, right:0},
+                                            // gridPadding: {top:0, bottom:47, left:0, right:0},
+
+                                            series:[{startAngle: -90,
+                                                  dataLabels: 'percent',
+                                                  padding: 0, 
+                                                  sliceMargin: 4}],
+
+                                            cursor: {
+                                              show: false
+                                            },
+
+                                            seriesDefaults: {
+                                                shadow: false,
+                                                // seriesColors: ['#04c0f0','#a6dba0','#e66101','#5e3c99'], // FINAL
+                                                seriesColors: ['#04c0f0','#a6dba0','#e66101','#69639d'], // FINAL
+                                                
+                                                renderer: jQuery.jqplot.DonutRenderer,
+                                                rendererOptions: {
+                                                    innerDiameter: 50,
+                                                    diameter : 80,
+                                                    thickness: 20
+                                                }
+                                            },
+                                            legend: { 
+                                                show:true,
+                                                placement: 'outsideGrid',                  
+                                                rendererOptions: {
+                                                    numberRows: 3
+
+                                                }, 
+                                                location: 'w',
+                                                bottom: '1.875em',
+                                                // marginLeft:'11.1em',
+                                                // width:'25em',
+                                                borderWidth: 0
+                                                                                                
+                                            }
+
+                                        });
+
+                                // $('#sr_sales_donut').find('table.jqplot-table-legend').css("background-color" , "#e4f4f9" );
+                                // $('#sr_sales_donut').find('table.jqplot-table-legend').css("left" , "5em" );
+
+                                $('#sr_sales_donut').find('.jqplot-title').removeClass("jqplot-title").addClass("sales_graph_donut_title");
+                                $('#sr_sales_donut').find('.sales_graph_donut_title').css({ "top" : "-2em" });
+                                $('#sr_sales_donut').find('.jqplot-table-legend').addClass('sales_donut_table-legend');
+                                $('.jqplot-table-legend-swatch').addClass('funnel_donut_table-legend-swatch'); 
+
+                                $('.sales_donut_table-legend tr').each(function(index){
+                                 // $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + kpi_data[index][2] + ' • ' + currency + kpi_data[index][1] + ' • ' + kpi_data[index][3] + '</td>');
+                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + kpi_data[index][2] + '</td>');
+                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + '•' + '</td>');
+                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204); color:black;" >' + kpi_data[index][4] + '</td>');
+                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + '•' + '</td>');
+                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + kpi_data[index][3] + '</td>');
+
+                                    
+
+                                });            
+                                
+
+                                } else {
+                                    $('#sr_sales_donut').removeAttr('style');
+                                    $('#sr_sales_donut').text('No Data');
+                                    $('#sr_sales_donut').addClass('no_data_text');
+                                    $('#sr_sales_donut').css('margin-top','6.7em');
+                                }
+
+                                $('.jqplot-table-legend').css({"border": "0px solid #ccc"});
+                            }
+
+                         sales_kpi_donut(); // call function to draw sales kpi donut
+                            qty_kpi_donut(); // call function to draw qty kpi donut
+
+                });// closing of tr click event function
+
+     });//closing of jQuery main function
+</script>
+
+</div> 
 
   <script type="text/javascript">
-
-
-      jQuery(function($) {
-            $("#sr_cumm_top_prod_detailed_view").on('mouseenter',function() {
-                $('#sr_cumm_top_prod_detailed_view_icon').css("color","#ffffff");
-            });
-
-            $("#sr_cumm_top_prod_detailed_view").on('mouseleave',function() {
-                $('#sr_cumm_top_prod_detailed_view_icon').css("color","#B1ADAD");
-            });
-
-            //code to display Top Product Detailed View Widget
-            $("#sr_cumm_top_prod_detailed_view").on('click', function() {
-                <?php if (defined('SRPRO') && SRPRO === true) {?>
-                    $('a#detailed_view_link').trigger('click');
-                  <?php }else {?>
-                    alert("Sorry! Detailed View functionality is available only in Pro version");
-                <?php }?>
-            });
-
-            $('.ajax-popup-link').magnificPopup({
-                items: {
-                  src: '#top_prod_detailed_view_widget',
-                  type: 'inline'
-                },
-                closeBtnInside: true,
-                callbacks:{
-                    open: function() {
-                        $.ajax({
-                                    type : 'POST',
-                                    url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
-                                    dataType:"text",
-                                    action: 'get_monthly_sales',
-                                    data: {
-                                        cmd: 'product_detailed_view_track',
-                                    }
-                                });
-                        }  
-                    }
-            });
-        });
 
     //Function to handle the display part of the Top Products Widget
     var top_prod_display = function(resp) {
