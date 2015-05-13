@@ -176,7 +176,7 @@ function sr_number_format($input, $places)
 
 		    // }
 
-		    if(!isset($_POST['detailed_view'])){
+		    if( empty($_POST['detailed_view']) ){
 
 		    //Query to get the variation Attributes in a formatted manner
 
@@ -208,7 +208,7 @@ function sr_number_format($input, $places)
 	    	foreach ($results_top_abandoned_products as &$results_top_abandoned_product) {
                 
                 	    		
-			if(isset($_POST['detailed_view'])){
+			if( !empty($_POST['detailed_view']) ){
 
 				unset($results_top_abandoned_product['abandoned_quantity']);
                 unset($results_top_abandoned_product['abandoned_dates']);
@@ -282,8 +282,7 @@ function sr_number_format($input, $places)
                 $abandoned_rate = (!empty($results_last_order_date[$j]['tot_qty_sold']) && !empty($results_top_abandoned_product['abondoned_qty'])) ? ($results_top_abandoned_product['abondoned_qty']/($results_last_order_date[$j]['tot_qty_sold'] + $results_top_abandoned_product['abondoned_qty']))*100 : '';
                 $results_top_abandoned_product['abandoned_rate'] = sr_number_format($abandoned_rate ,$sr_decimal_places) . "%";
 
-                if(!isset($_POST['detailed_view'])){
-
+                if( empty($_POST['detailed_view']) ){
 
                 //Code for formatting the product name
 
@@ -608,11 +607,10 @@ function sr_number_format($input, $places)
 	    //Top 5 Products OR Top 50 Products Detail View
 
 	    //Query to get the Top 5 Products OR Top 50 Products Detail View
-	    if( isset($_POST['detailed_view']) && $_POST['detailed_view'] = '1'){
-
-	    	$limit = 50;
+	    if( !empty($_POST['detailed_view']) && $_POST['detailed_view'] = '1'){
+			$limit = 50;
 	    } else{
-	    		$limit = 5;
+	    	$limit = 5;
 	    }
 
 	    $query_top_prod      		= "SELECT order_item.product_id as product_id,
@@ -791,8 +789,7 @@ function sr_number_format($input, $places)
 	        }    
 	    }
 	    
-	    if(isset($post['detailed_view'])){ // for Top Product Detail View Widget
-
+	    if(!empty($post['detailed_view'])){ // for Top Product Detail View Widget
 	    	// Query for total quantity
 	    	$query_total_quantity = "SELECT SUM(quantity)
 	    							 FROM {$wpdb->prefix}sr_woo_order_items 
@@ -915,7 +912,7 @@ function sr_number_format($input, $places)
          
 	         foreach ($refund_item_meta_key_values as $item){
                 
-                if( isset($item['_variation_id'] ) && $item['_variation_id'] > 0 ){ // if variation exists then use variation id as product id.
+                if( !empty($item['_variation_id']) && $item['_variation_id'] > 0 ){ // if variation exists then use variation id as product id.
                    	$item['_product_id'] = $item['_variation_id'];
                 	unset($item['_variation_id']);
                 }
@@ -1903,7 +1900,7 @@ function sr_number_format($input, $places)
 	    }
 
 
-	    if (isset($post['option']) || isset($post['detailed_view'])) { // for Top Product Detail View Widget
+	    if( isset($post['option']) || ( !empty($post['detailed_view'])) ) { // for Top Product Detail View Widget
 	        $results[1] = $min_date_sales;
 	        $results[2] = $max_date_sales;
 	    }
@@ -2596,7 +2593,7 @@ function sr_number_format($input, $places)
 
 	    $actual_cumm_sales = sr_get_sales ($start_date,$end_date,$diff_dates,$_POST);
 
-	     if(isset($_POST['detailed_view'])){ // for Top Product Detail View Widget 
+	     if(!empty($_POST['detailed_view'])){
 
 			$encoded['days'] = $comparison_diff_dates;
 			
@@ -2723,7 +2720,7 @@ function sr_number_format($input, $places)
 					$item['non_discount_qty'] 	= $item['product_qty'] - $item['discount_qty'];
 					$item['non_discount_qty_show'] 	= sr_number_format($item['non_discount_qty'], $sr_decimal_places);
 					$item['discount_sales'] = $tot_discount_sales[ $item['product_id'] ]['disc_sales'];
-					$item['discount_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format($tot_discount_sales[ $item['product_id'] ]['disc_sales']) );
+					$item['discount_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format($tot_discount_sales[ $item['product_id'] ]['disc_sales'], $sr_decimal_places) );
 					$item['non_discount_sales'] = $item['product_sales'] - $tot_discount_sales[ $item['product_id'] ]['disc_sales'];
 					$item['non_discount_sales_show'] = sprintf($sr_currency_pos , $sr_currency_symbol , sr_number_format( $item['product_sales'] - $tot_discount_sales[ $item['product_id'] ]['disc_sales'], $sr_decimal_places) );
 					
@@ -3126,7 +3123,7 @@ function sr_number_format($input, $places)
 					  ";
 			
 			$from = " FROM {$wpdb->prefix}sr_woo_order_items AS order_item
-				  	  LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id )
+				  	  LEFT JOIN {$wpdb->prefix}posts AS posts ON ( posts.ID = order_item.order_id AND posts.post_status IN ('wc-on-hold', 'wc-processing', 'wc-completed') )
 				  	  LEFT JOIN {$wpdb->prefix}postmeta AS postmeta ON ( order_item.order_id = postmeta.post_id AND postmeta.meta_key IN ( '_billing_first_name', '_billing_last_name' ) )
 					";
 			
@@ -3157,8 +3154,8 @@ function sr_number_format($input, $places)
 					$order_data [$cnt] ['purchaseid'] = $result ['order_id'];
 					$order_data [$cnt] ['date']       = date( "d-M-Y",strtotime( $result ['date'] ) ); 
 
-					if(isset($_POST['detailed_view'])){ // for detailed view widget
-						
+					if(!empty($_POST['detailed_view'])){ // for detailed view widget
+
 						$order_data [$cnt] ['totalprice'] 	  = sprintf( $_POST['SR_CURRENCY_POS'] , $_POST['SR_CURRENCY_SYMBOL'] , sr_number_format($result ['totalprice'], $_POST['SR_DECIMAL_PLACES']) );
 						$order_data [$cnt] ['country_code']	  = $result ['country'];
 
