@@ -3,8 +3,8 @@ Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, Tarun.Parswani, 
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 4.1.2
-Stable tag: 2.9
+Tested up to: 4.2.2
+Stable tag: 2.9.1
 
 Business analysis and reporting for WooCommerce and WP eCommerce like never before.
 
@@ -48,6 +48,10 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.9.1 =
+* Fix: Minor fixes related to Products Detailed View Widget [Top 50 Products] [Smart Reporter Beta] (WooCommerce)
+* Fix: Minor Fixes & improvements
 
 = 2.9 =
 * New: Products Detailed View Widget [Top 50 Products] [Smart Reporter Beta] (WooCommerce)
@@ -183,6 +187,9 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 
 
 == Upgrade Notice ==
+
+= 2.9.1 =
+Minor fixes related to Products Detailed View Widget [Top 50 Products] [Smart Reporter Beta] (WooCommerce) along with some important fixes & improvements, recommended upgrade.
 
 = 2.9 =
 New Products Detailed View Widget [Top 50 Products] [Smart Reporter Beta] (WooCommerce) along with some important fixes, recommended upgrade.
