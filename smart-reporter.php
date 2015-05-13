@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9
+Version: 2.9.1
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -495,8 +495,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			define ( 'SR_CURRENCY_POS' , get_woocommerce_price_format());
 			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
 		}
-		wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
-		wp_register_style ( 'sr_main', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 		
 		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
 			wp_register_script ( 'sr_functions', plugins_url ( '/pro/sr.js', __FILE__ ), array ('sr_main' ), $sr_plugin_info ['Version'] );
@@ -602,34 +600,16 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	function sr_admin_page(){
         global $woocommerce;
         
-
         $tab = ( !empty($_GET['tab'] )  ? ( $_GET['tab'] ) : 'smart_reporter_beta' )   ;
 
-        ?>
-
-        <div style = "margin:0.7em 0.5em 0 0" class="wrap woocommerce">
-
-            <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
-                <!-- <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter <sup style="vertical-align: super;color:red; font-size:15px">Beta</sub></a> -->
-                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_beta') ? 'nav-tab-active' : ''; ?>">Smart Reporter</a>
-                <a href="<?php echo admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') ?>" class="nav-tab <?php echo ($tab == 'smart_reporter_old') ? 'nav-tab-active' : ''; ?>">Smart Reporter Old</a>
-            </h2>
-
-            <?php
-                switch ($tab) {
-                    case "smart_reporter_old" :
-                        sr_show_console();
-                    break;
-                    default :
-                    	sr_beta_show_console();
-                    break;
-                }
-
-            ?>
-
-	    </div>
-	    <?php
-
+        switch ($tab) {
+            case "smart_reporter_old" :
+                sr_show_console();
+            break;
+            default :
+            	sr_beta_show_console();
+            break;
+        }
     }
     
 
@@ -772,12 +752,13 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             $attributes_name_to_slug = sr_get_attributes_name_to_slug();
             $prefix = ( (defined( 'SR_IS_WOO16' ) && SR_IS_WOO16 == "true") ) ? '' : '_';
             
-            if( isset( $all_order_items['order_date'] ) ){
+            if( !empty( $all_order_items['order_date'] ) ){
             
             $order_date = $all_order_items['order_date'];
             
             }
-            if( isset( $all_order_items['order_status'] ) ){
+            
+            if( !empty( $all_order_items['order_status'] ) ){
             
             $order_status = $all_order_items['order_status'];
             
@@ -792,15 +773,15 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                         $order_item['order_id'] = $order_id;
 
                         if( ! function_exists( 'get_product' ) ) {
-                            $product_id = ( !empty( $prefix ) && isset( $item[$prefix.'id'] ) ) ? $item[$prefix.'id'] : $item['id'];
+                            $product_id = ( !empty( $prefix ) && (!empty( $item[$prefix.'id'])) ) ? $item[$prefix.'id'] : $item['id'];
                         } else {
-                        	$product_id = (isset($item['product_id'])) ? $item['product_id'] : '';
-                            $product_id = ( !empty( $prefix ) && isset( $item[$prefix.'product_id'] ) ) ? $item[$prefix.'product_id'] : $product_id;
+                        	$product_id = ( !empty($item['product_id']) ) ? $item['product_id'] : '';
+                            $product_id = ( !empty( $prefix ) && ( !empty($item[$prefix.'product_id']) ) ) ? $item[$prefix.'product_id'] : $product_id;
                         }// end if
 
                         $order_item['product_name'] = get_the_title( $product_id );
-                        $variation_id 				= (isset( $item['variation_id'] ) ) ? $item['variation_id'] : '';
-                        $variation_id 				= ( !empty( $prefix ) && isset( $item[$prefix.'variation_id'] ) ) ? $item[$prefix.'variation_id'] : $variation_id;
+                        $variation_id 				= ( !empty( $item['variation_id'] ) ) ? $item['variation_id'] : '';
+                        $variation_id 				= ( !empty( $prefix ) && ( !empty($item[$prefix.'variation_id']) ) ) ? $item[$prefix.'variation_id'] : $variation_id;
                         $order_item['product_id'] 	= ( $variation_id > 0 ) ? $variation_id : $product_id;
 
                         if ( $variation_id > 0 ) {
@@ -815,9 +796,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
                                     foreach ( $item as $item_meta_key => $item_meta_value ) {
                                         if ( array_key_exists( $item_meta_key, $att_name_to_slug_prod ) ) {
-                                            $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && isset( $item_meta_value[0] ) ) ? $item_meta_value[0] : $item_meta_value;
+                                            $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && ( !empty( $item_meta_value[0] ) ) ) ? $item_meta_value[0] : $item_meta_value;
                                         } elseif ( in_array( $item_meta_key, $att_name_to_slug_prod ) ) {
-                                            $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && isset( $item_meta_value[0] ) ) ? $item_meta_value[0] : $item_meta_value;
+                                            $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && ( !empty( $item_meta_value[0] ) ) ) ? $item_meta_value[0] : $item_meta_value;
                                         }
                                     }
                                 }
@@ -825,18 +806,18 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                                 $order_item['product_name'] .= ' (' . woocommerce_get_formatted_variation( $variation_name, true ) . ')'; 
                         }
 
-                        $qty 						= (isset( $item['qty'] ) ) ? $item['qty']: '';
-                        $order_item['quantity'] 	= ( !empty( $prefix ) && isset( $item[$prefix.'qty'] ) ) ? $item[$prefix.'qty'] : $qty;
-                        $line_total             	= ( isset( $item['line_total'] ) ) ? $item['line_total'] : '' ;
-                        $line_total             	= ( !empty( $prefix ) && isset( $item[$prefix.'line_total'] ) ) ? $item[$prefix.'line_total'] : $line_total;
+                        $qty 						= ( !empty( $item['qty'] ) ) ? $item['qty']: '';
+                        $order_item['quantity'] 	= ( !empty( $prefix ) && ( !empty($item[$prefix.'qty']) ) ) ? $item[$prefix.'qty'] : $qty;
+                        $line_total             	= ( !empty( $item['line_total'] ) ) ? $item['line_total'] : '' ;
+                        $line_total             	= ( !empty( $prefix ) && ( !empty($item[$prefix.'line_total']) ) ) ? $item[$prefix.'line_total'] : $line_total;
                         $order_item['sales']    	= $line_total;
-                        $line_subtotal          	= ( isset( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
-                        $line_subtotal              = ( !empty( $prefix ) && isset( $item[$prefix.'line_subtotal'] ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
-                        $order_item['order_date']   = (isset($item['order_date'])) ? $item['order_date'] : $order_date;
-                        $order_item['order_status'] = (isset($item['order_status'])) ? $item['order_status'] : $order_status;
+                        $line_subtotal          	= ( !empty( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
+                        $line_subtotal              = ( !empty( $prefix ) && ( !empty($item[$prefix.'line_subtotal']) ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
+                        $order_item['order_date']   = ( !empty($item['order_date'])) ? $item['order_date'] : $order_date;
+                        $order_item['order_status'] = ( !empty($item['order_status'])) ? $item['order_status'] : $order_status;
                         $order_item['discount']     = $line_subtotal - $line_total;
                        
-                        if(isset($item['sku'])) {
+                        if(!empty($item['sku'])) {
                         	$order_item['sku'] = $item['sku'];
                         }
                         else {
@@ -845,7 +826,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                         	    $order_item['sku'] = !empty($prod_sku) ? $prod_sku: '';
                         }
 
-                        if(isset($item['category'])) {
+                        if(!empty($item['category'])) {
                         	$order_item['category'] = $item['category'];
                         }
                         else {
@@ -1035,7 +1016,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	                        continue; 
 	                    $order_item_meta_key_values = array_combine($order_item_meta_key, $order_item_meta_values);
 	                    
-	                    if( isset( $order_item_meta_key_values['_product_id'] ) ){
+	                    if( !empty( $order_item_meta_key_values['_product_id'] ) ){
 
 	                    $key = $order_item_meta_key_values['_product_id'];
 	                   	
@@ -1056,7 +1037,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	                    	$order_item_meta_key_values ['order_status'] = $order_post_details [$result['order_id']] ['order_status'];
 	                    }	                    
 
-	                    if ( !isset( $all_order_items[ $result['order_id'] ] ) ) {
+	                    if ( empty( $all_order_items[ $result['order_id'] ] ) ) {
 	                        $all_order_items[ $result['order_id'] ] = array();
 	                    }
 	                    $all_order_items[ $result['order_id'] ][] = $order_item_meta_key_values;
@@ -1140,6 +1121,14 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				$plug_page = '';
 			}
 
+			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
+				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo') .'" title="'. __( 'Switch back to new version', 'smart-reporter' ) .'"> ' . __( 'Switch back to new version', 'smart-reporter' ) .'</a>';
+			} else {
+				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') .'" title="'. __( 'Switch to earlier version', 'smart-reporter' ) .'"> ' . __( 'Problem? Switch to earlier version', 'smart-reporter' ) .'</a>';
+			}
+
+			
+
 			if ( SRPRO === true ) {
 
 
@@ -1152,7 +1141,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 
 	            // <a href="edit.php#TB_inline?max-height=420px&inlineId=smart_manager_post_query_form" title="Send your query" class="thickbox" id="support_link">Need Help?</a>
-	            $before_plug_page = '<a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
+	            $before_plug_page = ' | <a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
 	            
 	            // if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') && SR_BETA == "true") {
 	            // 	// $before_plug_page .= ' | <a href="#" class="show_hide" rel="#slidingDiv">Settings</a>';
@@ -1166,7 +1155,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 	        }
 
-			printf ( __ ( '%1s%2s%3s'), $before_plug_page, $plug_page, $after_plug_page);		
+			printf ( __ ( '%1s%2s%3s%4s'), $switch_version, $before_plug_page, $plug_page, $after_plug_page);		
 		?>
 		</span>
 		<?php
@@ -1336,6 +1325,9 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 	};
 
 	function sr_show_console() {
+
+		wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
+		wp_register_style ( 'sr_main', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 
 		//Enqueing the Scripts and StyleSheets
 		wp_enqueue_script ( 'sr_main' );

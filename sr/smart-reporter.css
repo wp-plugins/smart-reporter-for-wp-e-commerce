@@ -1384,22 +1384,33 @@ overflow: hidden;
 	font-family: Helvetica, Arial, sans-serif;
 }
 
+.recent_orders_container{
+  width: auto;
+  height: auto;
+  margin: 0.5em 0.92em 0.92em 0.92em;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #727277;
+}
+
 .recent_orders_table {
 	width: 95%;
-	height: 95%;
-	margin: 0.3em 0.92em 0.92em 0.92em;
-	font-family: Helvetica, Arial, sans-serif;
-	color: #727277;
+	height: auto;
+}
+
+.recent_orders_table tbody {
+vertical-align: top;
 }
 
 .recent_orders_table tr {
-	font-size: 0.8em;
+  line-height: 1.7em !important;
+  padding: 0px !important;
+  font-size: 0.8em;
 	width: 100%;
-	padding: 8px;
 }
 
 .recent_orders_table td {
-	padding: 0px;
+  height: auto !important;
+ 	padding: 0px !important;
 }
 
 .sales_graph_funnel{
@@ -1459,7 +1470,7 @@ overflow: hidden;
 	width: 100%;
 }
 
-.sales_donut{
+.draw_sales_donut{
 	margin-top:0em;
 	float: left;
 	margin-top: 2em;
@@ -1473,12 +1484,4 @@ overflow: hidden;
 	left : 24em !important;
 	top : 0em !important;
 	font-family : Helvetica, Arial, sans-serif;
-	border: 0px solid #ccc !important;
-}
-
-.qty_donut{
-	bottom: 3em;
-	float:right;
-	height:100%;
-	width:50%;
 }

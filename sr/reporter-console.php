@@ -1878,21 +1878,22 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                         <table id="prod_details_table" class="details_table"></table> \
                                     </div> \
                                     <div id="sr_prod_sales_details" class="prod_sales_details"> \
-                                        <div id="chartpseudotooltip_detail"></div> \
                                         <div id="sr_kpi_details" class="kpi_details"> \
-                                        <table id="kpi_display_table" class="kpi_table"></table> \
-                                    </div> \
-                                    <div id="sr_recent_orders" class="recent_orders"> \
-                                    <h3 id="recent_orders_heading" class="recent_orders_heading"><?php _e("Recent Orders" , "smart-reporter"); ?></h3>\
-                                    <table id="recent_orders_table" class="recent_orders_table"></table> \
-                                    </div> \
-                                    <div id="sr_detail_sales_graph_funnel" class="sales_graph_funnel"> \
+                                            <table id="kpi_display_table" class="kpi_table"></table> \
+                                        </div> \
+                                        <div id="sr_recent_orders" class="recent_orders"> \
+                                            <h3 id="recent_orders_heading" class="recent_orders_heading"><?php _e("Recent Orders" , "smart-reporter"); ?></h3>\
+                                            <div id="recent_orders_container" class="recent_orders_container"> \
+                                            <table id="recent_orders_table" class="recent_orders_table"></table> \
+                                            </div> \
+                                        </div> \
+                                        <div id="sr_detail_sales_graph_funnel" class="sales_graph_funnel"> \
                                             <div id="draw_sales_graph" class="draw_sales_graph"></div> \
                                             <div id="draw_sales_funnel" class="draw_sales_funnel"></div> \
-                                    </div> \
-                                    <div id="sr_prod_sales_donuts" class="prod_sales_donuts"> \
-                                            <div id="sr_sales_donut" class="sales_donut"></div> \
-                                    </div> \
+                                        </div> \
+                                        <div id="sr_prod_sales_donuts" class="prod_sales_donuts"> \
+                                            <div id="sr_sales_donut" class="draw_sales_donut"></div> \
+                                        </div> \
                                     </div>';
                    
                         $("#sr_cumm_top_prod_detailed_view").on('mouseenter',function() {
@@ -1951,7 +1952,6 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                             success: function(response) {
 
                                                 detail_view_data  = $.parseJSON(response);
-                                                //var table_html = '<tr><th colspan="2"><label for="product_name"><?php _e("Products", "smart-reporter"); ?></label></th></tr>';
                                                 var table_html;
                                                  
                                                 for (var i = 0; i < detail_view_data['top_prod_detail_view_data'].length; i++) {
@@ -2005,19 +2005,17 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
 
 
                                                 if(detail_view_data['top_prod_detail_view_data'].length > 0) {
-                                                        $('#top_prod_detailed_view_widget').removeClass('no_data_text');
-                                                        $('#top_prod_detailed_view_widget').removeAttr('style');
+                                                        $('#top_prod_detailed_view_widget').removeClass('no_data_text mfp-hide');
+                                                        $('#top_prod_detailed_view_widget').addClass('white-popup');
                                                         $('#top_prod_detailed_view_widget').html(sr_detailed_view_html);
                                                         $('#prod_details_table').html(table_html);
                                                         $('#prod_details_table').css("cursor" , "pointer");
-                                                        $('tr#0').trigger('click'); // defalut load sales & graph data of first row.
+                                                        $('tr#0').trigger('click'); // default load sales & graph data of first row.
                                                 }
                                                 else {
                                                         $('#top_prod_detailed_view_widget').empty();
-                                                        $('#top_prod_detailed_view_widget').text('No Data');
-                                                        $('#top_prod_detailed_view_widget').addClass('no_data_text');
-                                                        $('#top_prod_detailed_view_widget').css({'margin-top':'6.7em', 'content':'No Data'});
-                                                }
+                                                        $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                                    }
                                             }
                                         });// end of ajax
                                 },
@@ -2043,15 +2041,15 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                 prod_qty              = index.product_qty;
                             var discount              = index.discount;
                                 discount_qty          = index.discount_qty;
-                                discount_qty_show          = index.discount_qty_show;
+                                discount_qty_show     = index.discount_qty_show;
                                 discount_sales        = index.discount_sales;
-                                discount_sales_show        = index.discount_sales_show;
+                                discount_sales_show   = index.discount_sales_show;
                             var no_of_orders          = index.sales_count;
                             var one_sale_every        = index.one_sale_every;
                             var per_day_sales         = index.per_day_sales;
-                            var percent_of_total_sales= index.percent_of_total_sales;
+                            var percent_of_total_sales    = index.percent_of_total_sales;
                             var percent_of_total_quantity = index.percent_of_total_quantity;
-                            var abandonment_rate        = index.abandonment_rate;
+                            var abandonment_rate      = index.abandonment_rate;
                                 refund_qty            = index.refund_qty;
                                 refund_qty_show       = index.refund_qty_show;
                                 refund_sales          = index.refund_sales;
@@ -2062,7 +2060,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                 non_discount_sales_show    = index.non_discount_sales_show;
                                 total_sales           = index.total_sales;
                                 non_discount_qty      = index.non_discount_qty;
-                                non_discount_qty_show      = index.non_discount_qty_show;
+                                non_discount_qty_show = index.non_discount_qty_show;
                             
                             table_data = '<tr><td><span class="kpi_widgets_price">'+per_day_sales+'</span><p class ="kpi_widgets_text"><?php _e(" per Day Sales" , "smart-reporter"); ?></p></td>';
                             table_data+= '<td><span class="kpi_widgets_price">'+one_sale_every+'</span><p class ="kpi_widgets_text"><?php _e("1 Sale Every" , "smart-reporter"); ?></p></td>';
@@ -2075,7 +2073,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                            
                               
                             // code to display last few ordes of every product
-                            var last_few_orders='';
+                            var last_few_orders = '';
 
                             for(var i = 0; i < index['last_few_orders']['orderDetails'].orderTotalCount; i++ ){
                                    
@@ -2105,13 +2103,11 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                     country_name_trimmed = country_name;
                                   }
                                                            
-                              // last_few_orders +='<tr style="max-height:19px;"><td style ="width:8em;" title = "'+date+'">'+date+'</td><td style ="width:15em;" title ="'+cust_name+'"><a href="'+editlink+'" target="_blank">'+cust_name+'</a></td><td style ="width:3em;" title="'+country_name+'">'+country_code+'</td><td style ="width:10em;" >'+price+'</td></tr>';
-                              last_few_orders +='<tr style="max-height:19px;"><td style ="width:5em;" title = "' + date + '">' + date + '</td><td style ="width:20em;" title ="' + cust_name + '"><a href="' + editlink + '" target="_blank">' + cust_name_trimmed + '</a>' + ' - ' + country_name_trimmed + '</td><td style ="width:5em;" >' + price + '</td></tr>';
+                              
+                              last_few_orders +='<tr><td style ="width:5em;" title = "' + date + '">' + date + '</td><td style ="width:20em;" title ="' + cust_name + '"><a href="' + editlink + '" target="_blank">' + cust_name_trimmed + '</a>' + ' - ' + country_name_trimmed + '</td><td style ="width:5em;" >' + price + '</td></tr>';
                             }
                               $( '#recent_orders_heading' ).css( 'display' , 'block' );
                               $( '#recent_orders_table' ).html( last_few_orders );
-                              $( '#recent_orders_table' ).find('tbody').css('vertical-align', 'top');
-
                             // code to display sales funnel
                                 var sales_funnel = [];
 
@@ -2122,23 +2118,20 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                   sales_funnel[ 'total_completed_qty' ] = index[ 'sales_funnel' ][ 'completed_qty' ];
 
                                 } else{
-                                    sales_funnel = 0;
+                                  sales_funnel = 0;
                                     
                                 }
 
-                                // $('#draw_sales_funnel').empty();
                                 if ( $( '#draw_sales_funnel' ).hasClass( 'no_data_text' ) ) {
 
                                     $( '#draw_sales_funnel' ).removeClass( 'no_data_text' );
                                     $( '#draw_sales_funnel' ).removeAttr( 'style' );
-                                    $( '#draw_sales_funnel' ).css( 'height' , '13em' );
-                                    $( '#draw_sales_funnel' ).css( 'width' , '25%' );
-                                    // $('#draw_sales_funnel').css('margin-left' ,'4em');
+                                    $( '#draw_sales_funnel' ).addClass('draw_sales_funnel');
                                 }
-
+                                    
+                                $('#draw_sales_funnel').empty();
+                                
                                 if( sales_funnel !== 0) {
-                                    $('#draw_sales_funnel').empty();
-
                                     $.jqplot('draw_sales_funnel',  [[['Added to Cart', sales_funnel['total_cart_qty']],
                                                                          ['Orders Placed', sales_funnel['total_ordered_qty']],
                                                                          ['Orders Completed',sales_funnel['total_completed_qty']]]], {
@@ -2170,10 +2163,11 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                seriesColors: ['#04c0f0','#a6dba0','#e69a01'], // FINAL
 
                                                  rendererOptions:{
+                                                         highlightMouseOver: false,
                                                          sectionMargin: 5,
                                                          widthRatio: 0.3,
                                                          showDataLabels: true,
-                                                        dataLabels: [[sales_funnel['total_cart_qty']],
+                                                         dataLabels: [[sales_funnel['total_cart_qty']],
                                                                      [sales_funnel['total_ordered_qty']],
                                                                      [sales_funnel['total_completed_qty']]]
                                                   }
@@ -2185,12 +2179,11 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                 // placement: 'outside',                      
                                                 rendererOptions: {
                                                     numberRows: 3
-                                                    
                                                 }, 
                                                 location: 'w'
                                             }
-
                                     });
+
                                 
                                 
                                 $('#draw_sales_funnel').find('.jqplot-title').removeClass('jqplot-title').addClass('sales_funnel_title');                                
@@ -2198,9 +2191,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                 
                                 } else {
                                     $('#draw_sales_funnel').removeAttr('style');
-                                    $('#draw_sales_funnel').text('No Data');
-                                    $('#draw_sales_funnel').addClass('no_data_text');
-                                    $('#draw_sales_funnel').css('margin-top','6.7em');
+                                    $('#draw_sales_funnel').append('<div class="sales_funnel_title" style="color: #727277;"><?php _e("Sales Funnel" , "smart-reporter"); ?></div>');
+                                    $('#draw_sales_funnel').append('<div class="no_data_text" ><?php _e("No Data" , "smart-reporter"); ?></div>');
                                 }
 
                                 $('.jqplot-table-legend-swatch').addClass('sales_funnel_table-legend-swatch');
@@ -2217,13 +2209,16 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                     sales_trend[i][1] = index['graph_data'][i].sales;
                                 };
 
-                                var monthly_detail_view_sales_graph = function() { 
+                            var monthly_detail_view_sales_graph = function() { 
 
-                                            if (top_prod_detailed_plot != '') {
-                                                top_prod_detailed_plot.destroy();
-                                            }
-
-                                            top_prod_detailed_plot = $.jqplot('draw_sales_graph',  [sales_trend], {
+                                
+                                        if (top_prod_detailed_plot != '') {
+                                            top_prod_detailed_plot.destroy();
+                                        }
+                                        
+                                        if( prod_sales !== 0) {
+                                        
+                                           top_prod_detailed_plot = $.jqplot('draw_sales_graph',  [sales_trend], {
                                            title: '<?php _e("Sales Trend" , "smart-reporter"); ?>',
                                            axes: {
                                                      yaxis: {  
@@ -2234,7 +2229,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                          showTicks: true,
                                                          // min:-index.max_value/4,
                                                          min: 0,
-                                                         max: index.max_value + index.max_value/4
+                                                         max: precise_round( (index.max_value + index.max_value/4) , decimals)
                                                      } ,
                                                     xaxis: {                    
                                                         // label: 'Date',
@@ -2290,11 +2285,18 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                     showLine: true // shows the graph trend line
                                             }
                                         });// closing of jqplot
+
+                                    } else{
+                                        
+                                        $('#draw_sales_graph').removeAttr('style');
+                                        $('#draw_sales_graph').append('<div class="sales_graph_donut_title" ><?php _e("Sales Trend" , "smart-reporter"); ?></div>');
+                                        $('#draw_sales_graph').append('<div class="no_data_text" ><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                    }
                                 }
                             
                             monthly_detail_view_sales_graph();// call function to draw graph 
 
-                            $('#draw_sales_graph').find('.jqplot-title').removeClass("jqplot-title").addClass("sales_graph_donut_title");
+                             $('#draw_sales_graph').find('.jqplot-title').removeClass("jqplot-title").addClass("sales_graph_donut_title");
                              $('#draw_sales_graph').find('.sales_graph_donut_title').css({ "top" : "-1em" });                       
                           
                             // code to draw sales kpi donut
@@ -2313,8 +2315,8 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                             
                                             $('#sr_sales_donut').removeClass('no_data_text');
                                             $('#sr_sales_donut').removeAttr('style');
-                                            $('#sr_sales_donut').css('height' ,'100%');
-                                            $('#sr_sales_donut').css('width' ,'50%');
+                                            $('#sr_sales_donut').removeAttr('style');
+                                            $('#sr_sales_donut').addClass('draw_sales_donut');
                                         }
                                                                            
                                         kpi_data[0]    = new Array();
@@ -2360,8 +2362,6 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                 backgroundColor: 'transparent',
                                                 drawBorder: false,
                                                 shadow: false
-
-
                                             },
 
                                             gridPadding: {top:-6.5, bottom:47, left:0, right:0},
@@ -2383,6 +2383,7 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                 
                                                 renderer: jQuery.jqplot.DonutRenderer,
                                                 rendererOptions: {
+                                                    highlightMouseOver: false,
                                                     innerDiameter: 50,
                                                     diameter : 80,
                                                     thickness: 20
@@ -2393,52 +2394,36 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                                 placement: 'outsideGrid',                  
                                                 rendererOptions: {
                                                     numberRows: 3
-
                                                 }, 
                                                 location: 'w',
                                                 bottom: '1.875em',
-                                                // marginLeft:'11.1em',
-                                                // width:'25em',
                                                 borderWidth: 0
-                                                                                                
                                             }
-
                                         });
 
-                                // $('#sr_sales_donut').find('table.jqplot-table-legend').css("background-color" , "#e4f4f9" );
-                                // $('#sr_sales_donut').find('table.jqplot-table-legend').css("left" , "5em" );
+                                        
+                                        $('#sr_sales_donut').find('.jqplot-title').removeClass("jqplot-title").addClass("sales_graph_donut_title");
+                                        $('#sr_sales_donut').find('.sales_graph_donut_title').css({ "top" : "-2em" });
+                                        $('#sr_sales_donut').find('.jqplot-table-legend').addClass('sales_donut_table-legend');
+                                        $('.jqplot-table-legend-swatch').addClass('funnel_donut_table-legend-swatch'); 
 
-                                $('#sr_sales_donut').find('.jqplot-title').removeClass("jqplot-title").addClass("sales_graph_donut_title");
-                                $('#sr_sales_donut').find('.sales_graph_donut_title').css({ "top" : "-2em" });
-                                $('#sr_sales_donut').find('.jqplot-table-legend').addClass('sales_donut_table-legend');
-                                $('.jqplot-table-legend-swatch').addClass('funnel_donut_table-legend-swatch'); 
-
-                                $('.sales_donut_table-legend tr').each(function(index){
-                                 // $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + kpi_data[index][2] + ' • ' + currency + kpi_data[index][1] + ' • ' + kpi_data[index][3] + '</td>');
-                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + kpi_data[index][2] + '</td>');
-                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + '•' + '</td>');
-                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204); color:black;" >' + kpi_data[index][4] + '</td>');
-                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + '•' + '</td>');
-                                 $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; border: 0px solid rgb(204, 204, 204);" >' + kpi_data[index][3] + '</td>');
-
-                                    
-
-                                });            
-                                
+                                        $('.sales_donut_table-legend tr').each(function(index){
+                                             $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; font-size: 1.2em;" >' + kpi_data[index][2] + '</td>');
+                                             $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; " >' + '•' + '</td>');
+                                             $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; font-size: 1.2em;" >' + kpi_data[index][4] + '</td>');
+                                             $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; " >' + '•' + '</td>');
+                                             $(this).append('<td class = "jqplot-table-legend sales_donut_table-legend" style ="padding-top: 0px; font-size: 1.2em;" >' + kpi_data[index][3] + '</td>');
+                                        });            
 
                                 } else {
                                     $('#sr_sales_donut').removeAttr('style');
-                                    $('#sr_sales_donut').text('No Data');
-                                    $('#sr_sales_donut').addClass('no_data_text');
-                                    $('#sr_sales_donut').css('margin-top','6.7em');
+                                    $('#sr_sales_donut').append('<div class="sales_graph_donut_title" ><?php _e("Sales Distribution" , "smart-reporter"); ?></div>');
+                                    $('#sr_sales_donut').append('<div class="no_data_text" ><?php _e("No Data" , "smart-reporter"); ?></div>');
                                 }
-
                                 $('.jqplot-table-legend').css({"border": "0px solid #ccc"});
                             }
 
                          sales_kpi_donut(); // call function to draw sales kpi donut
-                            qty_kpi_donut(); // call function to draw qty kpi donut
-
                 });// closing of tr click event function
 
      });//closing of jQuery main function
@@ -3386,13 +3371,18 @@ if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-r
                                           + resp['top_shipping_method_data'][i].shipping_method_sales_percent + ' • '
                                           + '<a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders("'+resp['top_shipping_method_data'][i].order_ids+'")>' + resp['top_shipping_method_data'][i].shipping_count + '</a>';
                                           
+            if(shipping_method_name !== null){
 
-              if (shipping_method_name.length >= 25) {
-                  shipping_method_name_trimmed = shipping_method_name.substring(0,24) + "...";
-              }
-              else {
-                  shipping_method_name_trimmed = shipping_method_name;
-              }
+                  if (shipping_method_name.length >= 25) {
+                      shipping_method_name_trimmed = shipping_method_name.substring(0,24) + "...";
+                  }
+                  else {
+                      shipping_method_name_trimmed = shipping_method_name;
+                  }
+
+            }else{
+                shipping_method_name_trimmed = "";
+            }
 
               table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td><div id="'+span_id_sales_count+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+shipping_method_name+'"><b style="font-weight:bold;">'+shipping_method_name_trimmed+'</b><br>'+shipping_method_sales_display+'</td></tr> ';
 
