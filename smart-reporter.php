@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9.1
+Version: 2.9.2
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -131,6 +131,9 @@ function sr_activate() {
 	   		$wpdb = clone $wpdb_obj;
 		}
 	}
+
+	// Redirect to SR
+	update_option( '_sr_activation_redirect', 'pending' );
 }
 
 /**
@@ -415,7 +418,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	
 	add_action ( 'admin_notices', 'sr_admin_notices' );
 	add_action ( 'admin_init', 'sr_admin_init' );
-	
+	add_action('wp_ajax_sr_get_monthly_sales','sr_get_monthly_sales');
+
 	if ( is_multisite() && is_network_admin() ) {
 		
 		function sr_add_license_key_page() {
@@ -430,12 +434,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 	// add_action('woocommerce_cart_updated', 'sr_demo');
 
-
-	
-	
 	function sr_admin_init() {
-
-	
 
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
@@ -560,6 +559,17 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		wp_register_style ( 'sr_main_beta', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_magnific_popup' ), $sr_plugin_info ['Version'] );
 		// ================================================================================================
 
+
+		if ( false !== get_option( '_sr_activation_redirect' ) ) {
+        	// Delete the redirect transient
+	    	delete_option( '_sr_activation_redirect' );
+
+	    	if ( SR_WPSC_WOO_ACTIVATED === true || SR_WOO_ACTIVATED === true ) {
+	    		wp_redirect( admin_url('admin.php?page=smart-reporter-woo') );
+	    	} else if ( SR_WPSC_ACTIVATED === true ) {
+	    		wp_redirect( admin_url('edit.php?post_type=wpsc-product&page=smart-reporter-wpsc') );
+	    	}
+	    }
 
 	}
 
@@ -837,7 +847,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
                         if ( empty( $order_item['product_id'] ) || empty( $order_item['order_id'] ) || empty( $order_item['quantity'] ) ) 
                             continue;
-                        $values[] = "( {$order_item['product_id']}, {$order_item['order_id']},'{$order_item['order_date']}', '{$order_item['order_status']}', '{$order_item['product_name']}', '{$order_item['sku']}' , '{$order_item['category']}' , {$order_item['quantity']}, " . (empty($order_item['sales']) ? 0 : $order_item['sales'] ) . ", " . (empty($order_item['discount']) ? 0 : $order_item['discount'] ) . " )";
+                        $values[] = "( " .$wpdb->_real_escape($order_item['product_id']). ", " .$wpdb->_real_escape($order_item['order_id']). ",'" .$wpdb->_real_escape($order_item['order_date']). "', '" .$wpdb->_real_escape($order_item['order_status']). "', '" .$wpdb->_real_escape($order_item['product_name']). "', '" .$wpdb->_real_escape($order_item['sku']). "' , '" .$wpdb->_real_escape($order_item['category']). "' , " .$wpdb->_real_escape($order_item['quantity']). ", " . (empty($order_item['sales']) ? 0 : $wpdb->_real_escape($order_item['sales']) ) . ", " . (empty($order_item['discount']) ? 0 : $wpdb->_real_escape($order_item['discount']) ) . " )";
                 }
             }
 
@@ -1317,12 +1327,18 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 
 		// Code for overriding the wooCommerce orders module search functionality code
 
-		add_action('wp_ajax_get_monthly_sales','get_monthly_sales');
-
-		
-
-
+		// add_action('wp_ajax_get_monthly_sales','get_monthly_sales');
 	};
+
+	function sr_get_monthly_sales(){
+
+		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) );
+		
+		if (file_exists($base_path . 'sr/json-woo.php' )){
+			include_once ( $base_path . 'sr/json-woo.php' );
+			sr_get_ajax_monthly_sales();
+		}
+	}
 
 	function sr_show_console() {
 

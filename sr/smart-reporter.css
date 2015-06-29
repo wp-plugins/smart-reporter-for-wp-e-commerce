@@ -1261,6 +1261,21 @@ pre.code{
   background-image: linear-gradient(to bottom, #B3BAC0, #85888A);
 }
 
+
+.blur_widget{
+  opacity: 0.5;
+}
+
+.ajax_loader {
+  position:   absolute;
+  z-index:    1000;
+  border: 0 !important;
+  background: rgba( 255, 255, 255, .8 ) 
+              url('../resources/themes/images/ajax-loader.gif')
+              50% 50% 
+              no-repeat;
+}
+
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 /* CSS for all elements in Top Products Detailed View Widget */
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
