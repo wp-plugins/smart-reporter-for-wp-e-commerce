@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9.2
+Version: 2.9.3
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -418,7 +418,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	
 	add_action ( 'admin_notices', 'sr_admin_notices' );
 	add_action ( 'admin_init', 'sr_admin_init' );
-	add_action('wp_ajax_sr_get_monthly_sales','sr_get_monthly_sales');
+	add_action('wp_ajax_sr_get_stats','sr_get_stats');
 
 	if ( is_multisite() && is_network_admin() ) {
 		
@@ -439,14 +439,12 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
 		$ext_version 	= '4.0.1';
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) && (!defined('SR_WPSC_WOO_ACTIVATED'))) {
-			define('SR_WPSC_WOO_ACTIVATED',true);
+		if ( (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) ) || (is_plugin_active ( 'woocommerce/woocommerce.php' )) ) {
+			define('SR_WOO_ACTIVATED', true);
 		} elseif ( defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
 			define('SR_WPSC_ACTIVATED',true);
-		} elseif (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
-			define('SR_WOO_ACTIVATED', true);
 		}
-		
+
 		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
 		if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
 			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
@@ -489,10 +487,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				define('SR_WOO_RUNNING', true);
 			}
 			
-			//WooCommerce Currency Constants
-			define ( 'SR_CURRENCY_SYMBOL', get_woocommerce_currency_symbol());
-			define ( 'SR_CURRENCY_POS' , get_woocommerce_price_format());
-			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
 		}
 		
 		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
@@ -502,21 +496,32 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			define ( 'SRPRO', false );
 		}
 
+		if (SR_WPSC_ACTIVATED === true) {
+			$json_filename = 'json';
+		} else if (SR_WOO_ACTIVATED === true) {
+			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
+				$json_filename = 'json-woo';
+			} else {
+				$json_filename = 'json-woo-beta';
+			}
+
+			//WooCommerce Currency Constants
+			define ( 'SR_CURRENCY_SYMBOL', get_woocommerce_currency_symbol());
+			define ( 'SR_CURRENCY_POS' , get_woocommerce_price_format());
+			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
+		}
+		define ( 'SR_JSON_FILE_NM', $json_filename );
 
 		if (SRPRO === true) {
-
 			include ('pro/upgrade.php');
-
 			//wp-ajax action
 			if (is_admin() ) {
 	            add_action ( 'wp_ajax_top_ababdoned_products_export', 'sr_top_ababdoned_products_export' );
 	            add_action ( 'wp_ajax_sr_save_settings', 'sr_save_settings' );
-	        }
-
-			
+	        }			
 		}
 
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
+		if (SR_WOO_ACTIVATED === true) {
 	    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
 	    }
 
@@ -1082,13 +1087,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		</style>    
 		<?php 
 		
-		if (SR_WPSC_RUNNING === true) {
-			$json_filename = 'json';
-		} else if (SR_WOO_RUNNING === true) {
-			$json_filename = 'json-woo';
-		}
-		define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/$json_filename.php" );
-		
 		//set the number of days data to show in lite version.
 		define ( 'SR_AVAIL_DAYS', 30);
 		
@@ -1132,9 +1130,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			}
 
 			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
-				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo') .'" title="'. __( 'Switch back to new version', 'smart-reporter' ) .'"> ' . __( 'Switch back to new version', 'smart-reporter' ) .'</a>';
+				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo') .'" title="'. __( 'Switch back to new view', 'smart-reporter' ) .'"> ' . __( 'Switch back to new view', 'smart-reporter' ) .'</a>';
 			} else {
-				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') .'" title="'. __( 'Switch to earlier version', 'smart-reporter' ) .'"> ' . __( 'Problem? Switch to earlier version', 'smart-reporter' ) .'</a>';
+				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') .'" title="'. __( 'Switch to old view', 'smart-reporter' ) .'"> ' . __( 'Switch to old view', 'smart-reporter' ) .'</a>';
 			}
 
 			
@@ -1330,14 +1328,18 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 		// add_action('wp_ajax_get_monthly_sales','get_monthly_sales');
 	};
 
-	function sr_get_monthly_sales(){
+	function sr_get_stats(){
 
-		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) );
-		
-		if (file_exists($base_path . 'sr/json-woo.php' )){
-			include_once ( $base_path . 'sr/json-woo.php' );
-			sr_get_ajax_monthly_sales();
-		}
+		$json_filename = ($_REQUEST['file'] == 'json-woo-beta') ? 'json-woo' : $_REQUEST['file'];
+		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
+		if (file_exists( $base_path . $json_filename . '.php' )) {
+            include_once ($base_path . $json_filename . '.php');
+            if ( $json_filename == 'json-woo' ) {
+            	if ( $_REQUEST['file'] == "json-woo-beta" && ( !empty( $_POST ['cmd'] ) && ( $_POST ['cmd'] != 'daily') ) ) {
+            		sr_get_ajax_monthly_sales();
+				} 
+            }
+        }
 	}
 
 	function sr_show_console() {

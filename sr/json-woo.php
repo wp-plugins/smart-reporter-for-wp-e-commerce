@@ -1,11 +1,12 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly
+}
+
 ob_start();
 
 if ( empty( $wpdb ) || !is_object( $wpdb ) ) {
-    if ( ! defined('ABSPATH') ) {
-        include_once ('../../../../wp-load.php');
-    }
     require_once ABSPATH . 'wp-includes/wp-db.php';
 }
 
@@ -811,7 +812,6 @@ if( !empty($post['cmd'] ) && $post['cmd'] == 'monthly_top_customers'){
 	                                    LIMIT ".$limit;
 	    $results_top_prod    		= $wpdb->get_results ( $query_top_prod, 'ARRAY_A' );
 	    $rows_top_prod   		  	= $wpdb->num_rows;
-
 
 		if($rows_top_prod > 0) {
 	        foreach (array_keys($results_top_prod) as $results_top_prod1) {
@@ -2648,11 +2648,14 @@ if( !empty($post['cmd']) && $post['cmd'] == 'monthly_shipping_methods'){
 
 	if ( !empty( $_POST ['cmd'] ) && ( $_POST ['cmd'] == 'daily') ) {
 
+		check_ajax_referer('smart-reporter-security','security');
+
 		while(ob_get_contents()) {
          	   ob_clean();
 		}
 
 		echo json_encode (sr_get_daily_kpi_data());
+		exit;
 	}
 
 	// ================
@@ -2660,6 +2663,8 @@ if( !empty($post['cmd']) && $post['cmd'] == 'monthly_shipping_methods'){
 	// ================
 
 	function sr_get_ajax_monthly_sales(){
+
+		check_ajax_referer('smart-reporter-security','security');
 
 		$sr_currency_symbol = !empty($_POST['SR_CURRENCY_SYMBOL']) ? $_POST['SR_CURRENCY_SYMBOL'] : '';
 	    $sr_currency_pos	= !empty($_POST['SR_CURRENCY_POS']) ? $_POST['SR_CURRENCY_POS'] : '';
@@ -3033,7 +3038,9 @@ if( !empty($post['cmd']) && $post['cmd'] == 'monthly_shipping_methods'){
 		}
 
 	    echo json_encode( $encoded );
-	    die();
+	    
+	    unset($encoded);
+		exit;
 	}
 
 //=================================
@@ -3299,6 +3306,8 @@ if( !empty($post['cmd']) && $post['cmd'] == 'monthly_shipping_methods'){
 
 	if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
 		
+		check_ajax_referer('smart-reporter-security','security');
+
 	        if ( defined('SRPRO') && SRPRO == true ) {
 	            if ( SR_WPSC_RUNNING === true ) {
 			if ( file_exists ( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' ) ) include( SR_PLUGIN_DIR_ABSPATH. '/pro/sr.php' );
@@ -3451,8 +3460,10 @@ if( !empty($post['cmd']) && $post['cmd'] == 'monthly_shipping_methods'){
 		while(ob_get_contents()) {
          	   ob_clean();
 		}
-		
+
 		echo json_encode ( $encoded );
+		unset($encoded);
+    	exit;
 	}
 
 // ob_end_flush();

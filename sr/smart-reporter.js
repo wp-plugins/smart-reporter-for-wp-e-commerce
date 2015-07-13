@@ -211,14 +211,17 @@ Ext.onReady(function() {
 		}
 		],
 		params : {
+			security : srNonce,
 			fromDate : SR.fromDateField.getValue(),
 			toDate : SR.toDateField.getValue(),
 			start : 0,
-			cmd : 'getData'
+			cmd : 'getData',
+			file: jsonFileNm
 		},
 		proxy : {
 			type : 'ajax',
-			url : jsonURL, // url that will load data with respect to start and
+			// url : jsonURL, // url that will load data with respect to start and
+			url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
 			reader : {
 				type : 'json',
 				totalProperty : 'totalCount',
@@ -257,7 +260,8 @@ Ext.onReady(function() {
 		}],
 		proxy : {
 			type : 'ajax',
-			url : jsonURL, // url that will load data with respect to start and
+			// url : jsonURL, // url that will load data with respect to start and
+			url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
 			reader : {
 				type : 'json',
 				totalProperty : 'gridTotalCount',
@@ -285,11 +289,13 @@ Ext.onReady(function() {
 	var loadGridStore = function() {
 		gridStore.load({
 			params : {
+				security : srNonce,
 				fromDate : SR.fromDateField.getValue(),
 				toDate : SR.toDateField.getValue(),
 				start : 0,
 				searchText: SR.searchTextField.getValue(),
-				cmd : 'gridGetData'
+				cmd : 'gridGetData',
+				file: jsonFileNm
 			}
 		});
 	};
@@ -378,7 +384,8 @@ Ext.onReady(function() {
 					getRawData( records );
 					
 					var object = {
-						url : jsonURL,
+						// url : jsonURL,
+						url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
 						method: 'get',
 						callback: function (options, success, response) {
 							if (true == success) {
@@ -392,12 +399,14 @@ Ext.onReady(function() {
 						},
 						scope: this,
 						params : {
+							security  : srNonce,
 							fromDate  : SR.fromDateField.getValue(),
 							toDate    : SR.toDateField.getValue(),
 							searchText: SR.searchTextField.getValue(),
 							start 	  : 0,
 							id 		  : records[0].data.id,
-							cmd 	  : 'getData'
+							cmd 	  : 'getData',
+							file 	  : jsonFileNm
 						}
 					};
 					Ext.Ajax.request(object);
@@ -683,7 +692,8 @@ Ext.onReady(function() {
                                                 if ( fileExists == 1 ) {
                                                     jQuery('#wrap_sr_kpi').fadeTo('fast', 0.5);
                                                     jQuery.ajax({
-                                                        url: fileUrl,
+                                                        // url: fileUrl,
+                                                        url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
                                                         dataType: 'html',
                                                         success: function( response ){
                                                             jQuery('#wrap_sr_kpi').html(response).fadeTo('fast', 1);
