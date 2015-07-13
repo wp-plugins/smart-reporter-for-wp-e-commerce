@@ -1,5 +1,10 @@
 <?php 
-global $wpdb, $_wp_admin_css_colors;
+
+if ( ! defined( 'ABSPATH' ) || !is_user_logged_in() || !is_admin() ) {
+    exit; // Exit if accessed directly
+}
+
+global $wpdb, $_wp_admin_css_colors, $sr_nonce, $sr_json_file_nm;
 
 // to set javascript variable of file exists
 // $fileExists = ((defined(SRPRO)) && SRPRO === true) ? 1 : 0;
@@ -28,6 +33,9 @@ $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
 $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
 $sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
 $sr_is_woo22 = defined('SR_IS_WOO22') ? SR_IS_WOO22 : '';
+$sr_json_file_nm = defined('SR_JSON_FILE_NM') ? SR_JSON_FILE_NM : '';
+
+$sr_nonce = wp_create_nonce( 'smart-reporter-security' );
 
 if (!empty($sr_is_woo22) && $sr_is_woo22 == "true") {
     // $sr_woo_order_search_url = "&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&paged=1&mode=list&action2=-1";
@@ -45,6 +53,8 @@ if (!empty($sr_is_woo22) && $sr_is_woo22 == "true") {
 
 function sr_dashboard_widget_kpi() {
 
+    global $sr_nonce, $sr_json_file_nm;
+
     $sr_currency_symbol = defined('SR_CURRENCY_SYMBOL') ? SR_CURRENCY_SYMBOL : '';
     $sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
     $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
@@ -61,17 +71,19 @@ function sr_dashboard_widget_kpi() {
             //This ajax call for sr summary widget on wordpress dashboard
                 $.ajax({
                         type : 'POST',
-                        url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                        url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
                         dataType:"text",
                         async: false,
                         data: {
                             cmd: 'daily',
+                            security : "<?php echo $sr_nonce; ?>",
                             SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
                             SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
                             SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                             SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                             SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                            SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                            SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                            file: "<?php echo $sr_json_file_nm; ?>"
                         },
                         success: function(response) {
                             daily_widget_data = $.parseJSON(response);
@@ -345,17 +357,19 @@ jQuery(function($){
         // This ajax call for display daily widget on Sr main dashboard
         $.ajax({
                 type : 'POST',
-                url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
                 dataType:"text",
                 // async: false,
                 data: {
                     cmd: 'daily',
+                    security : "<?php echo $sr_nonce; ?>",
                     SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
                     SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
                     SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                     SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                     SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                    SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                    SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                    file: "<?php echo $sr_json_file_nm; ?>"
                 },
                 success: function(response) {
 
@@ -745,12 +759,13 @@ jQuery(function($){
                                           
                       $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
                             async: false,
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_sales',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -759,7 +774,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
 
@@ -819,11 +835,12 @@ jQuery(function($){
                         // call for Top Products Widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_top_products',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -832,7 +849,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
                                 
@@ -854,11 +872,12 @@ jQuery(function($){
                         // call for Abandoned Products Widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_abandoned_products',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -867,7 +886,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
                                 
@@ -886,11 +906,12 @@ jQuery(function($){
                          // call for Top Customers Widget 
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_top_customers',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -899,7 +920,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
                                 
@@ -916,11 +938,12 @@ jQuery(function($){
                         // call for Top Coupons Widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_top_coupons',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -929,7 +952,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
                                 
@@ -946,11 +970,12 @@ jQuery(function($){
                         // call for Avg Order Total, Avg Items Per Customer, Sales with Coupons, Discount widgets
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_total_discount',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -961,7 +986,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
                                 
@@ -1045,11 +1071,12 @@ jQuery(function($){
                         // call for Taxes and Shipping Widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_taxes_shipping',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -1058,7 +1085,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
 
@@ -1077,11 +1105,12 @@ jQuery(function($){
                         // call for Payment Gateways Widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_payment_gateways',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -1091,7 +1120,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
 
@@ -1112,11 +1142,12 @@ jQuery(function($){
                         // call for Billing Countries widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_billing_countries',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -1125,7 +1156,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
 
@@ -1142,11 +1174,12 @@ jQuery(function($){
                          // call for Shipping Methods widget
                         $.ajax({
                             type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                             dataType:"text",
-                            action: 'sr_get_monthly_sales',
+                            action: 'sr_get_stats',
                             data: {
                                         cmd: 'monthly_shipping_methods',
+                                        security : "<?php echo $sr_nonce; ?>",
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
                                         top_prod_option : opt_id,
@@ -1156,7 +1189,8 @@ jQuery(function($){
                                         SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
                                         SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
                                         SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"
+                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                                        file: "<?php echo $sr_json_file_nm; ?>"
                                 },
                             success: function(response) {
 
@@ -2342,17 +2376,19 @@ jQuery(function($){
               $.ajax({
                     type : 'POST',
                     // url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
-                    url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales', 
+                    url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
                     dataType:"text",
                     async: false,
-                    action: 'sr_get_monthly_sales',
+                    action: 'sr_get_stats',
                     data: {
                         cmd: 'top_products_option',
+                        security : "<?php echo $sr_nonce; ?>",
                         top_prod_option: opt_id,
                         option : 1,
                         start_date : $("#startdate").val(),
                         end_date : $("#enddate").val(),
-                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>"        
+                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+                        file: "<?php echo $sr_json_file_nm; ?>"
                     },
                     success: function(response) {
                         var myJsonObj    = $.parseJSON(response);
@@ -2622,12 +2658,13 @@ jQuery(function($){
                                 $.ajax({
                                             type : 'POST',
                                             // url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
-                                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_monthly_sales' : ajaxurl + '?action=sr_get_monthly_sales',
+                                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
                                             dataType:"text",
                                             async: false,
-                                            action: 'get_monthly_sales',
+                                            action: 'sr_get_stats',
                                             data: {
                                                 cmd: 'monthly_detailed_view',
+                                                security : "<?php echo $sr_nonce; ?>",
                                                 detailed_view: 1,
                                                 total_monthly_sales : Master_myJsonObj['detailed_view_total_monthly_sales'],
                                                 start_date : $("#startdate").val(),
@@ -2635,7 +2672,8 @@ jQuery(function($){
                                                 SR_IS_WOO22 : '<?php echo $sr_is_woo22; ?>',
                                                 SR_CURRENCY_SYMBOL : '<?php echo $sr_currency_symbol; ?>',
                                                 SR_CURRENCY_POS    : '<?php echo $sr_currency_pos; ?>',
-                                                SR_DECIMAL_PLACES : '<?php echo $sr_decimal_places; ?>'      
+                                                SR_DECIMAL_PLACES : '<?php echo $sr_decimal_places; ?>',
+                                                file: "<?php echo $sr_json_file_nm; ?>"
                                             },
                                             success: function(response) {
 
@@ -3449,7 +3487,7 @@ jQuery(function($){
                     <?php if (defined('SRPRO') && SRPRO === true) {?>
                         var iframe = document.createElement("iframe");
                         // iframe.src = '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/pro/sr-summary-mails.php"); ?>' + "?cmd=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val();
-                        iframe.src = ajaxurl + "?action=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val() + "&SR_IS_WOO22=<?php echo $sr_is_woo22; ?>";
+                        iframe.src = ajaxurl + "?action=top_ababdoned_products_export&security=<?php echo $sr_nonce;?>&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val() + "&SR_IS_WOO22=<?php echo $sr_is_woo22;?>&file=<?php echo $sr_json_file_nm;?>";
                         iframe.style.display = "none";
                         document.body.appendChild(iframe);
                     <?php }else {?>
@@ -4334,7 +4372,8 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
                 echo "SR.defaultCurrencySymbol = '" . get_woocommerce_currency_symbol() . "';";
             }   
         echo "
-        var jsonURL              = '" .SR_JSON_URL. "';
+        var jsonFileNm           = '" .SR_JSON_FILE_NM. "';
+        var srNonce           = '" .$sr_nonce. "';
         var imgURL               = '" .SR_IMG_URL . "';
         var fileExists           = '" .$fileExists. "';
         var ordersDetailsLink   = '" . $orders_details_url . "';

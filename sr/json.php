@@ -1,13 +1,16 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) || !is_user_logged_in() || !is_admin() ) {
+	exit; // Exit if accessed directly
+}
+
 ob_start();
 
-include_once ('../../../../wp-load.php');
 include_once ('../../../../wp-includes/wp-db.php');
 include_once (ABSPATH . WPINC . '/functions.php');
 
 // for delete logs.
-require_once ('../../' . WPSC_FOLDER . '/wpsc-includes/purchaselogs.class.php');
+include_once ('../../' . WPSC_FOLDER . '/wpsc-includes/purchaselogs.class.php');
 
 $del = 3;
 $result  = array ();
@@ -210,6 +213,8 @@ function get_last_few_order_details_wpec( $product_id, $select, $from, $group_by
 
 if (isset ( $_GET ['cmd'] ) && (($_GET ['cmd'] == 'getData') || ($_GET ['cmd'] == 'gridGetData'))) {
 
+	check_ajax_referer('smart-reporter-security','security');
+
 	$group_by = '';
 
 	if (isset ( $_GET ['fromDate'] )) {
@@ -370,4 +375,8 @@ while(ob_get_contents()) {
 }
 
 echo json_encode ( $encoded );
+
+unset($encoded);
+exit;
+
 ?>
