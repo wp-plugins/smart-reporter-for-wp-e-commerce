@@ -3,22 +3,55 @@ Contributors: storeapps, niravmehta, malayladu, ratnakar.dubey, Tarun.Parswani, 
 Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
-Tested up to: 4.2.2
-Stable tag: 2.9.2
+Tested up to: 4.3
+Stable tag: 2.9.4
 
-Business analysis and reporting for WooCommerce and WP eCommerce like never before.
+A phenomenal plugin that solves all your business related issues, from business analysis to reporting on your WooCommerce and WordPress eCommerce website.
 
 == Description ==
 
-Smart Reporter shows you key performance indicators and product wise sales trends in an easy to understand manner. You can see product performance, their sales trend and can take business decisions based on that.
+Storeapps.org presents **Smart Reporter**, a unique and an **ultimate plugin** for your business. Smart Reporter gives you the time you require to develop your business while it does all the heavy lifting.
 
-It also shows you key performance indicators (total sales, average sales, velocity etc) so you can quickly guage performance of your business. Also, the same key performance indicators are available on the wordpress dashboard page so you need not navigate to Smart Reporter page everytime.
+Smart Reporter provides detailed statistics about your store, your products and sales funnel.
 
-You can filter reports by date range and can also search and view sales trends of specific products.
+Need key performance indicators like sales today, new customers today, refunds today, orders remaining to fulfill and product wise sales trends in an easy to understand manner to make those critical business decisions? **Give Smart Reporter a try** and let it blow your mind.
 
-Smart Reporter works with WooCommerce latest versions and WP e-Commerce 3.8+.
+Smart Reporter delivers Business Analytics for WordPress powered e-Commerce shops like never before. You get up to date and accurate charts, reports and key performance indicators. You can now back up your intuition with data and take your sales to the next level.
 
-The Lite version is limited to showing data of past one month only. Purchase the paid versions for full access. 
+We have **16 Good Reasons** why you need Smart Reporter for your WooCommerce and WordPress eCommerce website:
+
+* **Daily, Weekly and Monthly** Sales Summary Report via Email
+* Sales amount and **trend chart**
+* **Sales Funnel** – conversion from add to cart, order placement and payment completed.
+* **Top Products** – by sales amount and quantity, along with their trend chart and percentage contribution
+* Average Order value in $$ and how is it moving from last period
+* Average Items bought per customer
+* Cart abandonment rate – and whether it’s going up or down
+* **Coupon's contribution** – percentage of sales that contained coupons
+* **Top customers**
+* **Top coupons**
+* **Abandoned Products** – which products are added to cart, but not actually ordered
+* **Discounts** – how much discount are you giving, now and historically!
+* **Taxes and Shipping** – and their ratio to sales
+* **Payment Gateways performance** – which ever your customers prefer
+* **Filter reports** by date range and search and view sales trends of specific products.
+
+Smart Reporter **provides a comprehensive products performance dashboard.** You can define a **time range** and use search to filter products to review on your WooCommerce and WordPress eCommerce website.
+
+**Products Dashboard** gives you in depth analysis of **product sales, product names, their category and their sales amount** for the selected criteria, **quantity sold, frequency of sales, product's contribution to total sales,** last few orders and **MUCH MORE!!**
+
+You also see a **sales trend chart** so you can easily spot the highs and lows!
+
+**Quickly discover top selling products**, laggards, and how well a product performs over a given time easily with this add-on. 
+To try a Live Demo of Smart Reporter, visit:
+[Smart Reporter Demo](http://demo.storeapps.org/?demo=sr-woo)
+
+The Lite version is limited to showing data of **past one month** only. Purchase the paid versions for full access.
+
+**Support**
+If you need any help with Smart Reporter, we will be happy to help. Write your queries in the support section, or mail us at support@storeapps.org
+
+If you like our plugin, dont forget to **give us a 5 star rating.** 
 
 == Installation ==
 
@@ -48,6 +81,15 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.9.4 =
+* Update: Major performance Improvements [Smart Reporter Beta] (WooCommerce)
+* Update: Option for controlling the number formatting [Smart Reporter Beta] (WooCommerce)
+* Fix: Minor Fixes
+
+= 2.9.3 =
+* Fix: Important security fixes
+* Fix: Minor Fixes
 
 = 2.9.2 =
 * Update: UI & Performance improvements [Smart Reporter Beta] (WooCommerce)
@@ -191,6 +233,12 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 
 
 == Upgrade Notice ==
+
+= 2.9.4 =
+UI & Major Performance Improvements [Smart Reporter Beta] (WooCommerce) along with some important fixes, recommended upgrade.
+
+= 2.9.3 =
+Some important security fixes along with some other fixes, recommended upgrade.
 
 = 2.9.2 =
 UI & Performance Improvements [Smart Reporter Beta] (WooCommerce) along with some important fixes, recommended upgrade.

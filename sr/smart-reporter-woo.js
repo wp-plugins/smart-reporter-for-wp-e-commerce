@@ -120,13 +120,13 @@ Ext.onReady(function() {
 			data: [
 					['TODAY',      'Today'],
 					['YESTERDAY',  'Yesterday'],
-					['THIS_WEEK',  'This Week'],
+					['CURRENT_WEEK',  'Current Week'],
 					['LAST_WEEK',  'Last Week'],
-					['THIS_MONTH', 'This Month'],
+					['CURRENT_MONTH', 'Current Month'],
 					['LAST_MONTH', 'Last Month'],
 					['3_MONTHS',   '3 Months'],
 					['6_MONTHS',   '6 Months'],
-					['THIS_YEAR',  'This Year'],
+					['CURRENT_YEAR',  'Current Year'],
 					['LAST_YEAR',  'Last Year']
 				]
 		}),
@@ -144,7 +144,7 @@ Ext.onReady(function() {
 			select: function () {
 				var dateValue = this.value;
 				if(fileExists == 0){
-					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'THIS_WEEK' || smartDateComboBox.getValue() == 'LAST_WEEK' || smartDateComboBox.getValue() == 'THIS_MONTH'){
+					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'CURRENT_WEEK' || smartDateComboBox.getValue() == 'LAST_WEEK' || smartDateComboBox.getValue() == 'CURRENT_MONTH'){
 						liteSelectDate(dateValue);
 						loadGridStore();
 					}else{
@@ -174,7 +174,7 @@ Ext.onReady(function() {
 			toDate 	 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 			break;
 
-			case 'THIS_WEEK':
+			case 'CURRENT_WEEK':
 			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() - 1));
 			toDate 	 = now;
 			break;
@@ -212,14 +212,17 @@ Ext.onReady(function() {
 		}
 		],
 		params : {
+			security : srNonce,
 			fromDate : SR.fromDateField.getValue(),
 			toDate : SR.toDateField.getValue(),
 			start : 0,
-			cmd : 'getData'
+			cmd : 'getData',
+			file: jsonFileNm
 		},
 		proxy : {
 			type : 'ajax',
-			url : jsonURL, // url that will load data with respect to start and
+			url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
+			// url : jsonURL, // url that will load data with respect to start and
 			reader : {
 				type : 'json',
 				totalProperty : 'totalCount',
@@ -258,7 +261,8 @@ Ext.onReady(function() {
 		}],
 		proxy : {
 			type : 'ajax',
-			url : jsonURL, // url that will load data with respect to start and
+			// url : jsonURL, // url that will load data with respect to start and
+			url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
 			reader : {
 				type : 'json',
 				totalProperty : 'gridTotalCount',
@@ -286,11 +290,13 @@ Ext.onReady(function() {
 	var loadGridStore = function() {
 		gridStore.load({
 			params : {
+				security : srNonce,
 				fromDate : SR.fromDateField.getValue(),
 				toDate : SR.toDateField.getValue(),
 				start : 0,
 				searchText: SR.searchTextField.getValue(),
-				cmd : 'gridGetData'
+				cmd : 'gridGetData',
+				file: jsonFileNm
 			}
 		});
 	};
@@ -379,7 +385,8 @@ Ext.onReady(function() {
 					getRawData( records );
 					
 					var object = {
-						url : jsonURL,
+						// url : jsonURL,
+						url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
 						method: 'get',
 						callback: function (options, success, response) {
 							if (true == success) {
@@ -393,12 +400,14 @@ Ext.onReady(function() {
 						},
 						scope: this,
 						params : {
+							security  : srNonce,
 							fromDate  : SR.fromDateField.getValue(),
 							toDate    : SR.toDateField.getValue(),
 							searchText: SR.searchTextField.getValue(),
 							start 	  : 0,
 							id 		  : records[0].data.id,
-							cmd 	  : 'getData'
+							cmd 	  : 'getData',
+							file 	  : jsonFileNm
 						}
 					};
 					Ext.Ajax.request(object);
@@ -685,7 +694,8 @@ Ext.onReady(function() {
                                                 if ( fileExists == 1 ) {
                                                     jQuery('#wrap_sr_kpi').fadeTo('fast', 0.5);
                                                     jQuery.ajax({
-                                                        url: fileUrl,
+                                                        // url: fileUrl,
+                                                        url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
                                                         dataType: 'html',
                                                         success: function( response ){
                                                             jQuery('#wrap_sr_kpi').html(response).fadeTo('fast', 1);

@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9.2
+Version: 2.9.4
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -42,31 +42,40 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 }
 
 
-// Function for custom order searches
+// Code for custom order searches
 
-function woocommerce_shop_order_search_custom_fields1( $wp ) {
-    global $pagenow, $wpdb;
+function sr_search_join($join) {
+	global $wpdb;
 
-    // if(empty($_COOKIE['sr_woo_search_post_ids']))
-    if(!(isset($_GET['source']) && $_GET['source'] == 'sr'))
-    	return;
+	if( !empty($_GET['source']) && $_GET['source'] == 'sr' ) {
+    	if ( !empty($_GET['s_col']) && $_GET['s_col'] == 'order_item_name' ) {
+			$join .= " JOIN {$wpdb->prefix}woocommerce_order_items AS oi ON ($wpdb->posts.ID = oi.order_id AND oi.order_item_type = 'coupon') ";
+		} else {
+			$join .= " JOIN {$wpdb->prefix}woo_sr_orders AS sro ON ($wpdb->posts.ID = sro.order_id) ";
+		}
+	}
 
-    $post_ids = (!empty($_COOKIE['sr_woo_search_post_ids'])) ? explode(",",$_COOKIE['sr_woo_search_post_ids']) : 0;
-
-    // Remove s - we don't want to search order name
-    unset( $wp->query_vars['s'] );
-
-    // Remove the post_ids from $_COOKIE
-    unset($_COOKIE['sr_woo_search_post_ids']);
-
-    // so we know we're doing this
-    $wp->query_vars['shop_order_search'] = true;
-
-    // Search by found posts
-    $wp->query_vars['post__in'] = $post_ids;
-
+	return $join;
 }
-add_action( 'parse_request', 'woocommerce_shop_order_search_custom_fields1' );
+add_filter('posts_join_request', 'sr_search_join');
+
+
+function sr_search_where($where) {
+	global $wpdb;
+
+	if( !empty($_GET['source']) && $_GET['source'] == 'sr' ) {
+    	$where .= " AND ( DATE($wpdb->posts.post_date) BETWEEN '". $_GET['sdate'] ."' AND '". $_GET['edate'] ."')";
+
+		if ( !empty($_GET['s_col']) && $_GET['s_col'] == 'order_item_name' ) {
+			$where .= " AND oi.". $_GET['s_col'] ." = '". $_GET['s_val'] ."'";
+		} else {
+			$where .= " AND sro.". $_GET['s_col'] ." = '". $_GET['s_val'] ."'";
+		}
+	}
+
+	return $where;
+}
+add_filter('posts_where_request', 'sr_search_where');
 
 /**
  * Registers a plugin function to be run when the plugin is activated.
@@ -151,6 +160,18 @@ function sr_deactivate() {
 		$wpdb->blogid = $blog_id;
 		$wpdb->set_prefix( $wpdb->base_prefix );
 		$wpdb->query( "DROP TABLE {$wpdb->prefix}sr_woo_order_items" );
+
+		$table_name = "{$wpdb->prefix}woo_sr_orders";
+		if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+			$wpdb->query( "DROP TABLE {$wpdb->prefix}woo_sr_orders" );
+		}
+
+		$table_name = "{$wpdb->prefix}woo_sr_order_items";
+		if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+			$wpdb->query( "DROP TABLE {$wpdb->prefix}woo_sr_order_items" );
+		}
+		
+		
 		$wpdb = clone $wpdb_obj;
 	}
 
@@ -383,7 +404,28 @@ function is_pro_updated() {
 
 	function sr_schedule_daily_summary_mails() {
 
+		global $wpdb;
+
+		// code for renaming the 'sr_woo_abandoned_items' table
+		$table_name = "{$wpdb->prefix}sr_woo_abandoned_items";
+		if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+			$wpdb->query("RENAME TABLE {$wpdb->prefix}sr_woo_abandoned_items TO {$wpdb->prefix}woo_sr_cart_items;");
+
+			$wpdb->query("ALTER TABLE {$wpdb->prefix}woo_sr_cart_items
+							CHANGE quantity qty int(10),
+							CHANGE abandoned_cart_time last_update_time int(11),
+							CHANGE product_abandoned cart_is_abandoned int(1);");
+		}
+
 		if ( in_array( 'woocommerce/woocommerce.php', get_option( 'active_plugins' ) ) || ( is_multisite() && in_array( 'woocommerce/woocommerce.php', get_option( 'active_sitewide_plugins' ) ) ) ) {
+
+			if ( !defined('SR_NONCE') ) {
+				define ( 'SR_NONCE', wp_create_nonce( 'smart-reporter-security' ));
+			}
+
+			if ( !defined('SR_NUMBER_FORMAT') ) {
+				define ( 'SR_NUMBER_FORMAT', get_option( 'sr_number_format' ));
+			}
 
 			if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr-summary-mails.php' )) {
 				include ('pro/sr-summary-mails.php');
@@ -414,11 +456,17 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
 	define ( 'SR_IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );        
 
+	define ( 'SR_DOMAIN', 'smart-reporter-for-wp-e-commerce' );
+
 	// EOF
 	
 	add_action ( 'admin_notices', 'sr_admin_notices' );
 	add_action ( 'admin_init', 'sr_admin_init' );
-	add_action('wp_ajax_sr_get_monthly_sales','sr_get_monthly_sales');
+
+	add_action( 'admin_enqueue_scripts', 'sr_admin_scripts' );
+	add_action( 'admin_enqueue_scripts', 'sr_admin_styles' );
+
+	add_action('wp_ajax_sr_get_stats','sr_get_stats');
 
 	if ( is_multisite() && is_network_admin() ) {
 		
@@ -434,22 +482,21 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 	// add_action('woocommerce_cart_updated', 'sr_demo');
 
+	$sr_plugin_info = $ext_version ='';
+
 	function sr_admin_init() {
 
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
 		$ext_version 	= '4.0.1';
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) && (!defined('SR_WPSC_WOO_ACTIVATED'))) {
-			define('SR_WPSC_WOO_ACTIVATED',true);
+
+		if ( (is_plugin_active ( 'woocommerce/woocommerce.php' ) && (defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) ) || (is_plugin_active ( 'woocommerce/woocommerce.php' )) ) {
+			define('SR_WOO_ACTIVATED', true);
 		} elseif ( defined('WPSC_URL') && is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )) {
 			define('SR_WPSC_ACTIVATED',true);
-		} elseif (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
-			define('SR_WOO_ACTIVATED', true);
 		}
-		
-		wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array (), $ext_version );
+
 		if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
-			wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
 			if (!defined('SR_WPSC_RUNNING')) {
 				define('SR_WPSC_RUNNING', true);	
 			}
@@ -476,11 +523,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 					define('SR_IS_WPSC388', version_compare ( WPSC_VERSION, '3.8.8', '>=' ));
 				}
 			}
-		} else if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') )  {
-			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
-				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
-			}
-
+		} else if ( ( isset($_GET['page']) && $_GET['page'] == 'wc-reports') )  {
+			
 			if (!defined('SR_WPSC_RUNNING')) {
 				define('SR_WPSC_RUNNING', false);
 			}
@@ -489,90 +533,61 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				define('SR_WOO_RUNNING', true);
 			}
 			
-			//WooCommerce Currency Constants
-			define ( 'SR_CURRENCY_SYMBOL', get_woocommerce_currency_symbol());
-			define ( 'SR_CURRENCY_POS' , get_woocommerce_price_format());
-			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
 		}
 		
 		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
-			wp_register_script ( 'sr_functions', plugins_url ( '/pro/sr.js', __FILE__ ), array ('sr_main' ), $sr_plugin_info ['Version'] );
 			define ( 'SRPRO', true );
 		} else {
 			define ( 'SRPRO', false );
 		}
 
 
-		if (SRPRO === true) {
+		if ( defined('SR_WPSC_ACTIVATED') && SR_WPSC_ACTIVATED === true ) {
+			$json_filename = 'json';
+		} else if ( defined('SR_WOO_ACTIVATED') && SR_WOO_ACTIVATED === true ) {
+			if (isset($_GET['view']) && $_GET['view'] == "smart_reporter_old") {
+				$json_filename = 'json-woo';
+			} else {
+				$json_filename = 'json-woo-beta';
+			}
 
+			//WooCommerce Currency Constants
+			define ( 'SR_CURRENCY_SYMBOL', get_woocommerce_currency_symbol());
+			define ( 'SR_CURRENCY_POS' , get_woocommerce_price_format());
+			define ( 'SR_DECIMAL_PLACES', get_option( 'woocommerce_price_num_decimals' ));
+		}
+		define ( 'SR_JSON_FILE_NM', $json_filename );
+
+		if ( defined('SRPRO') && SRPRO === true ) {
 			include ('pro/upgrade.php');
-
 			//wp-ajax action
 			if (is_admin() ) {
 	            add_action ( 'wp_ajax_top_ababdoned_products_export', 'sr_top_ababdoned_products_export' );
 	            add_action ( 'wp_ajax_sr_save_settings', 'sr_save_settings' );
-	        }
-
-			
+	        }			
 		}
 
-		if (is_plugin_active ( 'woocommerce/woocommerce.php' )) {
+		if ( defined('SR_WOO_ACTIVATED') && SR_WOO_ACTIVATED === true ) {
 	    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
 	    }
-
-		// ================================================================================================
-		//Registering scripts and stylesheets for SR Beta Version
-		// ================================================================================================
-
-		if ( !wp_script_is( 'jquery' ) ) {
-            wp_enqueue_script( 'jquery' );
-        }
-
-        wp_enqueue_script ( 'sr_jqplot_js', plugins_url ( 'resources/jqplot/jquery.jqplot.min.js', __FILE__ ),array('jquery'));
-        wp_register_script ( 'sr_jqplot_high', plugins_url ( 'resources/jqplot/jqplot.highlighter.min.js', __FILE__ ), array ('sr_jqplot_js' ));
-        wp_register_script ( 'sr_jqplot_cur', plugins_url ( 'resources/jqplot/jqplot.cursor.min.js', __FILE__ ), array ('sr_jqplot_high' ));
-        wp_register_script ( 'sr_jqplot_render', plugins_url ( 'resources/jqplot/jqplot.categoryAxisRenderer.min.js', __FILE__ ), array ('sr_jqplot_cur' ));
-        wp_register_script ( 'sr_jqplot_date_render', plugins_url ( 'resources/jqplot/jqplot.dateAxisRenderer.min.js', __FILE__ ), array ('sr_jqplot_render' ));
-        wp_register_script ( 'sr_jqplot_pie_render', plugins_url ( 'resources/jqplot/jqplot.pieRenderer.min.js', __FILE__ ), array ('sr_jqplot_date_render' ));
-        wp_register_script ( 'sr_jqplot_donout_render', plugins_url ( 'resources/jqplot/jqplot.donutRenderer.min.js', __FILE__ ), array ('sr_jqplot_pie_render' ));
-        wp_register_script ( 'sr_jqplot_funnel_render', plugins_url ( 'resources/jqplot/jqplot.funnelRenderer.min.js', __FILE__ ), array ('sr_jqplot_donout_render' ));
-        wp_enqueue_script ( 'sr_datepicker', plugins_url ( 'resources/jquery.datepick.package/jquery.datepick.js', __FILE__ ), array ('sr_jqplot_funnel_render' ));
-        wp_enqueue_script ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.min.js', __FILE__ ), array ('sr_datepicker' ));
-        wp_enqueue_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jvectormap/jquery-jvectormap-world-mill-en.js', __FILE__ ), array ('sr_jvectormap' ));
-        // wp_enqueue_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jvectormap/world-map.js', __FILE__ ), array ('sr_jvectormap' ));
-
-        // wp_enqueue_script ( 'sr_jvectormap', plugins_url ( 'resources/jqvmap/jquery.vmap.min.js', __FILE__ ), array ('sr_datepicker' ));
-        // wp_enqueue_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jqvmap/jquery.vmap.world.js', __FILE__ ), array ('sr_jvectormap' ));
-
-        wp_enqueue_script ( 'sr_magnific_popup', plugins_url ( 'resources/magnific-popup/jquery.magnific-popup.js', __FILE__ ), array ('sr_jvectormap_world_map' ));
-        wp_register_script ( 'sr_jqplot_all_scripts', plugins_url ( 'resources/jqplot/jqplot.BezierCurveRenderer.min.js', __FILE__ ), array ('sr_magnific_popup' ), $sr_plugin_info ['Version']);
-
-        wp_register_style ( 'font_awesome', plugins_url ( "resources/font-awesome/css/font-awesome.min.css", __FILE__ ), array ());
-        // wp_register_style ( 'font_awesome', '//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css', array ());
-		// wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/redmond.datepick.css', __FILE__ ), array ('font_awesome'));
-		wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/smoothness.datepick.css', __FILE__ ), array ('font_awesome'));
-		wp_register_style ( 'sr_jqplot_all', plugins_url ( 'resources/jqplot/jquery.jqplot.min.css', __FILE__ ), array ('sr_datepicker_css'));
-		wp_register_style ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.css', __FILE__ ), array ('sr_jqplot_all'));
-		
-		wp_register_style ( 'sr_magnific_popup', plugins_url ( 'resources/magnific-popup/magnific-popup.css', __FILE__ ), array ('sr_jvectormap'));
-		// wp_register_style ( 'sr_jvectormap', plugins_url ( 'resources/jqvmap/jqvmap.css', __FILE__ ), array ('sr_jqplot_all'));
-		wp_register_style ( 'sr_main_beta', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_magnific_popup' ), $sr_plugin_info ['Version'] );
-		// ================================================================================================
-
 
 		if ( false !== get_option( '_sr_activation_redirect' ) ) {
         	// Delete the redirect transient
 	    	delete_option( '_sr_activation_redirect' );
 
-	    	if ( SR_WPSC_WOO_ACTIVATED === true || SR_WOO_ACTIVATED === true ) {
-	    		wp_redirect( admin_url('admin.php?page=smart-reporter-woo') );
-	    	} else if ( SR_WPSC_ACTIVATED === true ) {
+	    	if ( (defined('SR_WPSC_WOO_ACTIVATED') && SR_WPSC_WOO_ACTIVATED === true) || (defined('SR_WOO_ACTIVATED') && SR_WOO_ACTIVATED === true) ) {
+	    		
+	    		if ( defined('SR_IS_WOO22') && SR_IS_WOO22 == "true" ) {
+	    			wp_redirect( admin_url('admin.php?page=wc-reports&tab=smart_reporter') );
+	    		} else if ( defined('SR_IS_WOO22') && SR_IS_WOO22 == "false" ) {
+	    			wp_redirect( admin_url('admin.php?page=wc-reports&tab=smart_reporter_old') );
+	    		}
+	    		
+	    	} else if ( defined('SR_WPSC_ACTIVATED') && SR_WPSC_ACTIVATED === true ) {
 	    		wp_redirect( admin_url('edit.php?post_type=wpsc-product&page=smart-reporter-wpsc') );
 	    	}
 	    }
-
 	}
-
 	
 	// is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )
 	function sr_admin_notices() {
@@ -583,38 +598,110 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		}
 	}
 	
-	function sr_admin_scripts() {		
-		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
+	function sr_admin_scripts() {
+
+		global $sr_plugin_info, $ext_version;
+
+		if ( !wp_script_is( 'jquery' ) ) {
+            wp_enqueue_script( 'jquery' );
+        }
+
+        // condition for SR_Beta
+		if ( ( isset($_GET['page']) && $_GET['page'] == 'wc-reports') && empty($_GET['view']) && (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") ) {
+
+	        wp_register_script ( 'sr_datepicker', plugins_url ( 'resources/jquery.datepick.package/jquery.datepick.js', __FILE__ ), array ('jquery' ));
+	        wp_register_script ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.min.js', __FILE__ ), array ('sr_datepicker' ));
+	        wp_register_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jvectormap/jquery-jvectormap-world-mill-en.js', __FILE__ ), array ('sr_jvectormap' ));
+	        wp_register_script ( 'sr_magnific_popup', plugins_url ( 'resources/magnific-popup/jquery.magnific-popup.js', __FILE__ ), array ('sr_jvectormap_world_map' ));
+	        wp_register_script ( 'sr_main', plugins_url ( 'resources/chartjs/Chart.min.js', __FILE__ ), array ('sr_magnific_popup' ), $sr_plugin_info ['Version']);
+		} elseif ( ((defined('SR_WOO_RUNNING') && SR_WOO_RUNNING === true) && ((!empty($_GET['view']) && $_GET['view'] == "smart_reporter_old") || (defined('SR_IS_WOO22') && SR_IS_WOO22 == "false")) ) 
+				|| (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) ) {
+
+			wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array ('jquery'), $ext_version );
+
+			if ( defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true ) {
+				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
+			} else if ( (defined('SR_WOO_RUNNING') && SR_WOO_RUNNING === true) && ( (!empty($_GET['view']) && $_GET['view'] == "smart_reporter_old") || (defined('SR_IS_WOO22') && SR_IS_WOO22 == "false") ) ) {
+				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
+			}
+
+		}
+
+		if ( defined('SRPRO') && SRPRO === true ) {
+			wp_register_script ( 'sr_functions', plugins_url ( '/pro/sr.js', __FILE__ ), array ('sr_main' ), $sr_plugin_info ['Version'] );
 			wp_enqueue_script ( 'sr_functions' );
+		} else {
+			wp_enqueue_script ( 'sr_main' );
 		}
 	}
 	
 	function sr_admin_styles() {
+
+		global $sr_plugin_info, $ext_version;
+
+		// condition for SR_Beta
+		if ( ( isset($_GET['page']) && $_GET['page'] == 'wc-reports') && empty($_GET['view']) && (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") ) {
+			wp_register_style ( 'font_awesome', plugins_url ( "resources/font-awesome/css/font-awesome.min.css", __FILE__ ), array ());
+			wp_register_style ( 'sr_datepicker_css', plugins_url ( 'resources/jquery.datepick.package/smoothness.datepick.css', __FILE__ ), array ('font_awesome'));
+			wp_register_style ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.css', __FILE__ ), array ('sr_datepicker_css'));
+			wp_register_style ( 'sr_magnific_popup', plugins_url ( 'resources/magnific-popup/magnific-popup.css', __FILE__ ), array ('sr_jvectormap'));
+
+			$deps = array('sr_magnific_popup');
+		} elseif ( ((defined('SR_WOO_RUNNING') && SR_WOO_RUNNING === true) && 
+				((!empty($_GET['view']) && $_GET['view'] == "smart_reporter_old") || (defined('SR_IS_WOO22') && SR_IS_WOO22 == "false") ) )
+				 || (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) ) {
+			wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
+			$deps = array('sr_ext_all');
+		}
+			
+		wp_register_style ( 'sr_main', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), $deps, $sr_plugin_info ['Version'] );
 		wp_enqueue_style ( 'sr_main' );
 	}
 	
-	function woo_add_modules_sr_admin_pages() {
+	function woo_add_modules_sr_admin_pages($wooreports) {
 
+		$reports = array();
+		$reports['smart_reporter'] = array( 
+											'title'  	=> __( 'Smart Reporter', 'smart_reporter' ) .' '. ((SRPRO === true) ? __( 'Pro' ) : __( 'Lite' ) ),
+											'reports' 	=> array(
+																"smart_reporter" => array(
+																									'title'       => '',
+																									'description' => '',
+																									'hide_title'  => true,
+																									'callback'    => 'sr_admin_page'
+																								)
+																)
+										);
 
-		$page = add_submenu_page ('woocommerce', 'Smart Reporter', 'Smart Reporter', 'manage_woocommerce', 'smart-reporter-woo','sr_admin_page');
+		$wooreports = array_merge($reports,$wooreports);
+		return $wooreports;
 
-		// if ( $_GET ['action'] != 'sr-settings') { // not be include for settings page
-		if ( !isset($_GET ['action']) ) { // not be include for settings page
-			add_action ( 'admin_print_scripts-' . $page, 'sr_admin_scripts' );
-		}
-		add_action ( 'admin_print_styles-' . $page, 'sr_admin_styles' );
 	}
-	add_action ('admin_menu', 'woo_add_modules_sr_admin_pages');
-	
+	add_filter( 'woocommerce_admin_reports', 'woo_add_modules_sr_admin_pages', 10, 1 );
+
+
+
+	function sr_customize_tab(){
+		?>
+		<script type="text/javascript">
+			jQuery(function($) {
+				$('.icon32-woocommerce-reports').parent().find('.nav-tab-wrapper').find('a[href$="tab=smart_reporter"]').prepend('<img alt="Smart Reporter" src="<?php echo SR_IMG_URL."logo.png";?>" style="width:23px;height:23px;margin-right:4px;vertical-align:middle">');
+			});
+
+		</script>
+		<?php
+	}
+
+	// add_action('wc_reports_tabs','sr_customize_tab');
 	
 	function sr_admin_page(){
         global $woocommerce;
-        
-        $tab = ( !empty($_GET['tab'] )  ? ( $_GET['tab'] ) : 'smart_reporter_beta' )   ;
 
-        switch ($tab) {
+    	$view = (defined('SR_IS_WOO22') && SR_IS_WOO22 == "false") ? 'smart_reporter_old' : ( !empty($_GET['view'] )  ? ( $_GET['view'] ) : 'smart_reporter_beta' );
+
+        switch ($view) {
             case "smart_reporter_old" :
-                sr_show_console();
+                sr_console_common();
             break;
             default :
             	sr_beta_show_console();
@@ -624,7 +711,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
     
 
 	function wpsc_add_modules_sr_admin_pages($page_hooks, $base_page) {
-		$page = add_submenu_page ( $base_page, 'Smart Reporter', 'Smart Reporter', 'manage_options', 'smart-reporter-wpsc', 'sr_show_console' );
+		$page = add_submenu_page ( $base_page, 'Smart Reporter', 'Smart Reporter', 'manage_options', 'smart-reporter-wpsc', 'sr_console_common' );
 		add_action ( 'admin_print_styles-' . $page, 'sr_admin_styles' );
 		// if ( $_GET ['action'] != 'sr-settings') { // not be include for settings page
 		if ( !isset($_GET ['action']) ) { // not be include for settings page
@@ -640,13 +727,15 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	
 
 	// Actions on order change
-	add_action( 'woocommerce_order_status_pending', 	'sr_woo_remove_order' );
-	add_action( 'woocommerce_order_status_failed', 		'sr_woo_remove_order' );
-	// add_action( 'woocommerce_order_status_refunded', 	'sr_woo_remove_order' );
-	add_action( 'woocommerce_order_status_cancelled', 	'sr_woo_remove_order' );
+	add_action( 'woocommerce_order_status_pending', 	'sr_woo_add_order' );
+	add_action( 'woocommerce_order_status_failed', 		'sr_woo_add_order' );
+	add_action( 'woocommerce_order_status_refunded', 	'sr_woo_add_order' );
+	add_action( 'woocommerce_order_status_cancelled', 	'sr_woo_add_order' );
 	add_action( 'woocommerce_order_status_on-hold', 	'sr_woo_add_order' );
 	add_action( 'woocommerce_order_status_processing', 	'sr_woo_add_order' );
 	add_action( 'woocommerce_order_status_complete', 	'sr_woo_add_order' );
+
+	add_action ( 'woocommerce_order_refunded' , 'sr_woo_add_order',10,2 ); // added for handling manual refunds
 
 	function sr_woo_refresh_order( $order_id ) {
 		sr_woo_remove_order( $order_id );
@@ -854,22 +943,110 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             return $values;
         }
         
-        function sr_woo_add_order( $order_id ) {
+    function sr_woo_add_order( $order_id, $refund_id = '' ) {
+
        global $wpdb;
+
 			$order = new WC_Order( $order_id );
 			$order_items = array( $order_id => $order->get_items() );
 
 			$order_items['order_date'] = $order->order_date;
 			$order_items['order_status'] = $order->post_status;
 
-			$insert_query = "INSERT INTO {$wpdb->prefix}sr_woo_order_items 
+			$order_is_sale = 1;
+
+			//Condn for woo 2.2 compatibility
+			if (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") {
+				$order_status = substr($order->post_status, 3);
+			} else {
+				$order_status = wp_get_object_terms( $order_id, 'shop_order_status', array('fields' => 'slugs') );
+				$order_status = (!empty($order_status)) ? $order_status[0] : '';
+			}
+
+			if ( $order_status == 'on-hold' || $order_status == 'processing' || $order_status == 'completed' ) {
+				$insert_query = "REPLACE INTO {$wpdb->prefix}sr_woo_order_items 
 							( `product_id`, `order_id`, `order_date`, `order_status`, `product_name`, `sku`, `category`, `quantity`, `sales`, `discount` ) VALUES ";
                 
-            $values = sr_items_to_values( $order_items );
-            if ( count( $values ) > 0 ) {
-            	$insert_query .= implode(",",$values);
-                $wpdb->query( $insert_query );
-            }
+	            $values = sr_items_to_values( $order_items );
+	            if ( count( $values ) > 0 ) {
+	            	$insert_query .= implode(",",$values);
+	                $wpdb->query( $insert_query );
+	            }
+
+			} else {
+				$wpdb->query( "DELETE FROM {$wpdb->prefix}sr_woo_order_items WHERE order_id = {$order_id}" );
+				$order_is_sale = 0;
+			}
+
+            //chk if the SR Beta Snapshot table exists or not
+		    $table_name = "{$wpdb->prefix}woo_sr_orders";
+		    if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+
+		    	$oi_type = 'S';
+
+		    	// For handling manual refunds
+		    	if(!empty( $refund_id )) {
+		    		$order_id = $refund_id;
+		    		$order = new WC_Order( $order_id );
+					$oi_type = 'R';
+		    	}
+
+		    	$order_items = $order->get_items( array('line_item', 'shipping') );
+
+		    	$order_meta = get_post_meta($order_id);
+		    	$order_sm = $order->get_shipping_methods();
+
+		    	$oi_values = array();
+		    	$t_qty = 0;
+		    	$sm_id = '';
+
+		    	foreach ( $order_items as $oi_id => $item ) {
+
+		    		if ( $item['type'] == 'shipping' ) {
+		    			$sm_id = ( !empty($item['item_meta']['method_id'][0]) ) ? $item['item_meta']['method_id'][0] : '';
+		    		} else {
+		    			$t_qty += $item['qty'];
+			    		
+			    		$oi_values[] = "( ". $wpdb->_real_escape($oi_id) .", '". $wpdb->_real_escape(substr($order->order_date,0,10) ) ."', 
+			    							'". $wpdb->_real_escape(substr($order->order_date,12) ) ."', ". $wpdb->_real_escape($order_is_sale) .", 
+			    							". $wpdb->_real_escape($item['product_id']) .", ". $wpdb->_real_escape($item['variation_id']) .",
+			    						 	". $wpdb->_real_escape($order_id) .", '". $wpdb->_real_escape($oi_type) ."', ". $wpdb->_real_escape($item['qty']) .",
+			    						 	". $wpdb->_real_escape($item['line_total']) ." )";	
+		    		}
+		    	}
+
+		    	$query = "REPLACE INTO {$wpdb->prefix}woo_sr_orders 
+							( `order_id`, `created_date`, `created_time`, `status`, `type`, `parent_id`, `total`, `currency`, `discount`, `cart_discount`, `shipping`, 
+								`shipping_tax`, `shipping_method`, `tax`, `qty`, `payment_method`, `user_id`, `billing_email`,
+								`billing_country`, `customer_name` ) VALUES
+								( ". $wpdb->_real_escape($order->id) .", '". $wpdb->_real_escape(substr($order->order_date,0,10) ) ."',
+								'". $wpdb->_real_escape(substr($order->order_date,12) ) ."', '". $wpdb->_real_escape($order->post_status) ."',
+								'". $wpdb->_real_escape($order->post->post_type) ."', ". $wpdb->_real_escape($order->post->post_parent) .", 
+								". $wpdb->_real_escape( !empty($order_meta['_order_total'][0]) ? $order_meta['_order_total'][0] : 0) .",
+								'". $wpdb->_real_escape($order_meta['_order_currency'][0]) ."', 
+								". $wpdb->_real_escape(!empty($order_meta['_order_discount'][0]) ? $order_meta['_order_discount'][0] : 0) .",
+								". $wpdb->_real_escape(!empty($order_meta['_cart_discount'][0]) ? $order_meta['_cart_discount'][0] : 0) .",
+								". $wpdb->_real_escape(!empty($order_meta['_order_shipping'][0]) ? $order_meta['_order_shipping'][0] : 0) .", 
+								". $wpdb->_real_escape(!empty($order_meta['_order_shipping_tax'][0]) ? $order_meta['_order_shipping_tax'][0] : 0) .",
+								'". $wpdb->_real_escape( $sm_id ) ."', 
+								". $wpdb->_real_escape(!empty($order_meta['_order_tax'][0]) ? $order_meta['_order_tax'][0] : 0) .", 
+								". $wpdb->_real_escape((!empty($t_qty)) ? $t_qty : 1) .",
+								'". $wpdb->_real_escape($order_meta['_payment_method'][0]) ."', 
+								". $wpdb->_real_escape(!empty($order_meta['_customer_user'][0]) ? $order_meta['_customer_user'][0] : 0) .",
+								'". $wpdb->_real_escape($order_meta['_billing_email'][0]) ."', '". $wpdb->_real_escape($order_meta['_billing_country'][0]) ."',
+								'". $wpdb->_real_escape($order_meta['_billing_first_name'][0]) .' '. $wpdb->_real_escape($order_meta['_billing_last_name'][0]) ."' ) ";	
+
+				$wpdb->query( $query );
+
+				$query = "REPLACE INTO {$wpdb->prefix}woo_sr_order_items
+								( `order_item_id`, `order_date`, `order_time`, `order_is_sale`, `product_id`, `variation_id`, `order_id`, `type`,
+								`qty`, `total` ) VALUES ";
+
+				if ( count($oi_values) > 0 ) {
+					$query .= implode(',',$oi_values);
+					$wpdb->query( $query );
+				}
+		    }
         }
 	
 	function sr_woo_remove_order( $order_id ) {
@@ -1082,13 +1259,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		</style>    
 		<?php 
 		
-		if (SR_WPSC_RUNNING === true) {
-			$json_filename = 'json';
-		} else if (SR_WOO_RUNNING === true) {
-			$json_filename = 'json-woo';
-		}
-		define ( 'SR_JSON_URL', SR_PLUGIN_DIRNAME . "/sr/$json_filename.php" );
-		
 		//set the number of days data to show in lite version.
 		define ( 'SR_AVAIL_DAYS', 30);
 		
@@ -1101,23 +1271,31 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			sr_settings_page (SR_PLUGIN_FILE);
 		} else {
 			$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
-		?>
-		<div class="wrap">
-		<div id="icon-smart-reporter" class="icon32"><img alt="Smart Reporter"
-			src="<?php echo SR_IMG_URL.'/logo.png'; ?>"></div>
-		<h2><?php
-		echo _e ( 'Smart Reporter' );
-		echo ' ';
-			if (SRPRO === true) {
-				echo _e ( 'Pro' );
-			} else {
-				echo _e ( 'Lite' );
+
+			?>
+
+			<div class="wrap">
+
+			<?php
+
+			if ( !empty($_GET['page']) && $_GET['page'] != 'wc-reports') {
+			?>
+				<div id="icon-smart-reporter" class="icon32"><img alt="Smart Reporter"
+					src="<?php echo SR_IMG_URL.'/logo.png'; ?>"></div>
+				<h2><?php
+				echo _e ( 'Smart Reporter' );
+				echo ' ';
+					if (SRPRO === true) {
+						echo _e ( 'Pro' );
+					} else {
+						echo _e ( 'Lite' );
+					}
 			}
-		?>
+			?>
 
 
    	<p class="wrap" style="font-size: 12px">
-	   	<span style="float: right;margin-right: 2.25em;"> <?php
+	   	<span id='sr_nav_links' style="float: right;margin-right: 2.25em;"> <?php
 			if ( SRPRO === true && ! is_multisite() ) {
 				
 				if (SR_WPSC_RUNNING == true) {
@@ -1131,16 +1309,17 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				$plug_page = '';
 			}
 
-			if (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") {
-				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo') .'" title="'. __( 'Switch back to new version', 'smart-reporter' ) .'"> ' . __( 'Switch back to new version', 'smart-reporter' ) .'</a>';
-			} else {
-				$switch_version = '<a href="'. admin_url('admin.php?page=smart-reporter-woo&tab=smart_reporter_old') .'" title="'. __( 'Switch to earlier version', 'smart-reporter' ) .'"> ' . __( 'Problem? Switch to earlier version', 'smart-reporter' ) .'</a>';
+			$switch_version = '';
+
+			if ( defined('SR_IS_WOO22') && SR_IS_WOO22 == "true" ) {
+				if (isset($_GET['view']) && $_GET['view'] == "smart_reporter_old") {
+					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports') .'" title="'. __( 'Switch back to new view', 'smart-reporter' ) .'"> ' . __( 'Switch back to new view', 'smart-reporter' ) .'</a> | ';
+				} else {
+					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports&view=smart_reporter_old') .'" title="'. __( 'Switch to old view', 'smart-reporter' ) .'"> ' . __( 'Switch to old view', 'smart-reporter' ) .'</a> | ';
+				}	
 			}
-
 			
-
 			if ( SRPRO === true ) {
-
 
 	            if ( !wp_script_is( 'thickbox' ) ) {
 	                if ( !function_exists( 'add_thickbox' ) ) {
@@ -1151,7 +1330,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 
 	            // <a href="edit.php#TB_inline?max-height=420px&inlineId=smart_manager_post_query_form" title="Send your query" class="thickbox" id="support_link">Need Help?</a>
-	            $before_plug_page = ' | <a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
+	            $before_plug_page = '<a href="admin.php#TB_inline?max-height=420px&inlineId=sr_post_query_form" title="Send your query" class="thickbox" id="support_link">Feedback / Help?</a>';
 	            
 	            // if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') && SR_BETA == "true") {
 	            // 	// $before_plug_page .= ' | <a href="#" class="show_hide" rel="#slidingDiv">Settings</a>';
@@ -1169,7 +1348,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		?>
 		</span>
 		<?php
-			echo __ ( 'Store analysis like never before.' );
+			if ( !empty($_GET['page']) && $_GET['page'] != 'wc-reports') {
+				echo __ ( 'Store analysis like never before.' );
+			}
 		?>
 	</p>
 	<h6 align="right"><?php
@@ -1197,8 +1378,10 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 			?>
 <?php
 			$error_message = '';
+
+
 			if ((file_exists( WP_PLUGIN_DIR . '/wp-e-commerce/wp-shopping-cart.php' )) && (file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ))) {
-			
+
 			if ( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc')) {
 
 				if (is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
@@ -1248,6 +1431,9 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
                                 $error_message = __( 'WP e-Commerce plugin is not activated.', 'smart-reporter' ) . "<br/><b>" . _e( 'Smart Reporter', 'smart-reporter' ) . "</b> " . _e( 'add-on requires WP e-Commerce plugin, please activate it.', 'smart-reporter' );
                         }
                     } else if (file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' )) {
+
+
+
                         if (is_plugin_active( 'woocommerce/woocommerce.php' )) {
                             if ((defined('SR_IS_WOO13')) && SR_IS_WOO13 == "true") {
                                     $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
@@ -1284,15 +1470,22 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
 		if (file_exists( $base_path . 'reporter-console.php' )) {
             include_once ($base_path . 'reporter-console.php');
-            wp_enqueue_script ( 'sr_jqplot_all_scripts' );
-			wp_enqueue_style ( 'sr_main_beta' );
 		
+            wp_register_style ( 'font_awesome', plugins_url ( "resources/font-awesome/css/font-awesome.min.css", __FILE__ ), array ());
+            wp_enqueue_style ('font_awesome');
+
 			//Constants for the arrow indicators
 		    define ('SR_IMG_UP_GREEN', 'fa fa-angle-double-up icon_cumm_indicator_green');
 		    define ('SR_IMG_UP_RED', 'fa fa-angle-double-up icon_cumm_indicator_red');
 		    define ('SR_IMG_DOWN_RED', 'fa fa-angle-double-down icon_cumm_indicator_red');
 
-			wp_add_dashboard_widget( 'sr_dashboard_kpi', __( 'Sales Summary', 'smart_reporter' ), 'sr_dashboard_widget_kpi' );
+		    if (file_exists( $base_path . 'json-woo.php' )) {
+	            include_once ($base_path . 'json-woo.php');
+				$sr_daily_widget_data = sr_get_daily_kpi_data(SR_NONCE);
+				
+				wp_add_dashboard_widget( 'sr_dashboard_kpi', __( 'Sales Summary', 'smart_reporter' ), 'sr_dashboard_widget_kpi','',array('security' => SR_NONCE, 'data' => $sr_daily_widget_data) );
+	        }
+
 		}
 	}
 
@@ -1309,47 +1502,42 @@ printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 
 
 	    define("SR_BETA","true");
 
-	    //Enqueing the Scripts and StyleSheets
 
-        wp_enqueue_script ( 'sr_jqplot_all_scripts' );
-		wp_enqueue_style ( 'sr_main_beta' );
+	    $base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
+		if (file_exists( $base_path . 'json-woo.php' )) {
+            include_once ($base_path . 'json-woo.php');
+			$sr_daily_widget_data = sr_get_daily_kpi_data(SR_NONCE);
+			define("sr_daily_widget_data",$sr_daily_widget_data);
 
-		if (file_exists ( (dirname ( __FILE__ )) . '/pro/sr.js' )) {
-
-			$plugin_info 	= get_plugins ();
-			$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
-
-			wp_register_script ( 'sr_pro', plugins_url ( 'pro/sr.js', __FILE__ ), array ('sr_jqplot_all_scripts' ), $sr_plugin_info ['Version']);
-			wp_enqueue_script ( 'sr_pro' );
-		}
-		
+        }
 		sr_console_common();
-
-		// Code for overriding the wooCommerce orders module search functionality code
-
-		// add_action('wp_ajax_get_monthly_sales','get_monthly_sales');
 	};
 
-	function sr_get_monthly_sales(){
+	function sr_get_stats(){
 
-		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) );
-		
-		if (file_exists($base_path . 'sr/json-woo.php' )){
-			include_once ( $base_path . 'sr/json-woo.php' );
-			sr_get_ajax_monthly_sales();
-		}
-	}
+		$params = (!empty($_REQUEST['params'])) ? $_REQUEST['params'] : array();
 
-	function sr_show_console() {
+		if ( ! wp_verify_nonce( $params['security'], 'smart-reporter-security' ) ) {
+     		die( 'Security check' );
+     	}
 
-		wp_register_style ( 'sr_ext_all', plugins_url ( 'resources/css/ext-all.css', __FILE__ ), array (), $ext_version );
-		wp_register_style ( 'sr_main', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
+		$json_filename = ($params['file_nm'] == 'json-woo-beta') ? 'json-woo' : $params['file_nm'];
+		$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
+		if (file_exists( $base_path . $json_filename . '.php' )) {
+            include_once ($base_path . $json_filename . '.php');
+            if ( $json_filename == 'json-woo' ) {
+            	if ( $params['file_nm'] == "json-woo-beta" && ( !empty( $_POST ['cmd'] ) && ( $_POST ['cmd'] != 'daily') ) ) {
 
-		//Enqueing the Scripts and StyleSheets
-		wp_enqueue_script ( 'sr_main' );
-		wp_enqueue_style ( 'sr_main' );
+            		if ( $_POST ['cmd'] == 'sr_data_sync' ) {
+            			sr_data_sync();
+            		} else {
+            			sr_get_cumm_stats();
+            		}
 
-		sr_console_common();
+            		
+				} 
+            }
+        }
 	}
 	
 	function sr_update_notice() {
