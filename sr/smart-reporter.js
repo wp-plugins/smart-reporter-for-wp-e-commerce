@@ -119,13 +119,13 @@ Ext.onReady(function() {
 			data: [
 					['TODAY',      'Today'],
 					['YESTERDAY',  'Yesterday'],
-					['THIS_WEEK',  'This Week'],
+					['CURRENT_WEEK',  'Current Week'],
 					['LAST_WEEK',  'Last Week'],
-					['THIS_MONTH', 'This Month'],
+					['CURRENT_MONTH', 'Current Month'],
 					['LAST_MONTH', 'Last Month'],
 					['3_MONTHS',   '3 Months'],
 					['6_MONTHS',   '6 Months'],
-					['THIS_YEAR',  'This Year'],
+					['CURRENT_YEAR',  'Current Year'],
 					['LAST_YEAR',  'Last Year']
 				]
 		}),
@@ -143,7 +143,7 @@ Ext.onReady(function() {
 			select: function () {
 				var dateValue = this.value;
 				if(fileExists == 0){
-					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'THIS_WEEK' || smartDateComboBox.getValue() == 'LAST_WEEK' || smartDateComboBox.getValue() == 'THIS_MONTH'){
+					if(smartDateComboBox.getValue() == 'TODAY' || smartDateComboBox.getValue() == 'YESTERDAY' || smartDateComboBox.getValue() == 'CURRENT_WEEK' || smartDateComboBox.getValue() == 'LAST_WEEK' || smartDateComboBox.getValue() == 'CURRENT_MONTH'){
 						liteSelectDate(dateValue);
 						loadGridStore();
 					}else{
@@ -173,7 +173,7 @@ Ext.onReady(function() {
 			toDate 	 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 			break;
 
-			case 'THIS_WEEK':
+			case 'CURRENT_WEEK':
 			fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() - 1));
 			toDate 	 = now;
 			break;

@@ -4,12 +4,14 @@ if ( ! defined( 'ABSPATH' ) || !is_user_logged_in() || !is_admin() ) {
     exit; // Exit if accessed directly
 }
 
-global $wpdb, $_wp_admin_css_colors, $sr_nonce, $sr_json_file_nm;
+global $wpdb, $_wp_admin_css_colors, $sr_json_file_nm;
 
 // to set javascript variable of file exists
 // $fileExists = ((defined(SRPRO)) && SRPRO === true) ? 1 : 0;
 
 $orders_details_url = '';
+
+$sr_domain = ( defined('SR_DOMAIN') ) ? SR_DOMAIN : 'smart-reporter-for-wp-e-commerce';
 
 if (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) {
     $currency_type = get_option( 'currency_type' );   //Maybe
@@ -25,17 +27,23 @@ if (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) {
 $fileExists = (defined('SRPRO') && SRPRO === true) ? 1 : 0;
 $selectedDateValue = (defined('SRPRO') && SRPRO === true) ? 'THIS_MONTH' : 'LAST_SEVEN_DAYS';
 
-//Global Variables
-$sr_currency_symbol = defined('SR_CURRENCY_SYMBOL') ? SR_CURRENCY_SYMBOL : '';
-$sr_currency_pos   = defined('SR_CURRENCY_POS') ? SR_CURRENCY_POS : '';
-$sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
-$sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
-$sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
-$sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
-$sr_is_woo22 = defined('SR_IS_WOO22') ? SR_IS_WOO22 : '';
-$sr_json_file_nm = defined('SR_JSON_FILE_NM') ? SR_JSON_FILE_NM : '';
+$sr_const = array();
 
-$sr_nonce = wp_create_nonce( 'smart-reporter-security' );
+//Global Variables
+$sr_const['currency_symbol']  = defined('SR_CURRENCY_SYMBOL') ? SR_CURRENCY_SYMBOL : '';
+$sr_const['currency_pos']     = defined('SR_CURRENCY_POS') ? SR_CURRENCY_POS : '';
+$sr_const['decimal_places']   = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
+$sr_const['img_up_green']     = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
+$sr_const['img_up_red']       = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
+$sr_const['img_down_red']     = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
+$sr_const['is_woo22']         = defined('SR_IS_WOO22') ? SR_IS_WOO22 : '';
+$sr_const['file_nm']          = defined('SR_JSON_FILE_NM') ? SR_JSON_FILE_NM : '';
+$sr_const['img_url']          = defined('SR_IMG_URL') ? SR_IMG_URL : '';
+$sr_const['num_format']          = defined('SR_NUMBER_FORMAT') ? SR_NUMBER_FORMAT : 1;
+$sr_const['security']         = defined('SR_NONCE') ? SR_NONCE : '';
+
+
+$sr_daily_widget_data = (defined('sr_daily_widget_data')) ? json_decode(sr_daily_widget_data,true) : array();
 
 if (!empty($sr_is_woo22) && $sr_is_woo22 == "true") {
     // $sr_woo_order_search_url = "&source=sr&post_status=all&post_type=shop_order&action=-1&m=0&paged=1&mode=list&action2=-1";
@@ -51,95 +59,15 @@ if (!empty($sr_is_woo22) && $sr_is_woo22 == "true") {
 // Code for SR WP Dashboard Widget
 // ================================================
 
-function sr_dashboard_widget_kpi() {
+function sr_dashboard_widget_kpi($post, $args) {
 
-    global $sr_nonce, $sr_json_file_nm;
+    if ( ! wp_verify_nonce( $args['args']['security'], 'smart-reporter-security' ) ) {
+      die( 'Security check' ); 
+    }
 
-    $sr_currency_symbol = defined('SR_CURRENCY_SYMBOL') ? SR_CURRENCY_SYMBOL : '';
-    $sr_decimal_places = defined('SR_DECIMAL_PLACES') ? SR_DECIMAL_PLACES : 2;
-    $sr_img_up_green = defined('SR_IMG_UP_GREEN') ? SR_IMG_UP_GREEN : '';
-    $sr_img_up_red = defined('SR_IMG_UP_RED') ? SR_IMG_UP_RED : '';
-    $sr_img_down_red = defined('SR_IMG_DOWN_RED') ? SR_IMG_DOWN_RED : '';
-    $sr_is_woo22 = defined('SR_IS_WOO22') ? SR_IS_WOO22 : '';
+    $data = (!empty($args['args']['data'])) ? json_decode($args['args']['data'],true) : array();
 
-    ?>
-    <script type="text/javascript">
-            var daily_widget_data;
-        jQuery(function($){ 
-
-            $(document).ready(function() {
-            //This ajax call for sr summary widget on wordpress dashboard
-                $.ajax({
-                        type : 'POST',
-                        url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
-                        dataType:"text",
-                        async: false,
-                        data: {
-                            cmd: 'daily',
-                            security : "<?php echo $sr_nonce; ?>",
-                            SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                            SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                            SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                            SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                            SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                            SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                            file: "<?php echo $sr_json_file_nm; ?>"
-                        },
-                        success: function(response) {
-                            daily_widget_data = $.parseJSON(response);
-
-                            if(daily_widget_data.rows_physical_prod > 0 && daily_widget_data.result_shipping_status == "yes") {
-
-                                $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_4_color">' + daily_widget_data.order_fulfillment_formatted 
-                                                                    + ' <i class="' + daily_widget_data.imgurl_order_fulfillment + '"></i>'
-                                                                    + '  <span class = "daily_widgets_comp_price daily_widget_4_color">' + daily_widget_data.diff_order_fulfillment_formatted + '</span> </span>');
-                            } else {
-                                $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_4_color"> N/A </span>');
-                            }
-
-                            $('#daily_total_sales').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_1_color"> ' + daily_widget_data.daily_sales_formatted
-                                                            + ' <i class= "' + daily_widget_data.imgurl_daily_sales + '" ></i>' 
-                                                            + '  <span class = "daily_widgets_comp_price daily_widget_1_color">' + daily_widget_data.diff_daily_sales_formatted + '</span> </span>');
-
-                            $('#daily_new_cust').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_2_color"> ' + daily_widget_data.daily_cust_formatted
-                                                        + ' <i class="' + daily_widget_data.imgurl_daily_cust + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_2_color">' + daily_widget_data.diff_daily_cust_formatted + '</span> </span>');
-
-                            $('#daily_refund').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_3_color">' + daily_widget_data.daily_refund_formatted
-                                                        + ' <i class="' + daily_widget_data.imgurl_daily_refund + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_3_color">' + daily_widget_data.diff_daily_refund_formatted + '</span> </span>');
-
-
-                            $('#month_to_date_sales').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_5_color">' + daily_widget_data.month_to_date_sales_formatted
-                                                        + ' <i class="' + daily_widget_data.imgurl_month_to_date_sales + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_5_color">' + daily_widget_data.diff_month_to_date_sales_formatted + '</span> </span>');
-
-                            $('#average_sales_day').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_6_color">' + daily_widget_data.avg_sales_per_day_formatted
-                                                        + ' <i class="' + daily_widget_data.imgurl_avg_sales_per_day + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_6_color">' + daily_widget_data.diff_avg_sales_per_day_formatted + '</span> </span>');
-
-                            $('#forecasted_sales').prepend('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_7_color">' + daily_widget_data.forcasted_sales_formatted
-                                                        + ' <i class="' + daily_widget_data.imgurl_forcasted_sales + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_7_color">' + daily_widget_data.diff_forcasted_sales_formatted + '</span> </span>');
-
-                            $('#sales_frequency').append('<span class = "daily_widgets_price daily_widgets_price_dashboard_font_size daily_widget_8_color">' + daily_widget_data.sales_frequency_formatted
-                                                        + ' <i class="' + daily_widget_data.imgurl_sales_frequency + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_8_color">' + daily_widget_data.diff_sales_frequency_formatted + '</span> </span>');
-
-                            
-                            
-                        }
-
-                    });
-            });
-
-            $("#sr_wordpress_dashboard_widget").on('click',function(){
-                window.open('<?php echo admin_url("admin.php?page=smart-reporter-woo"); ?>');
-            });
-
-        });
-        
-    </script>
+   ?>
 
     <!-- 
     // ================================================
@@ -147,43 +75,26 @@ function sr_dashboard_widget_kpi() {
     // ================================================
     -->
     <div id= "sr_wordpress_dashboard_widget" style="overflow:hidden; cursor:pointer;">
-       <!-- <div style="width:50%;"> -->
+       <!-- <div style="width:50%;"> daily_widgets_text_dashboard_margin_top-->
         <div>
                 <div id = "daily_widget_1" class = "daily_widget_dashboard first">
-                    <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_1").hover(
-                                function() { $(this).css('border', '0.2em solid #12B41F');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
-
                     <div class = "daily_widgets_icon_dashboard"> 
-                        <i class = "fa fa-signal daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_1_color">   </i>
+                        <i class = "fa fa-signal daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size">   </i>
                     </div>
 
                     <div id="daily_total_sales" class="daily_widgets_data">
-                            <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Sales Today </p>
+                        <?php echo $data['sales_today'];?>
                     </div>
                 </div>
         </div>
         <div>
                 <div id = "daily_widget_2" class="daily_widget_dashboard second">
-                  <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_2").hover(
-                                function() { $(this).css('border', '0.2em solid #12ADC2');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
                   <div class="daily_widgets_icon_dashboard">
-                    <i class = "fa fa-user daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_2_color"> </i>     
+                    <i class = "fa fa-user daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size"> </i>     
                   </div>
 
                   <div id="daily_new_cust" class="daily_widgets_data">
-                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> New Customers Today </p>
+                    <?php echo $data['new_customers_today'];?>
                   </div>
 
                 </div>
@@ -191,20 +102,11 @@ function sr_dashboard_widget_kpi() {
 
         <div>
                 <div id = "daily_widget_3" class="daily_widget_dashboard third">
-
-                   <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_3").hover(
-                                function() { $(this).css('border', '0.2em solid #f86868');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
                   <div class="daily_widgets_icon_dashboard">
-                    <i class = "fa fa-thumbs-down daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_3_color"> </i>   
+                    <i class = "fa fa-thumbs-down daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size"> </i>   
                   </div>
                   <div id="daily_refund" class="daily_widgets_data">
-                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Refund Today </p>
+                    <?php echo $data['refund_today'];?>
                   </div>
 
                 </div>
@@ -212,19 +114,11 @@ function sr_dashboard_widget_kpi() {
 
         <div>
                 <div id = "daily_widget_4" class="daily_widget_dashboard fourth">
-                    <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_4").hover(
-                                function() { $(this).css('border', '0.2em solid #ab8465');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
                     <div class="daily_widgets_icon_dashboard">
-                      <i class = "fa fa-truck daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_4_color"> </i>   
+                      <i class = "fa fa-truck daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size"> </i>   
                     </div>
                     <div id="daily_order_unfullfilment" class="daily_widgets_data">
-                      <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Orders To Fulfill </p>
+                      <?php echo $data['orders_to_fulfill'];?>
                     </div>
                 </div>
         </div>
@@ -233,40 +127,23 @@ function sr_dashboard_widget_kpi() {
         <!-- <div class="row" style="width:50%;"> -->
         <div>
                 <div id = "daily_widget_5" class = "daily_widget_dashboard first">
-                    <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_5").hover(
-                                function() { $(this).css('border', '0.2em solid #f37b53');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
-
                     <div class = "daily_widgets_icon_dashboard"> 
-                        <i class = "fa fa-dashboard daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_5_color">   </i>
+                        <i class = "fa fa-dashboard daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size">   </i>
                     </div>
 
                     <div id="month_to_date_sales" class="daily_widgets_data">
-                            <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Month To Date Sales </p>
+                            <?php echo $data['month_to_date_sales'];?>
                     </div>
                 </div>
         </div>
         <div>
                 <div id = "daily_widget_6" class="daily_widget_dashboard second">
-                  <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_6").hover(
-                                function() { $(this).css('border', '0.2em solid #f2ae43');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
                   <div class="daily_widgets_icon_dashboard">
-                    <i class = "fa fa-filter daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_6_color"> </i>     
+                    <i class = "fa fa-filter daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size"> </i>     
                   </div>
 
                   <div id="average_sales_day" class="daily_widgets_data">
-                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Average Sales/Day </p>
+                    <?php echo $data['avg_sales/day'];?>
                   </div>
 
                 </div>
@@ -274,43 +151,28 @@ function sr_dashboard_widget_kpi() {
 
         <div>
                 <div id = "daily_widget_7" class="daily_widget_dashboard third">
-
-                   <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_7").hover(
-                                function() { $(this).css('border', '0.2em solid #847cc5');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
-                  <div class="daily_widgets_icon_dashboard">
-                    <i class = "fa fa-rocket daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size daily_widget_7_color"> </i>   
-                  </div>
-                  <div id="forecasted_sales" class="daily_widgets_data">
-                    <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top"> Forecasted Sales </p>
-                  </div>
-
+                    <div class="daily_widgets_icon_dashboard">
+                      <i class = "fa fa-clock-o daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size"> </i>   
+                    </div>
+                    <div id="sales_frequency" class="daily_widgets_data" style="margin-top: -3.8em !important;">
+                      <?php echo $data['one_sale_every'];?>
+                    </div>
                 </div>
         </div>
 
         <div>
                 <div id = "daily_widget_8" class="daily_widget_dashboard fourth">
-                    <script type="text/javascript">
-                        jQuery(function($){
-                            $("#daily_widget_8").hover(
-                                function() { $(this).css('border', '0.2em solid #77808a');},
-                                function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                            );
-                        });
-                    </script>
-                    <div class="daily_widgets_icon_dashboard">
-                      <i class = "fa fa-clock-o daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widgets_icon1_dashboard_font_size daily_widget_8_color"> </i>   
-                    </div>
-                    <div id="sales_frequency" class="daily_widgets_data" style="margin-top: -3.8em;">
-                      <p class="daily_widgets_text daily_widgets_text_dashboard_margin_top" style="margin-top: 0.6em; margin-bottom:0.6em;"> One Sale Every </p>
-                    </div>
+                  <div class="daily_widgets_icon_dashboard">
+                    <i class = "fa fa-rocket daily_widgets_icon1 daily_widgets_icon1_dashboard_font_size"> </i>   
+                  </div>
+                  <div id="forecasted_sales" class="daily_widgets_data">
+                    <?php echo $data['forecasted_sales'];?>
+                  </div>
+
                 </div>
         </div>
+
+        
     <!-- </div> -->
         
     </div>
@@ -322,105 +184,109 @@ function sr_dashboard_widget_kpi() {
 // Code for SR Beta
 // ================================================
 
+
 // if(defined(SR_BETA) && SR_BETA == "true") {
-if ( !isset($_GET['tab']) && ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-woo') ) {
+if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-reports') && ( !empty($sr_const['is_woo22']) && $sr_const['is_woo22'] == "true" ) ) {
+
+    //chk if the SR db dump table exists or not
+    $table_name = "{$wpdb->prefix}woo_sr_orders";
+    if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+        $query = "SELECT COUNT(*) as order_count
+                  FROM {$wpdb->prefix}posts
+                  WHERE post_type IN ('shop_order', 'shop_order_refund')";
+
+        $order_count = $wpdb->get_var($query);
+
+        if ($order_count > 0) {
+
+        ?>
+
+          <div id="sr_data_sync_msg" class="updated woocommerce-message wc-connect" style="margin-top:25%;text-align:center;border:0px;">
+            <input id="sr_data_sync_orders" type="hidden" value="<?php echo $order_count; ?>"> 
+            <p><?php _e( '<strong>Smart Reporter Data Sync Required</strong> &#8211; We just need to sync your orders for faster reporting', $sr_domain ); ?></p>
+            <p class="submit"> <a id="sr_sync_link" href="<?php echo esc_url( add_query_arg( 'sr_data_sync', 'true', admin_url( 'admin.php?page=wc-reports&tab=smart_reporter' ) ) ); ?>" class="wc-update-now button-primary"><?php _e( 'Sync Now', $sr_domain ); ?></a> </p> 
+            <label id="sr_data_sync_per">  </label> </p>
+            
+          </div>
+
+        <?php
+
+        if ( !empty($_GET) && !empty($_GET['sr_data_sync']) ) {
+
+          ?> 
+
+          <script type="text/javascript">
+
+              jQuery(function($){
+                  var ocount = $('#sr_data_sync_orders').val();
+
+                  var ajax_count = 1;
+
+                  $('#sr_sync_link').attr('disabled',true).click(function(e) {
+                      return false;
+                  });
+
+                  if ( ocount > 250 ) {
+                      for ( i=0; i<ocount; ) {
+                          ajax_count ++;
+                          i = i+250;
+                      }
+                  }
+                  else{
+                      ajax_count = 1;
+                  }
+
+                  // for ( i=1; i<=ajax_count; i++ ) {
+                  var sr_sync_data_req = function(num) {
+
+                      var sfinal = ( num == ajax_count ) ? 1 : 0;
+
+                      $.ajax({
+                            type : 'POST',
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
+                            dataType:"text",
+                            action: 'sr_get_stats',
+                            // async:false,
+                            data: {
+                                    cmd: 'sr_data_sync',
+                                    part: num,
+                                    sfinal: sfinal,
+                                    params : <?php echo json_encode($sr_const); ?>
+                                },
+                            success: function(response) {
+
+                              if ( num<=ajax_count ) {
+
+                                  if ( num == ajax_count ) {
+                                      $("#sr_sync_link").text( 'Sync Complete' );
+                                      window.location = "<?php echo admin_url('admin.php?page=wc-reports'); ?>";
+                                  } else {
+                                      $("#sr_sync_link").text( ((num/ajax_count)*100).toFixed(2) + '% Completed' ); 
+                                      num++;
+                                      sr_sync_data_req(num); 
+                                  }
+                              }
+                            }
+                        });
+                  }
+
+                  sr_sync_data_req(1);
+              });
+
+          </script>
+
+          <?php    
+      }
+        exit;
+
+        }
+    }
 
 ?>
 
 <div id="smart_reporter_beta" syle="width:99%;">
 
-<?php
-
-
-    global $wpdb;
-
-
-
-// ================================================
-// DAILY WIDGETS
-// ================================================
-
-//Query to get the relevant order ids
-// WHERE terms.name IN ('completed','processing','on-hold','pending')
-
-
-
-?>
-
-<script type="text/javascript">
-        
-jQuery(function($){
-
-    
-    jQuery(document).on('ready', function() {
-        
-        // This ajax call for display daily widget on Sr main dashboard
-        $.ajax({
-                type : 'POST',
-                url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
-                dataType:"text",
-                // async: false,
-                data: {
-                    cmd: 'daily',
-                    security : "<?php echo $sr_nonce; ?>",
-                    SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                    SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                    SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                    SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                    SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                    SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                    file: "<?php echo $sr_json_file_nm; ?>"
-                },
-                success: function(response) {
-
-                    daily_widget_data = $.parseJSON(response);
-                    $("div[id^= 'daily_widget_']").removeClass('blur_widget');
-                                     
-                    if(daily_widget_data.rows_physical_prod > 0 && daily_widget_data.result_shipping_status == "yes") {
-                        $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widget_4_color">' + daily_widget_data.order_fulfillment_formatted 
-                                                        + ' <i class="' + daily_widget_data.imgurl_order_fulfillment + '"></i>'
-                                                        + '  <span class = "daily_widgets_comp_price daily_widget_4_color">' + daily_widget_data.diff_order_fulfillment_formatted + '</span> </span>');
-                    } else {
-                        $('#daily_order_unfullfilment').prepend('<span class = "daily_widgets_price daily_widget_4_color"> N/A </span>');
-                    }
-
-                    $('#daily_total_sales').prepend('<span class = "daily_widgets_price daily_widget_1_color"> ' + daily_widget_data.daily_sales_formatted
-                                                    + ' <i class= "' + daily_widget_data.imgurl_daily_sales + '" ></i>' 
-                                                    + '  <span class = "daily_widgets_comp_price daily_widget_1_color">' + daily_widget_data.diff_daily_sales_formatted + '</span> </span>');
-
-                    $('#daily_new_cust').prepend('<span class = "daily_widgets_price daily_widget_2_color"> ' + daily_widget_data.daily_cust_formatted
-                                                + ' <i class="' + daily_widget_data.imgurl_daily_cust + '"></i>'
-                                                + '  <span class = "daily_widgets_comp_price daily_widget_2_color">' + daily_widget_data.diff_daily_cust_formatted + '</span> </span>');
-
-                    $('#daily_refund').prepend('<span class = "daily_widgets_price daily_widget_3_color">' + daily_widget_data.daily_refund_formatted
-                                                + ' <i class="' + daily_widget_data.imgurl_daily_refund + '"></i>'
-                                                + '  <span class = "daily_widgets_comp_price daily_widget_3_color">' + daily_widget_data.diff_daily_refund_formatted + '</span> </span>');
-
-
-                    $('#month_to_date_sales').prepend('<span class = "daily_widgets_price daily_widget_5_color">' + daily_widget_data.month_to_date_sales_formatted
-                                                + ' <i class="' + daily_widget_data.imgurl_month_to_date_sales + '"></i>'
-                                                + '  <span class = "daily_widgets_comp_price daily_widget_5_color">' + daily_widget_data.diff_month_to_date_sales_formatted + '</span> </span>');
-
-                    $('#average_sales_day').prepend('<span class = "daily_widgets_price daily_widget_6_color">' + daily_widget_data.avg_sales_per_day_formatted
-                                                + ' <i class="' + daily_widget_data.imgurl_avg_sales_per_day + '"></i>'
-                                                + '  <span class = "daily_widgets_comp_price daily_widget_6_color">' + daily_widget_data.diff_avg_sales_per_day_formatted + '</span> </span>');
-
-                    $('#forecasted_sales').prepend('<span class = "daily_widgets_price daily_widget_7_color">' + daily_widget_data.forcasted_sales_formatted
-                                                + ' <i class="' + daily_widget_data.imgurl_forcasted_sales + '"></i>'
-                                                + '  <span class = "daily_widgets_comp_price daily_widget_7_color">' + daily_widget_data.diff_forcasted_sales_formatted + '</span> </span>');
-
-                    $('#sales_frequency').append('<span class = "daily_widgets_price daily_widget_8_color">' + daily_widget_data.sales_frequency_formatted
-                                                + ' <i class="' + daily_widget_data.imgurl_sales_frequency + '"></i>'
-                                                + '  <span class = "daily_widgets_comp_price daily_widget_8_color">' + daily_widget_data.diff_sales_frequency_formatted + '</span> </span>');
-
-                    
-                }
-
-            });
-    });
-});
-</script>
-
+<div id="chartjs-tooltip" style="display:none;"></div>
 
 <!-- 
 // ================================================
@@ -430,82 +296,48 @@ jQuery(function($){
 <div id ="daily_widgets_container">
     <div class="row">
     <div>
-            <div id = "daily_widget_1" class = "daily_widget first daily_widget_today_sales blur_widget">
-                <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_1").hover(
-                            function() { $(this).css('border', '0.2em solid #12B41F');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
-
+            <div id = "daily_widget_1" class = "daily_widget first daily_widget_today_sales">
                 <div class = "daily_widgets_icon"> 
-                    <i class = "fa fa-signal daily_widgets_icon1 daily_widget_1_color">   </i>
+                    <i class = "fa fa-signal daily_widgets_icon1">   </i>
                 </div>
 
-                <div id="daily_total_sales" class="daily_widgets_data">
-                        <p class="daily_widgets_text"> Sales Today </p>
+                <div id="daily_total_sales" class="daily_widgets_data"> 
+                    <?php echo $sr_daily_widget_data['sales_today'];?>
                 </div>
             </div>
     </div>
     <div>
-            <div id = "daily_widget_2" class="daily_widget second blur_widget">
-              <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_2").hover(
-                            function() { $(this).css('border', '0.2em solid #12ADC2');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
+            <div id = "daily_widget_2" class="daily_widget second">
               <div class="daily_widgets_icon">
-                <i class = "fa fa-user daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_2_color"> </i>     
+                <i class = "fa fa-user daily_widgets_icon1 daily_widgets_icon1_margin_left"> </i>
               </div>
 
               <div id="daily_new_cust" class="daily_widgets_data">
-                <p class="daily_widgets_text"> New Customers Today </p>
+                  <?php echo $sr_daily_widget_data['new_customers_today'];?>
               </div>
 
             </div>
     </div>
 
     <div>
-            <div id = "daily_widget_3" class="daily_widget third blur_widget">
-
-               <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_3").hover(
-                            function() { $(this).css('border', '0.2em solid #f86868');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
+            <div id = "daily_widget_3" class="daily_widget third">
               <div class="daily_widgets_icon">
-                <i class = "fa fa-thumbs-down daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_3_color"> </i>   
+                <i class = "fa fa-thumbs-down daily_widgets_icon1 daily_widgets_icon1_margin_left"> </i>
               </div>
               <div id="daily_refund" class="daily_widgets_data">
-                <p class="daily_widgets_text"> Refund Today </p>
+                  <?php echo $sr_daily_widget_data['refund_today'];?>
               </div>
 
             </div>
     </div>
 
     <div>
-            <div id = "daily_widget_4" class="daily_widget daily_widget_order_fulfill fourth blur_widget">
-                <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_4").hover(
-                            function() { $(this).css('border', '0.2em solid #ab8465');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
+            <div id = "daily_widget_4" class="daily_widget daily_widget_order_fulfill fourth">
                 <div class="daily_widgets_icon">
-                  <i class = "fa fa-truck daily_widgets_icon1 daily_widget_4_color"> </i>   
+                  <i class = "fa fa-truck daily_widgets_icon1"> </i>   
                 </div>
                 <div id="daily_order_unfullfilment" class="daily_widgets_data">
-                  <p class="daily_widgets_text"> Orders To Fulfill </p>
+                    <?php echo $sr_daily_widget_data['orders_to_fulfill'];?>
                 </div>
             </div>
     </div>
@@ -513,85 +345,54 @@ jQuery(function($){
 
     <div class="row">
     <div>
-            <div id = "daily_widget_5" class = "daily_widget first daily_widget_today_sales blur_widget">
-                <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_5").hover(
-                            function() { $(this).css('border', '0.2em solid #f37b53');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
-
+            <div id = "daily_widget_5" class = "daily_widget first daily_widget_today_sales">
                 <div class = "daily_widgets_icon"> 
-                    <i class = "fa fa-dashboard daily_widgets_icon1 daily_widget_5_color">   </i>
+                    <i class = "fa fa-dashboard daily_widgets_icon1">   </i>
                 </div>
 
                 <div id="month_to_date_sales" class="daily_widgets_data">
-                        <p class="daily_widgets_text"> Month To Date Sales </p>
+                    <?php echo $sr_daily_widget_data['month_to_date_sales'];?>
                 </div>
             </div>
     </div>
     <div>
-            <div id = "daily_widget_6" class="daily_widget second blur_widget">
-              <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_6").hover(
-                            function() { $(this).css('border', '0.2em solid #f2ae43');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
+            <div id = "daily_widget_6" class="daily_widget second">
               <div class="daily_widgets_icon">
-                <i class = "fa fa-filter daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_6_color"> </i>     
+                <i class = "fa fa-filter daily_widgets_icon1 daily_widgets_icon1_margin_left"> </i>     
               </div>
 
               <div id="average_sales_day" class="daily_widgets_data">
-                <p class="daily_widgets_text"> Average Sales/Day </p>
+                  <?php echo $sr_daily_widget_data['avg_sales/day'];?>
               </div>
 
             </div>
     </div>
 
     <div>
-            <div id = "daily_widget_7" class="daily_widget third blur_widget">
-
-               <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_7").hover(
-                            function() { $(this).css('border', '0.2em solid #847cc5');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
-              <div class="daily_widgets_icon">
-                <i class = "fa fa-rocket daily_widgets_icon1 daily_widget_7_color"> </i>   
-              </div>
-              <div id="forecasted_sales" class="daily_widgets_data">
-                <p class="daily_widgets_text"> Forecasted Sales </p>
-              </div>
-
-            </div>
-    </div>
-
-    <div>
-            <div id = "daily_widget_8" class="daily_widget daily_widget_order_fulfill fourth blur_widget">
-                <script type="text/javascript">
-                    jQuery(function($){
-                        $("#daily_widget_8").hover(
-                            function() { $(this).css('border', '0.2em solid #77808a');},
-                            function() { $(this).css('border', '0.2em solid #e8e8e8'); }
-                        );
-                    });
-                </script>
+            <div id = "daily_widget_7" class="daily_widget third">
                 <div class="daily_widgets_icon">
-                  <i class = "fa fa-clock-o daily_widgets_icon1 daily_widgets_icon1_margin_left daily_widget_8_color"> </i>   
+                  <i class = "fa fa-clock-o daily_widgets_icon1 daily_widgets_icon1_margin_left"> </i>   
                 </div>
                 <div id="sales_frequency" class="daily_widgets_data" style="margin-top: -4.5em;">
-                  <p class="daily_widgets_text" style="margin-top: 0.8em; margin-bottom:1em;"> One Sale Every </p>
+                    <?php echo $sr_daily_widget_data['one_sale_every'];?>
+
+                <!-- style="margin-top: 0.8em; margin-bottom:1em;" -->
                 </div>
             </div>
     </div>
+
+    <div>
+            <div id = "daily_widget_8" class="daily_widget fourth">
+              <div class="daily_widgets_icon">
+                <i class = "fa fa-rocket daily_widgets_icon1"> </i>   
+              </div>
+              <div id="forecasted_sales" class="daily_widgets_data">
+                    <?php echo $sr_daily_widget_data['forecasted_sales'];?>
+              </div>
+            </div>
+    </div>
+
+    
     </div>
 
 </div>
@@ -604,61 +405,195 @@ jQuery(function($){
 // ================================================
  -->
 
-<div id="sr_cumm_date" style="height:2.4em;width:97.85%">
-    <div id="sr_cumm_date1" class="sr_cumm_date">
+<!-- <div id="sr_cumm_date" style="height:2.4em;width:97.85%"> -->
+<div id="sr_cumm_date" style="height:3em;width:97.85%">
+    <div id="sr_cumm_date1" class="sr_cumm_date" style="width:11.2em;">
         <form>
-
             
-
-            <!-- <img id = "sr_endcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon"> -->
-            
-            <span>
-               <input type ="text" id="startdate_display" class = "sr_cumm_date_picker" >
-               <span id = "sr_startcal_icon" ><i class = "fa fa-calendar sr_cumm_date_icon" style="margin-right: 0.5em;"> </i> </span>
-               <!-- <img id = "sr_startcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon"> -->
-            </span>
-            <label class = "sr_cumm_date_label"> To </label>
-
-            <input type = "text" id="enddate_display" class = "sr_cumm_date_picker" >
-            <span id = "sr_endcal_icon" ><i class = "fa fa-calendar sr_cumm_date_icon"> </i> </span>
-            
-            
-
-            <span id ="startdate" style="padding-top: 2px;font-size : 1.4em; float:left; display: none"> </span>
-            <span id ="enddate" style="padding-top: 2px;font-size : 1.4em; float:left; display: none"> </span>
-
-
             <span id ="sr_smart_date" class="sr_cumm_date_picker"> 
-                <label id ="sr_smart_date_select_label" for="sr_smart_date_select" style:"display:none;"> Smart Date: </label>
-                <select id ="sr_smart_date_select" style="height:1.7em;padding:0px;margin-left:1em;margin-top:-0.05em;" >
+                <select id ="sr_smart_date_select" style="height:auto;font-size:1.2em;padding:0px;margin-top:-0.05em;" >
                   <option value="" style="display:none;color: #333 !important;" selected> Select Date </option>
                   <option value="TODAY">Today</option>
                   <option value="YESTERDAY">Yesterday</option>
-                  <option value="THIS_WEEK">This Week</option>
+                  <option value="CURRENT_WEEK">Current Week</option>
                   <option value="LAST_WEEK">Last Week</option>
-                  <option value="THIS_MONTH" <?php echo ($fileExists) ? 'selected' : ''; ?> >This Month</option>
+                  <option value="CURRENT_MONTH" <?php echo ($fileExists) ? 'selected' : ''; ?> >Current Month</option>
                   <option value="LAST_MONTH">Last Month</option>
                   <option value="3_MONTHS">3 Months</option>
                   <option value="6_MONTHS">6 Months</option>
-                  <option value="THIS_YEAR">This Year</option>
+                  <option value="CURRENT_YEAR">Current Year</option>
                   <option value="LAST_YEAR">Last Year</option>
+                  <option value="CUSTOM_DATE">Custom Date</option>
                 </select>
+            </span>
+
+            <span id ="sr_custom_date" style ="display : none;">
+                <span>
+                   <input type ="text" id="startdate_display" class = "sr_cumm_date_picker" >
+                   <span id = "sr_startcal_icon" ><i class = "fa fa-calendar sr_cumm_date_icon" style="margin-right: 0.5em;"> </i> </span>
+                   <!-- <img id = "sr_startcal_icon" src= "<?php echo SR_IMG_DATE_PICKER?>" class = "sr_cumm_date_icon"> -->
+                </span>
+                <label class = "sr_cumm_date_label"> To </label>
+
+                <input type = "text" id="enddate_display" class = "sr_cumm_date_picker" >
+                <span id = "sr_endcal_icon" ><i class = "fa fa-calendar sr_cumm_date_icon"> </i> </span>
+                
+                
+
+                <span id ="startdate" style="padding-top: 2px;font-size : 1.4em; float:left; display: none"> </span>
+                <span id ="enddate" style="padding-top: 2px;font-size : 1.4em; float:left; display: none"> </span>
             </span>
 
 
         <script type="text/javascript">
 
-
+                var curr = "<?php echo $sr_const['currency_symbol'];?>";
                 var get_data_flag = false; // Flag to handle call to get_data()
+                var chart = new Array();
+
+                var sr_chart_params = {
+                                          data : {
+                                                    labels: '',
+                                                    datasets: [
+                                                        {
+                                                            
+                                                            // strokeColor: "#5AA2E8",
+                                                            // pointColor: "#368ee0",
+                                                            pointColor: "#388BDC",
+                                                            strokeColor: "#1471CB",
+                                                            // strokeColor: "#46B2C8",
+                                                            // pointColor: "#279EB4",
+                                                            // pointColor: "#85BBEF",
+                                                            pointStrokeColor: "#fff",
+                                                            pointHighlightFill: "#fff",
+                                                            pointHighlightStroke: "rgba(151,187,205,1)",
+                                                            data: ''
+                                                        }
+                                                    ]
+                                                  },
+                                          options : {
+                                                      showScale: false,
+                                                      responsive: true,
+                                                      maintainAspectRatio: true,
+                                                      scaleShowGridLines : false,
+                                                      bezierCurve : true,
+                                                      bezierCurveTension : 0.4,
+                                                      pointDot : true,
+                                                      pointDotRadius : 3,
+                                                      pointDotStrokeWidth : 1,
+                                                      pointHitDetectionRadius : 1,                                            
+                                                      datasetFill : false,
+                                                      scaleShowLabels: true,
+                                                      tooltipFillColor: "#0F434F",
+                                                      tooltipCornerRadius: 6,
+                                                      tooltipTemplate: "<%if (label){%><%=label%>::<%}%><%= value %>",
+                                                      // tooltipTemplate: "<%%=datas.etLabel%> : <?php echo $sr_const['currency_symbol'];?> <%%= value %>"
+                                                    }
+                                      };
+
+                var sr_plot_charts = function (data) {
+
+                    jQuery(function($) {
+                        if ( data.hasOwnProperty('period') === false ){
+                            return;
+                        }
+
+                        // var s_colors = new Array('#AA3939' ,'#2EBB6F' ,'#73469D' ,'#46B2C8' ,'#1F2E32' ,'#DD6272'); 
+
+                        sr_chart_params.data.labels = data.period;
+
+                        // delete data.period;
+
+                        // var i = 0;
+
+                        for ( var key in data ) {
+
+                              if (key == 'period') {
+                                 continue;
+                              }
+
+                              sr_chart_params.data.datasets[0].data = data[key];
+
+                              if ( typeof (chart[key]) != 'undefined' ) {
+                                  chart[key].destroy();
+                              }
+
+                              if ( typeof ($("#sr_"+ key +"_graph").get(0)) != 'undefined' ) {
+
+                                  sr_chart_params.options.pointDot = true;
+                                  sr_chart_params.options.showTooltips = true;
+                                  sr_chart_params.options.customTooltips= function(tooltip) {
+
+                                        var tooltipEl = $('#chartjs-tooltip');
+
+                                        // tooltip will be false if tooltip is not visible or should be hidden
+                                        if (!tooltip) {
+                                            tooltipEl.hide();
+                                            return;
+                                        }
+
+                                        // Set caret Position
+                                        tooltipEl.removeClass('above below');
+                                        tooltipEl.addClass(tooltip.yAlign);
+
+                                        v = tooltip.text.split('::');
+                                        tooltipEl.html(v[0]+', '+"<?php echo $sr_const['currency_symbol'];?>"+v[1]);
+
+                                        // Find Y Location on page
+                                        var top;
+                                        if (tooltip.yAlign == 'above') {
+                                            top = tooltip.y - tooltip.caretHeight - tooltip.caretPadding;
+                                        } else {
+                                            top = tooltip.y + tooltip.caretHeight + tooltip.caretPadding;
+                                        }
+
+                                        // Display, position, and set styles for font
+                                        tooltipEl.css({
+                                            left: tooltip.chart.canvas.offsetLeft + tooltip.x + 'px',
+                                            top: tooltip.chart.canvas.offsetTop + top + 'px',
+                                            fontFamily: tooltip.fontFamily,
+                                            fontSize: tooltip.fontSize,
+                                            fontStyle: tooltip.fontStyle,
+                                        });
+
+                                        tooltipEl.show();
+                                    };
+
+                                  chart[key] = new Chart($("#sr_"+ key +"_graph").get(0).getContext("2d")).Line(sr_chart_params.data, sr_chart_params.options);
+
+                              } else if ( typeof ($("#"+ key).get(0)) != 'undefined' ) {
+
+                                  sr_chart_params.data.datasets[0].strokeColor = '#5AA2E8';
+                                  sr_chart_params.options.pointDot = false;
+                                  sr_chart_params.options.showTooltips = false;
+
+                                  chart[key] = new Chart($("#"+ key).get(0).getContext("2d")).Line(sr_chart_params.data, sr_chart_params.options);
+                              }
+                        }
+                    });
+                }
+
+
 
                 //Code for handling Smart Dates
 
                 jQuery(function($) {
                     $("#sr_smart_date_select").on('change',function(){
+
                         var smartdateValue = this.value;
                             get_data_flag = false;
+
+                        if(smartdateValue == "CUSTOM_DATE"){
+                            $('#sr_cumm_date1').css({"width" :"37.5em"});
+                            $("#sr_custom_date").css({ "display" : "block"});
+                        } else {
+                            $('#sr_cumm_date1').css({"width" :"11.2em"});
+                            $("#sr_custom_date").css({ "display" : "none"});
+                        }
+
                         <?php if (defined('SRPRO') && SRPRO === true) { ?>
                             var date = proSelectDate(smartdateValue, true);
+
                             var fromdate = new Date(date.fromDate);
                             var todate = new Date(date.toDate);
 
@@ -687,7 +622,8 @@ jQuery(function($){
                 });
                 
 
-                var myJsonObj = "";
+                var sr_data = {tp_data : { kpi:[], chart:[] },
+                                bc_data : {} }; // for top_prod chart data
 
                 var daily_summary_report = function() {
 
@@ -704,7 +640,7 @@ jQuery(function($){
                 var ajax_spinner = function(id,show){
                         
                             if ( typeof id == undefined || id == '' ) {
-                                id = ["#sr_cumm_sales_graph", "#sr_cumm_sales_funnel_data", "#top_prod_data", "#sr_cumm_top_abandoned_products_data", "#top_cust_data", "#sr_cumm_top_coupons_data", "#sr_cumm_total_discount_graph", "#sr_cumm_taxes_data", "#sr_cumm_order_by_gateways_data", "#sr_cumm_sales_countries_graph", "#sr_cumm_order_by_shipping_method_data"];
+                                id = ["#sr_sales_graph", "#sr_cumm_sales_funnel_data", "#top_prod_data", "#sr_cumm_top_abandoned_products_data", "#top_cust_data", "#sr_cumm_top_coupons_data", "#sr_discount_graph", "#sr_cumm_taxes_data", "#sr_cumm_order_by_pm_data", "#sr_cumm_sales_countries_graph", "#sr_cumm_order_by_sm_data"];
                             }
 
                             for (var i = 0; i < id.length; i++) {
@@ -764,448 +700,154 @@ jQuery(function($){
                             async: false,
                             action: 'sr_get_stats',
                             data: {
-                                        cmd: 'monthly_sales',
-                                        security : "<?php echo $sr_nonce; ?>",
+                                        cmd: 'cumm_sales',
                                         start_date : $("#startdate").val(),
                                         end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
+                                        params : <?php echo json_encode($sr_const); ?>
                                 },
                             success: function(response) {
 
-                                myJsonObj = $.parseJSON(response);
+                                resp = $.parseJSON(response);  
 
-                                Master_myJsonObj = myJsonObj;
+                                chart_data = resp.chart;
+
+                                delete resp.chart;
+
+                                //  sales widget
+                                $('#sr_cumm_sales_actual').html( "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp['kpi']['sales']) );
+                                $('#sr_cumm_sales_indicator').removeClass();
+                                $('#sr_cumm_sales_indicator').addClass( (resp['kpi']['sales'] > resp['kpi']['lp_sales']) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>"  );
+                                $('#diff_cumm_sales').text( sr_cumm_number_format( (resp['kpi']['lp_sales'] > 0) ? ( ((resp['kpi']['sales'] - resp['kpi']['lp_sales'])/resp['kpi']['lp_sales']) * 100) : resp['kpi']['sales'] ) +'%');
+
+                                //  discount widget
+                                $('#sr_cumm_total_discount_actual').html( "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp['kpi']['discount']) );
+                                $('#sr_cumm_total_discount_indicator').removeClass();
+                                $('#sr_cumm_total_discount_indicator').addClass( (resp['kpi']['discount'] > resp['kpi']['lp_discount']) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>"  );
+                                $('#diff_cumm_total_discount').text( sr_cumm_number_format( (resp['kpi']['lp_discount'] > 0) ? ( ((resp['kpi']['discount'] - resp['kpi']['lp_discount'])/resp['kpi']['lp_discount']) * 100) : resp['kpi']['discount'] ) +'%');
+
+                                $('#sr_cumm_avg_order_tot_content').removeClass().addClass('sr_cumm_small_widget_content');
+                                $('#sr_cumm_avg_order_tot_content').removeAttr('style');
+                                $('#average_order_tot_title').css({'margin-top':'0em'});
+
+                                // Code for Avg Order Total widget
+                                if( resp['kpi']['orders'] > 0 && resp['kpi']['lp_orders'] > 0 ) {
+
+                                    $('#sr_cumm_avg_order_tot_content').removeClass('no_data_text').removeAttr('style');
+
+                                    var c_avg_tot = (resp['kpi']['sales']/resp['kpi']['orders']);
+                                    var l_avg_tot = (resp['kpi']['lp_sales']/resp['kpi']['lp_orders']);
+
+                                    $('#sr_cumm_avg_order_tot_content').html('<span id ="sr_cumm_avg_order_tot_actual" class="sr_cumm_avg_order_value">'+ "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format( c_avg_tot ) + '</span><br>'+
+                                    '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_avg_order_tot_img" class="'+ ( ( c_avg_tot > l_avg_tot ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
+                                    ' <span id ="sr_cumm_avg_order_tot_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( l_avg_tot > 0 ) ? ( ((c_avg_tot - l_avg_tot)/l_avg_tot) * 100 ) : c_avg_tot ) +'%' +'</span></div>');
+                                }else {
+                                    $('#sr_cumm_avg_order_tot_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#average_order_tot_title').css({'margin-top':'1.5em'});
+                                }
+
+                                top_payment_shipping_display(resp);
+
+                                Dom_Id[0] = '#sr_sales_graph';
+                                Dom_Id[1] = '#sr_discount_graph';
+                                Dom_Id[2] = '#sr_cumm_taxes_data';
                                 
-                                Master_myJsonObj['detailed_view_total_monthly_sales'] = myJsonObj['total_monthly_sales'];
-                                Master_myJsonObj['siteurl'] = myJsonObj['siteurl'];
-                                monthly_display(myJsonObj);
-                                cumm_sales_funnel_display(myJsonObj);
-                                $('#sr_cumm_cart_abandanment').removeClass('blur_widget');
+                                ajax_spinner(Dom_Id, false);
+
+                                $('#sr_cumm_avg_order_tot').removeClass('blur_widget');
+                                
+                                cumm_taxes_display(resp);
+
+                                sr_plot_charts(chart_data); //plotting chart data
+
+                                // Dom_Id.splice(1, 1);
+                            }
+                        });
+
+                        // call for Top cust, prod Widget
+                        $.ajax({
+                            type : 'POST',
+                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
+                            dataType:"text",
+                            action: 'sr_get_stats',
+                            data: {
+                                        cmd: 'cumm_cust_prod',
+                                        start_date : $("#startdate").val(),
+                                        end_date : $("#enddate").val(),
+                                        params : <?php echo json_encode($sr_const); ?>
+                                },
+                            success: function(response) {
+                                
+                                resp = $.parseJSON(response);  
+
+                                chart_data = resp.chart;
+                                
+
+                                for ( var key in chart_data ) {
+                                    if ( key == 'period' || key.substring(0,2) == 'tp' ) {
+                                        sr_data.tp_data.chart[key] = chart_data[key];
+                                    }
+                                }
+
+                                sr_data.tp_data.kpi['sales'] = resp.kpi.top_prod.sales;
+                                sr_data.tp_data.kpi['qty'] = resp.kpi.top_prod.qty;
+
+                                delete resp.chart;
+
+                                sr_data.bc_data = resp.kpi.billing_country;
+                                sr_data.bc_data.s_link = resp.meta.s_link;
+
                                
-                                if(myJsonObj['result_monthly_sales'].length > 0) {
-                                    $('#sr_cumm_sales_actual').html(myJsonObj['total_monthly_sales_show']);
-                                    $('#sr_cumm_sales_indicator').removeClass();
-                                    $('#sr_cumm_sales_indicator').addClass(myJsonObj['img_cumm_sales']);
-                                    $('#diff_cumm_sales').text(myJsonObj['diff_cumm_sales']+'%');  
-                                }
-                                else {
-                                    $('#sr_cumm_sales_actual').text(" ");
-                                    $('#sr_cumm_sales_indicator').removeClass();
-                                    $('#diff_cumm_sales').text(" "); 
-                                }
 
-                                //Code for Cart Abandonment Rate Widget
-                                if(myJsonObj['cumm_abandoned_rate'] != "") {
+                                top_cust_display(resp);
+                                sr_top_coupons_display(resp);
+                                cumm_sales_billing_country(sr_data.bc_data);
+                                top_prod_display(resp.kpi.top_prod.sales, 'tps_');
+                                top_ababdoned_products_display(resp.kpi.top_aprod);
+                               
+                                sr_plot_charts(chart_data); //plotting chart data
+                                cumm_sales_funnel_display(resp);
 
-                                    $('#sr_cumm_cart_abandanment_content').removeClass().addClass('sr_cumm_small_widget_content');
-                                    $('#sr_cumm_cart_abandanment_content').removeAttr('style');
-                                    $('#sr_cumm_cart_abandanment_title').css({'margin-top':'0em'});
 
-                                    if(myJsonObj['cumm_abandoned_rate'] != 0) {
-                                        $('#sr_cumm_cart_abandanment_content').html('<span id ="sr_cumm_cart_abandanment_rate_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['cumm_abandoned_rate'] + '%</span><br>'+
-                                        '<div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_cart_abandanment_rate_img" class="'+ myJsonObj['img_cumm_abandoned_rate'] +'" > </i>'+
-                                        ' <span id ="sr_cumm_cart_abandanment_rate_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_abandoned_rate']+'%' +'</span></div>');
-                                    }
-                                    else {
-                                        $('#sr_cumm_cart_abandanment_content').html('<span id ="sr_cumm_cart_abandanment_rate_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['cumm_abandoned_rate'] + '%</span>');
-                                        $('#sr_cumm_cart_abandanment_content').css({'margin-bottom':'1.46em'});
-                                    }
-                                
+                                $('#sr_cumm_avg_order_items_content, #sr_cumm_cart_abandonment_content, #sr_cumm_order_coupons_content').removeClass('no_data_text').removeAttr('style');
+
+                                // Code for Avg Items Per Customer
+                                if( resp['kpi']['aipc'] > 0 || resp['kpi']['lp_aipc'] > 0 ) {
+
+                                    $('#sr_cumm_avg_order_items_content').html('<span id ="sr_cumm_avg_order_items_actual" class="sr_cumm_avg_order_value">'+ sr_cumm_number_format( resp['kpi']['aipc'] ) + '</span><br>'+
+                                    '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_avg_order_items_img" class="'+ ( ( resp['kpi']['aipc'] > resp['kpi']['lp_aipc'] ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
+                                    ' <span id ="sr_cumm_avg_order_items_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( resp['kpi']['lp_aipc'] > 0 ) ? (resp['kpi']['aipc'] - resp['kpi']['lp_aipc']) : resp['kpi']['aipc'] ) +'</span></div>');
                                 } else {
-                                    $('#sr_cumm_cart_abandanment_content').text('No Data');
-                                    $('#sr_cumm_cart_abandanment_content').addClass('no_data_text');
-                                    $('#sr_cumm_cart_abandanment_content').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
-                                    $('#sr_cumm_cart_abandanment_title').css({'margin-top':'1.5em'});
+                                    $('#sr_cumm_avg_order_items_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#average_order_items_title').css({'margin-top':'1.5em'});
                                 }
 
-                                Dom_Id[0] = '#sr_cumm_sales_graph';
-                                Dom_Id[1] = '#sr_cumm_sales_funnel_data';
-                                ajax_spinner(Dom_Id, false);
-                                Dom_Id.splice(1, 1);
-                            }
-                        });
+                                // Code for Sales with Coupons widget
+                                if( resp['kpi']['car'] > 0 || resp['kpi']['lp_car'] > 0 ) {
 
-                        // call for Top Products Widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_top_products',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-                                
-                                myJsonObj = $.parseJSON(response);
-                               
-                                myJsonObj['currency_symbol'] = Master_myJsonObj['currency_symbol'];
-                                myJsonObj['cumm_sales_min_date'] = Master_myJsonObj['cumm_sales_min_date'];
-                                myJsonObj['cumm_sales_max_date'] = Master_myJsonObj['cumm_sales_max_date'];
-                                Master_myJsonObj['monthly_top_products'] = myJsonObj;                               
-                                
-                                Dom_Id[0] = '#top_prod_data';
-                                ajax_spinner(Dom_Id, false);
-
-                                top_prod_display(myJsonObj);
-
-                            }
-                        });
-                        
-                        // call for Abandoned Products Widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_abandoned_products',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-                                
-                                myJsonObj = $.parseJSON(response);
-                                
-                                myJsonObj['currency_symbol'] = Master_myJsonObj['currency_symbol'];
-
-                                Master_myJsonObj['monthly_abandoned_products'] = myJsonObj;
-                                
-                                Dom_Id[0] = '#sr_cumm_top_abandoned_products_data';
-                                ajax_spinner(Dom_Id, false);
-                                top_ababdoned_products_display(myJsonObj);
-                            }
-                        });
-
-                         // call for Top Customers Widget 
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_top_customers',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-                                
-                                myJsonObj = $.parseJSON(response);
-                                
-                                myJsonObj['siteurl'] = Master_myJsonObj['siteurl'];
-                                // Master_myJsonObj['monthly_top_customers'] = myJsonObj;
-                                Dom_Id[0] = '#top_cust_data';
-                                ajax_spinner(Dom_Id, false);
-                                top_cust_display(myJsonObj);
-                            }
-                        });
-                        
-                        // call for Top Coupons Widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_top_coupons',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-                                
-                                myJsonObj = $.parseJSON(response);
-                               
-                                myJsonObj['siteurl'] = Master_myJsonObj['siteurl'];
-                                // Master_myJsonObj['monthly_top_coupons'] = myJsonObj;
-                                Dom_Id[0] = '#sr_cumm_top_coupons_data';
-                                ajax_spinner(Dom_Id, false);
-                                sr_top_coupons_display(myJsonObj);
-                            }
-                        });
-                        
-                        // call for Avg Order Total, Avg Items Per Customer, Sales with Coupons, Discount widgets
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_total_discount',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        total_monthly_sales : Master_myJsonObj['total_monthly_sales'],
-                                        total_orders: Master_myJsonObj['total_orders'],
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-                                
-                                myJsonObj = $.parseJSON(response);
-                                
-                                myJsonObj['currency_symbol'] = Master_myJsonObj['currency_symbol'];
-                                myJsonObj['result_monthly_sales'] = Master_myJsonObj['result_monthly_sales'];
-                                myJsonObj['cumm_sales_min_date']  = Master_myJsonObj['cumm_sales_min_date'];
-                                myJsonObj['cumm_sales_max_date']  = Master_myJsonObj['cumm_sales_max_date'];
-                                Master_myJsonObj['monthly_total_discount'] = myJsonObj;
-                                
-                                Dom_Id[0] = '#sr_cumm_total_discount_graph';
-                                ajax_spinner(Dom_Id, false);
-                                $('#sr_cumm_avg_order_tot, #sr_cumm_avg_order_count, #sr_cumm_order_coupons_count').removeClass('blur_widget');
-                                sr_cumm_total_discount_display(myJsonObj);
-                                                                
-                                if( myJsonObj['result_monthly_sales'].length > 0) {
-
-                                    $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').removeClass().addClass('sr_cumm_small_widget_content');
-                                    $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').removeAttr('style');
-                                    $('#average_order_tot_title, #average_order_items_title, #average_order_items_title').css({'margin-top':'0em'});
-
-                                    // Code for Avg Order Total widget
-                                    if(myJsonObj['diff_cumm_avg_order_tot'] != 0) {
-                                        $('#sr_cumm_avg_order_tot_content').html('<span id ="sr_cumm_avg_order_tot_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_total'] + '</span><br>'+
-                                        '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_avg_order_tot_img" class="'+ myJsonObj['img_cumm_avg_order_tot'] +'" > </i>'+
-                                        ' <span id ="sr_cumm_avg_order_tot_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_avg_order_tot']+'%' +'</span></div>');
-                                    }
-                                    else {
-                                        $('#sr_cumm_avg_order_tot_content').html('<span id ="sr_cumm_avg_order_tot_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_total'] + '</span>');
-                                        $('#sr_cumm_avg_order_tot_content').css({'margin-bottom':'1.46em'});
-                                    }
-
-                                    // Code for Avg Items Per Customer
-                                    if(myJsonObj['diff_cumm_avg_order_items'] != 0) {
-                                        $('#sr_cumm_avg_order_items_content').html('<span id ="sr_cumm_avg_order_items_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_items'] + '</span><br>'+
-                                        '<div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_avg_order_items_img" class="'+ myJsonObj['img_cumm_avg_order_items'] +'" > </i>'+
-                                        ' <span id ="sr_cumm_avg_order_items_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_avg_order_items'] +'</span></div>');
-                                    }
-                                    else {
-                                        $('#sr_cumm_avg_order_items_content').html('<span id ="sr_cumm_avg_order_items_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['avg_order_items'] + '</span>');     
-                                        $('#sr_cumm_avg_order_items_content').css({'margin-bottom':'1.46em'});
-                                    }
-
-                                    // Code for Sales with Coupons widget
-                                    if(myJsonObj['diff_cumm_per_order_coupons'] != 0) {
-                                        $('#sr_cumm_order_coupons_content').html('<span id ="sr_cumm_order_coupons_count_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['cumm_per_order_coupons'] + '%</span><br>'+
-                                        '<div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_order_coupons_count_img" class="'+ myJsonObj['img_cumm_per_order_coupons'] +'" > </i>'+
-                                        ' <span id ="sr_cumm_order_coupons_count_diff" style="font-size : 0.5em;">'+ myJsonObj['diff_cumm_per_order_coupons']+'%' +'</span></div>');
-                                    }
-                                    else {
-                                        $('#sr_cumm_order_coupons_content').html('<span id ="sr_cumm_order_coupons_count_actual" class="sr_cumm_avg_order_value">'+ myJsonObj['cumm_per_order_coupons'] + '%</span>');
-                                        $('#sr_cumm_order_coupons_content').css({'margin-bottom':'1.46em'});
-                                    }
+                                    $('#sr_cumm_cart_abandonment_content').html('<span id ="sr_cumm_cart_abandonment_actual" class="sr_cumm_avg_order_value">'+ sr_cumm_number_format( resp['kpi']['car'] ) + ' % </span><br>'+
+                                    '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_cart_abandonment_img" class="'+ ( ( resp['kpi']['car'] > resp['kpi']['lp_car'] ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
+                                    ' <span id ="sr_cumm_cart_abandonment_count_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( resp['kpi']['lp_car'] > 0 ) ? (resp['kpi']['car'] - resp['kpi']['lp_car']) : resp['kpi']['car'] ) +' % </span></div>');
+                                } else {
+                                    $('#sr_cumm_cart_abandonment_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#sr_cumm_cart_abandonment_title').css({'margin-top':'1.5em'});
                                 }
-                                else {
-                                    
-                                    $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').text('No Data');
-                                    $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').addClass('no_data_text');
-                                    $('#sr_cumm_avg_order_tot_content, #sr_cumm_avg_order_items_content, #sr_cumm_order_coupons_content').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
-                                    $('#average_order_tot_title, #average_order_items_title, #average_order_items_title').css({'margin-top':'1.5em'});
 
+                                // Code for Sales with Coupons widget
+                                if( resp['kpi']['swc'] > 0 || resp['kpi']['lp_swc'] > 0 ) {
+
+                                    $('#sr_cumm_order_coupons_content').html('<span id ="sr_cumm_order_coupons_actual" class="sr_cumm_avg_order_value">'+ sr_cumm_number_format( resp['kpi']['swc'] ) + ' % </span><br>'+
+                                    '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_order_coupons_img" class="'+ ( ( resp['kpi']['swc'] > resp['kpi']['lp_swc'] ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
+                                    ' <span id ="sr_cumm_order_coupons_count_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( resp['kpi']['lp_swc'] > 0 ) ? (resp['kpi']['swc'] - resp['kpi']['lp_swc']) : resp['kpi']['swc'] ) +' % </span></div>');
+                                } else {
+                                    $('#sr_cumm_order_coupons_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#sr_cumm_order_coupons_title').css({'margin-top':'1.5em'});
                                 }
-                                
-                                 //Code for Cumm Discount Widget
-                                if(myJsonObj['graph_cumm_discount_sales'].length > 0) {
-                                    $('#sr_cumm_total_discount_actual').html(myJsonObj['cumm_discount_sales_total']);
-                                    $('#sr_cumm_total_discount_indicator').removeClass();
-                                    $('#sr_cumm_total_discount_indicator').addClass(myJsonObj['img_cumm_discount_sales_total']);
-                                    $('#diff_cumm_total_discount').text(myJsonObj['diff_cumm_discount_sales_total']+'%');    
-                                }
-                                else {
-                                    $('#sr_cumm_total_discount_actual').text(" ");
-                                    $('#sr_cumm_total_discount_indicator').removeClass();
-                                    $('#diff_cumm_total_discount').text(" "); 
-                                }                                
 
+                                $('#sr_cumm_avg_order_count, #sr_cumm_cart_abandonment, #sr_cumm_order_coupons_count').removeClass('blur_widget');
                             }
                         });
                         
-                        // call for Taxes and Shipping Widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_taxes_shipping',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-
-                                myJsonObj = $.parseJSON(response);
-                               
-                                myJsonObj['currency_symbol']      = Master_myJsonObj['currency_symbol'];
-                                myJsonObj['result_monthly_sales'] = Master_myJsonObj['result_monthly_sales'];
-                                Master_myJsonObj['monthly_taxes_shipping'] = myJsonObj;
-                                
-                                Dom_Id[0] = '#sr_cumm_taxes_data';
-                                ajax_spinner(Dom_Id, false);
-                                cumm_taxes_display(myJsonObj);
-                            }
-                        });
-                        
-                        // call for Payment Gateways Widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_payment_gateways',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        total_monthly_sales : Master_myJsonObj['total_monthly_sales'],
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-
-                                myJsonObj = $.parseJSON(response);
-                                
-                                myJsonObj['currency_symbol']      = Master_myJsonObj['currency_symbol'];
-                                myJsonObj['siteurl']              = Master_myJsonObj['siteurl'];
-                                myJsonObj['cumm_sales_min_date']  = Master_myJsonObj['cumm_sales_min_date'];
-                                myJsonObj['cumm_sales_max_date']  = Master_myJsonObj['cumm_sales_max_date'];
-                                Master_myJsonObj['monthly_payment_gateways'] = myJsonObj;                            
-                                
-                                Dom_Id[0] = '#sr_cumm_order_by_gateways_data';
-                                ajax_spinner(Dom_Id, false);
-                                top_gateway_display(myJsonObj);
-                            }
-                        });
-
-                        // call for Billing Countries widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_billing_countries',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-
-                                myJsonObj = $.parseJSON(response);
-                                myJsonObj['siteurl'] = Master_myJsonObj['siteurl'];
-                                Master_myJsonObj['monthly_billing_countries'] = myJsonObj;
-                                
-                                Dom_Id[0] = '#sr_cumm_sales_countries_graph';
-                                ajax_spinner(Dom_Id, false);
-                                cumm_sales_billing_country(myJsonObj);
-                            }
-                        });
-                        
-                         // call for Shipping Methods widget
-                        $.ajax({
-                            type : 'POST',
-                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                            dataType:"text",
-                            action: 'sr_get_stats',
-                            data: {
-                                        cmd: 'monthly_shipping_methods',
-                                        security : "<?php echo $sr_nonce; ?>",
-                                        start_date : $("#startdate").val(),
-                                        end_date : $("#enddate").val(),
-                                        top_prod_option : opt_id,
-                                        total_monthly_sales : Master_myJsonObj['total_monthly_sales'],
-                                        SR_IMG_UP_GREEN : "<?php echo $sr_img_up_green; ?>",
-                                        SR_IMG_UP_RED : "<?php echo $sr_img_up_red; ?>",
-                                        SR_IMG_DOWN_RED : "<?php echo $sr_img_down_red; ?>",
-                                        SR_CURRENCY_SYMBOL : "<?php echo $sr_currency_symbol; ?>",
-                                        SR_DECIMAL_PLACES : "<?php echo $sr_decimal_places; ?>",
-                                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                                        file: "<?php echo $sr_json_file_nm; ?>"
-                                },
-                            success: function(response) {
-
-                                myJsonObj = $.parseJSON(response);
-                                
-                                myJsonObj['currency_symbol'] = Master_myJsonObj['currency_symbol'];
-                                myJsonObj['siteurl']         = Master_myJsonObj['siteurl'];
-                                Master_myJsonObj['monthly_shipping_methods'] = myJsonObj;                              
-                                
-                                Dom_Id[0] = '#sr_cumm_order_by_shipping_method_data';
-                                ajax_spinner(Dom_Id, false);
-                                top_shipping_method_display(myJsonObj);
-                                                                     
-                            }
-                        });
+            //             
                   });
             }
             
@@ -1387,6 +1029,9 @@ jQuery(function($){
 // Cumm Sales Widget
 // ================================================
  -->
+
+<canvas id="sample1" width="400" height="400"> </canvas>
+
 <div id="sr_cumm_sales" class="cumm_widget">
 
     <div id="sr_cumm_sales_value" style="height:60px;width:100%;">
@@ -1399,248 +1044,13 @@ jQuery(function($){
           </div>    
     </div>
     <div class="ajax_loader cumm_widget" style="display: none;"></div>
-    <div id="sr_cumm_sales_graph" class="sr_cumm_sales_graph ">
+    <!-- <canvas id="sr_sales_graph" class="sr_sales_graph "> </canvas> -->
+    <canvas id="sr_sales_graph" class="sr_cumm_sales_graph"> </canvas>
     <script type="text/javascript"> 
         
         // ================================================================================
         // Code to override the Jqplot Functionality to display only one marker
         // ================================================================================
-
-        jQuery(function($){
-
-            $.jqplot.LineRenderer.prototype.draw = function(ctx, gd, options, plot) {
-            var i;
-            // get a copy of the options, so we don't modify the original object.
-            var opts = $.extend(true, {}, options);
-            var shadow = (opts.shadow != undefined) ? opts.shadow : this.shadow;
-            var showLine = (opts.showLine != undefined) ? opts.showLine : this.showLine;
-            var fill = (opts.fill != undefined) ? opts.fill : this.fill;
-            var fillAndStroke = (opts.fillAndStroke != undefined) ? opts.fillAndStroke : this.fillAndStroke;
-            var xmin, ymin, xmax, ymax;
-            ctx.save();
-            if (gd.length) {
-                if (showLine) {
-                    // if we fill, we'll have to add points to close the curve.
-                    if (fill) {
-                        if (this.fillToZero) { 
-                            // have to break line up into shapes at axis crossings
-                            var negativeColor = this.negativeColor;
-                            if (! this.useNegativeColors) {
-                                negativeColor = opts.fillStyle;
-                            }
-                            var isnegative = false;
-                            var posfs = opts.fillStyle;
-                        
-                            // if stoking line as well as filling, get a copy of line data.
-                            if (fillAndStroke) {
-                                var fasgd = gd.slice(0);
-                            }
-                            // if not stacked, fill down to axis
-                            if (this.index == 0 || !this._stack) {
-                            
-                                var tempgd = [];
-                                var pd = (this.renderer.smooth) ? this.renderer._smoothedPlotData : this._plotData;
-                                this._areaPoints = [];
-                                var pyzero = this._yaxis.series_u2p(this.fillToValue);
-                                var pxzero = this._xaxis.series_u2p(this.fillToValue);
-
-                                opts.closePath = true;
-                                
-                                if (this.fillAxis == 'y') {
-                                    tempgd.push([gd[0][0], pyzero]);
-                                    this._areaPoints.push([gd[0][0], pyzero]);
-                                    
-                                    for (var i=0; i<gd.length-1; i++) {
-                                        tempgd.push(gd[i]);
-                                        this._areaPoints.push(gd[i]);
-                                        // do we have an axis crossing?
-                                        if (pd[i][1] * pd[i+1][1] < 0) {
-                                            if (pd[i][1] < 0) {
-                                                isnegative = true;
-                                                opts.fillStyle = negativeColor;
-                                            }
-                                            else {
-                                                isnegative = false;
-                                                opts.fillStyle = posfs;
-                                            }
-                                            
-                                            var xintercept = gd[i][0] + (gd[i+1][0] - gd[i][0]) * (pyzero-gd[i][1])/(gd[i+1][1] - gd[i][1]);
-                                            tempgd.push([xintercept, pyzero]);
-                                            this._areaPoints.push([xintercept, pyzero]);
-                                            // now draw this shape and shadow.
-                                            if (shadow) {
-                                                this.renderer.shadowRenderer.draw(ctx, tempgd, opts);
-                                            }
-                                            this.renderer.shapeRenderer.draw(ctx, tempgd, opts);
-                                            // now empty temp array and continue
-                                            tempgd = [[xintercept, pyzero]];
-                                            // this._areaPoints = [[xintercept, pyzero]];
-                                        }   
-                                    }
-                                    if (pd[gd.length-1][1] < 0) {
-                                        isnegative = true;
-                                        opts.fillStyle = negativeColor;
-                                    }
-                                    else {
-                                        isnegative = false;
-                                        opts.fillStyle = posfs;
-                                    }
-                                    tempgd.push(gd[gd.length-1]);
-                                    this._areaPoints.push(gd[gd.length-1]);
-                                    tempgd.push([gd[gd.length-1][0], pyzero]); 
-                                    this._areaPoints.push([gd[gd.length-1][0], pyzero]); 
-                                }
-                                // now draw the last area.
-                                if (shadow) {
-                                    this.renderer.shadowRenderer.draw(ctx, tempgd, opts);
-                                }
-                                this.renderer.shapeRenderer.draw(ctx, tempgd, opts);
-                                
-                                
-                                // var gridymin = this._yaxis.series_u2p(0);
-                                // // IE doesn't return new length on unshift
-                                // gd.unshift([gd[0][0], gridymin]);
-                                // len = gd.length;
-                                // gd.push([gd[len - 1][0], gridymin]);                   
-                            }
-                            // if stacked, fill to line below 
-                            else {
-                                var prev = this._prevGridData;
-                                for (var i=prev.length; i>0; i--) {
-                                    gd.push(prev[i-1]);
-                                    // this._areaPoints.push(prev[i-1]);
-                                }
-                                if (shadow) {
-                                    this.renderer.shadowRenderer.draw(ctx, gd, opts);
-                                }
-                                this._areaPoints = gd;
-                                this.renderer.shapeRenderer.draw(ctx, gd, opts);
-                            }
-                        }
-                        /////////////////////////
-                        // Not filled to zero
-                        ////////////////////////
-                        else {                    
-                            // if stoking line as well as filling, get a copy of line data.
-                            if (fillAndStroke) {
-                                var fasgd = gd.slice(0);
-                            }
-                            // if not stacked, fill down to axis
-                            if (this.index == 0 || !this._stack) {
-                                // var gridymin = this._yaxis.series_u2p(this._yaxis.min) - this.gridBorderWidth / 2;
-                                var gridymin = ctx.canvas.height;
-                                // IE doesn't return new length on unshift
-                                gd.unshift([gd[0][0], gridymin]);
-                                var len = gd.length;
-                                gd.push([gd[len - 1][0], gridymin]);                   
-                            }
-                            // if stacked, fill to line below 
-                            else {
-                                var prev = this._prevGridData;
-                                for (var i=prev.length; i>0; i--) {
-                                    gd.push(prev[i-1]);
-                                }
-                            }
-                            this._areaPoints = gd;
-                            
-                            if (shadow) {
-                                this.renderer.shadowRenderer.draw(ctx, gd, opts);
-                            }
-                
-                            this.renderer.shapeRenderer.draw(ctx, gd, opts);                        
-                        }
-                        if (fillAndStroke) {
-                            var fasopts = $.extend(true, {}, opts, {fill:false, closePath:false});
-                            this.renderer.shapeRenderer.draw(ctx, fasgd, fasopts);
-                            //////////
-                            // TODO: figure out some way to do shadows nicely
-                            // if (shadow) {
-                            //     this.renderer.shadowRenderer.draw(ctx, fasgd, fasopts);
-                            // }
-                            // now draw the markers
-                            if (this.markerRenderer.show) {
-                                if (this.renderer.smooth) {
-                                    fasgd = this.gridData;
-                                }
-                                  var i1= fasgd.length - 1;
-                                  this.markerRenderer.draw(fasgd[i1][0], fasgd[i1][1], ctx, opts.markerOptions);
-                                
-                            }
-                        }
-                    }
-                    else {
-
-                        if (this.renderer.bands.show) {
-                            var bdat;
-                            var bopts = $.extend(true, {}, opts);
-                            if (this.renderer.bands.showLines) {
-                                bdat = (this.renderer.smooth) ? this.renderer._hiBandSmoothedData : this.renderer._hiBandGridData;
-                                this.renderer.shapeRenderer.draw(ctx, bdat, opts);
-                                bdat = (this.renderer.smooth) ? this.renderer._lowBandSmoothedData : this.renderer._lowBandGridData;
-                                this.renderer.shapeRenderer.draw(ctx, bdat, bopts);
-                            }
-
-                            if (this.renderer.bands.fill) {
-                                if (this.renderer.smooth) {
-                                    bdat = this.renderer._hiBandSmoothedData.concat(this.renderer._lowBandSmoothedData.reverse());
-                                }
-                                else {
-                                    bdat = this.renderer._hiBandGridData.concat(this.renderer._lowBandGridData.reverse());
-                                }
-                                this._areaPoints = bdat;
-                                bopts.closePath = true;
-                                bopts.fill = true;
-                                bopts.fillStyle = this.renderer.bands.fillColor;
-                                this.renderer.shapeRenderer.draw(ctx, bdat, bopts);
-                            }
-                        }
-
-                        if (shadow) {
-                            this.renderer.shadowRenderer.draw(ctx, gd, opts);
-                        }
-        
-                        this.renderer.shapeRenderer.draw(ctx, gd, opts);
-                    }
-                }
-                // calculate the bounding box
-                var xmin = xmax = ymin = ymax = null;
-                for (i=0; i<this._areaPoints.length; i++) {
-                    var p = this._areaPoints[i];
-                    if (xmin > p[0] || xmin == null) {
-                        xmin = p[0];
-                    }
-                    if (ymax < p[1] || ymax == null) {
-                        ymax = p[1];
-                    }
-                    if (xmax < p[0] || xmax == null) {
-                        xmax = p[0];
-                    }
-                    if (ymin > p[1] || ymin == null) {
-                        ymin = p[1];
-                    }
-                }
-
-                if (this.type === 'line' && this.renderer.bands.show) {
-                    ymax = this._yaxis.series_u2p(this.renderer.bands._min);
-                    ymin = this._yaxis.series_u2p(this.renderer.bands._max);
-                }
-
-                this._boundingBox = [[xmin, ymax], [xmax, ymin]];
-            
-                // now draw the markers
-                if (this.markerRenderer.show && !fill) {
-                    if (this.renderer.smooth) {
-                        gd = this.gridData;
-                    }
-                        var i1= gd.length - 1;
-                        this.markerRenderer.draw(gd[i1][0], gd[i1][1], ctx, opts.markerOptions);
-
-                }
-            }
-            
-            ctx.restore();
-        };
-    });
     
     // ================================================================================
 
@@ -1654,26 +1064,7 @@ jQuery(function($){
 
         $(window).resize(function() {
 
-            $('#top_prod_data').empty();
-            $('#sr_cumm_order_by_gateways_data').empty();
-            $('#sr_cumm_order_by_shipping_method_data').empty();
-            $('#sr_cumm_top_abandoned_products_data').empty();
-            $('#sr_cumm_taxes_data').empty();
-            $('#sr_cumm_sales_funnel_data').empty();
-            $('#sr_cumm_sales_countries_graph').empty();
-
-            setTimeout(function(){
-
-                top_prod_display(Master_myJsonObj['monthly_top_products']);
-                top_gateway_display(Master_myJsonObj['monthly_payment_gateways']);
-                top_shipping_method_display(Master_myJsonObj['monthly_shipping_methods']);
-                sr_cumm_total_discount_display(Master_myJsonObj['monthly_total_discount']);
-                top_ababdoned_products_display(Master_myJsonObj['monthly_abandoned_products']);
-                cumm_taxes_display(Master_myJsonObj['monthly_taxes_shipping']);
-                cumm_sales_funnel_display(Master_myJsonObj);
-                cumm_sales_billing_country(Master_myJsonObj['monthly_billing_countries']);
-
-            }, 1000);
+            cumm_sales_billing_country(sr_data.bc_data);
         });
     });
 
@@ -1762,8 +1153,8 @@ jQuery(function($){
             jqplot_flag = 2;
 
             // $('#sr_cumm_date1').css('width','21em');
-            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
-            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
+            $('#sr_sales_graph, #sr_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
+            $('#sr_sales_graph, #sr_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
 
             // if(screen.width >= 1001 && screen.width <= 1150) {
             //     // $('body').css('font-size','0.655em');    
@@ -1782,10 +1173,10 @@ jQuery(function($){
 
             jqplot_flag = 2;
 
-            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-0.95em");
+            $('#sr_sales_graph, #sr_discount_graph').css("margin-top","-0.95em");
             // $('#sr_cumm_date1').css('width','20.8em');
-            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
-            $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
+            $('#sr_sales_graph, #sr_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
+            $('#sr_sales_graph, #sr_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
 
             // if(screen.width >= 1001 && screen.width <= 1150) {
             //     // $('body').css('font-size','0.745em');
@@ -1809,11 +1200,11 @@ jQuery(function($){
 
             if ( $(document.body).hasClass('folded') ) {
 
-                // $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('folded_height');
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-2.75em");
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
+                // $('#sr_sales_graph, #sr_discount_graph').removeClass('folded_height');
+                $('#sr_sales_graph, #sr_discount_graph').removeAttr('style');
+                $('#sr_sales_graph, #sr_discount_graph').css("margin-top","-2.75em");
+                $('#sr_sales_graph, #sr_discount_graph').removeClass('sr_cumm_sales_graph_collapsed');
+                $('#sr_sales_graph, #sr_discount_graph').addClass('sr_cumm_sales_graph_not_collapsed');
                 // $('#sr_cumm_date1').css('width','21em');
 
                 // if(screen.width >= 1001 && screen.width <= 1150) {
@@ -1832,9 +1223,9 @@ jQuery(function($){
             }
             else {            
 
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
-                $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
+                $('#sr_sales_graph, #sr_discount_graph').removeAttr('style');
+                $('#sr_sales_graph, #sr_discount_graph').removeClass('sr_cumm_sales_graph_not_collapsed');
+                $('#sr_sales_graph, #sr_discount_graph').addClass('sr_cumm_sales_graph_collapsed');
                 // $('#sr_cumm_date1').css('width','20.8em');
 
                 // if(screen.width >= 1001 && screen.width <= 1150) {
@@ -1853,15 +1244,15 @@ jQuery(function($){
             }
 
             //Code to replot the jqPlot graphs
-            monthly_display(Master_myJsonObj);
-            top_prod_display(Master_myJsonObj['monthly_top_products']);
-            top_gateway_display(Master_myJsonObj['monthly_payment_gateways']);
-            top_shipping_method_display(Master_myJsonObj['monthly_shipping_methods']);
-            sr_cumm_total_discount_display(Master_myJsonObj['monthly_total_discount']);
-            top_ababdoned_products_display(Master_myJsonObj['monthly_abandoned_products']);
-            cumm_taxes_display(Master_myJsonObj['monthly_taxes_shipping']);
-            cumm_sales_funnel_display(Master_myJsonObj);
-            cumm_sales_billing_country(Master_myJsonObj['monthly_billing_countries']);
+            // monthly_display(Master_myJsonObj);
+            // top_prod_display(Master_myJsonObj['monthly_top_products']);
+            // top_gateway_display(Master_myJsonObj['monthly_payment_gateways']);
+            // top_shipping_method_display(Master_myJsonObj['monthly_shipping_methods']);
+            // sr_cumm_total_discount_display(Master_myJsonObj['monthly_total_discount']);
+            // top_ababdoned_products_display(Master_myJsonObj['monthly_abandoned_products']);
+            // cumm_taxes_display(Master_myJsonObj['monthly_taxes_shipping']);
+            // cumm_sales_funnel_display(Master_myJsonObj);
+            // cumm_sales_billing_country(Master_myJsonObj['monthly_billing_countries']);
         });
     });
        
@@ -1869,12 +1260,22 @@ jQuery(function($){
     //Javascript function to handles Sales Figures
     var sr_cumm_number_format = function (number) {
 
-        var decPlaces = <?php echo $sr_decimal_places;?>;
+        var decPlaces = "<?php echo $sr_const['decimal_places'];?>";
+        var numformat = "<?php echo $sr_const['num_format'];?>";
         // 2 decimal places => 100, 3 => 1000, etc
         decPlaces = Math.pow(10,decPlaces);
 
         // Enumerate number abbreviations
         var abbrev = [ "k", "m", "b", "t" ];
+
+        number =  ( typeof number != undefined || number != '' )  ? Math.abs(number) : 0;
+
+        // for rounding off to decPlaces
+        number = Math.round(number*decPlaces)/decPlaces;
+
+        if ( numformat == 0 ) {
+            return number;
+        }
 
         // Go through the array backwards, so we do the largest first
         for (var i=abbrev.length-1; i>=0; i--) {
@@ -1886,6 +1287,7 @@ jQuery(function($){
             if(size <= number) {
                  // Here, we multiply by decPlaces, round, and then divide by decPlaces.
                  // This gives us nice rounding to a particular decimal place.
+
                  number = Math.round(number*decPlaces/size)/decPlaces;
 
                  // Handle special case where we round up to the next abbreviation
@@ -1908,7 +1310,7 @@ jQuery(function($){
 
     //Function to handle the tooltip formatting for the Cumm Sales Widget
     var tickFormatter = function (format , number) {
-        var currency_symbol = '<?php echo $sr_currency_symbol;?>';
+        var currency_symbol = "<?php echo $sr_const['currency_symbol'];?>";
         number = sr_cumm_number_format(number);
         return currency_symbol + number;
     };
@@ -1928,7 +1330,7 @@ jQuery(function($){
 
     //Function to handle the tooltip formatting for the Top 5 Products Widget
     var tickFormatter_top_prod = function (format , number) {
-        var currency_stmbol = '<?php echo $sr_currency_symbol;?>';
+        var currency_stmbol = "<?php echo $sr_const['currency_symbol'];?>";
 
         number = sr_cumm_number_format(number);
         
@@ -1950,20 +1352,20 @@ jQuery(function($){
             var tick_format = resp['tick_format'];
             var currency_symbol = resp['currency_symbol'];
             
-            $('#sr_cumm_sales_graph').empty();
-            $('#sr_cumm_sales_graph').removeAttr('style'); // remove styling after no data label
+            $('#sr_sales_graph').empty();
+            $('#sr_sales_graph').removeAttr('style'); // remove styling after no data label
 
             if(resp['result_monthly_sales'].length > 0) {
 
                 if ( (!$(document.body).hasClass('folded')) && jqplot_flag == 1) {                
-                    $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
-                    $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-2.75em");
+                    $('#sr_sales_graph, #sr_discount_graph').removeAttr('style');
+                    $('#sr_sales_graph, #sr_discount_graph').css("margin-top","-2.75em");
                 }
                 else if (($(document.body).hasClass('folded')) && jqplot_flag == 1) {
-                    $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+                    $('#sr_sales_graph, #sr_discount_graph').removeAttr('style');
                 }
 
-                $('#sr_cumm_sales_graph').removeClass().addClass('sr_cumm_sales_graph_not_collapsed sr_cumm_sales_graph');
+                $('#sr_sales_graph').removeClass().addClass('sr_cumm_sales_graph_not_collapsed sr_cumm_sales_graph');
 
                 for(var i = 0, len = resp['result_monthly_sales'].length; i < len; i++) {
                     sales_trend[i] = new Array();
@@ -1972,7 +1374,7 @@ jQuery(function($){
                 }
 
                     $(window).resize(function() {
-                        $('#sr_cumm_sales_graph').empty();
+                        $('#sr_sales_graph').empty();
 
                         setTimeout(function() {
                             monthly_sales_graph_resize();
@@ -1988,7 +1390,7 @@ jQuery(function($){
                     }
 
                     var monthly_sales_graph = function() { 
-                        plot = $.jqplot('sr_cumm_sales_graph',  [sales_trend], {
+                        plot = $.jqplot('sr_sales_graph',  [sales_trend], {
                         axes: {
                              yaxis: {  
                                   tickOptions: {
@@ -2056,45 +1458,45 @@ jQuery(function($){
             }
 
             else {
-                $('#sr_cumm_sales_graph').removeClass();            
-                $('#sr_cumm_sales_graph').text('No Data');
-                $('#sr_cumm_sales_graph').addClass('no_data_text');
-                $('#sr_cumm_sales_graph').css('margin-top','5.4em');
+                $('#sr_sales_graph').removeClass();            
+                $('#sr_sales_graph').text('No Data');
+                $('#sr_sales_graph').addClass('no_data_text');
+                $('#sr_sales_graph').css('margin-top','5.4em');
             }
         });
     }
 
     //Code to handle the display of the tooltips
     jQuery(function($){
-        $('#sr_cumm_sales_graph').on('jqplotMouseMove', 
+        $('#sr_sales_graph').on('jqplotMouseMove', 
             function (ev, seriesIndex, pointIndex, data) {
               if( data ) {
-                $('#sr_cumm_sales_graph .jqplot-highlight-canvas').css('display','block');
-                $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('display','block');
-                $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('background','#E0DCDC');
-                $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('border','1px solid #E0DCDC');
-                $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('font-size','1.1em');
-                $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('font-weight','500');
+                $('#sr_sales_graph .jqplot-highlight-canvas').css('display','block');
+                $('#sr_sales_graph .jqplot-highlighter-tooltip').css('display','block');
+                $('#sr_sales_graph .jqplot-highlighter-tooltip').css('background','#E0DCDC');
+                $('#sr_sales_graph .jqplot-highlighter-tooltip').css('border','1px solid #E0DCDC');
+                $('#sr_sales_graph .jqplot-highlighter-tooltip').css('font-size','1.1em');
+                $('#sr_sales_graph .jqplot-highlighter-tooltip').css('font-weight','500');
 
               }
               else {
-                $('#sr_cumm_sales_graph .jqplot-highlight-canvas').css('display','none');
-                $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('display','none'); 
+                $('#sr_sales_graph .jqplot-highlight-canvas').css('display','none');
+                $('#sr_sales_graph .jqplot-highlighter-tooltip').css('display','none'); 
               }
             }
         );
 
-        $('#sr_cumm_sales_graph').on('jqplotMouseLeave', 
+        $('#sr_sales_graph').on('jqplotMouseLeave', 
            function (ev, seriesIndex, pointIndex, data) {
-              $('#sr_cumm_sales_graph .jqplot-highlight-canvas').css('display','none');
-              $('#sr_cumm_sales_graph .jqplot-highlighter-tooltip').css('display','none');
+              $('#sr_sales_graph .jqplot-highlight-canvas').css('display','none');
+              $('#sr_sales_graph .jqplot-highlighter-tooltip').css('display','none');
            }
         );
 
     });
     
      </script>
-</div>
+<!-- </div> -->
 </div>
 
 <!-- 
@@ -2111,7 +1513,7 @@ jQuery(function($){
 
     <!-- <div id="sr_cumm_sales_funnel_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;"> -->
     <div class="ajax_loader cumm_widget" style="display: none;"></div>
-    <div id="sr_cumm_sales_funnel_data" style="height:87%;width:65%;margin-left:4.4em">
+    <div id="sr_cumm_sales_funnel_data" style="height:87%;margin-top:1.75em">
         
     </div>
     <script type="text/javascript">
@@ -2129,69 +1531,20 @@ jQuery(function($){
                 $('#sr_cumm_sales_funnel_data').removeAttr('style');
 
                 $('#sr_cumm_sales_funnel_data').css('height' ,'87%');
-                $('#sr_cumm_sales_funnel_data').css('width' ,'65%');
-                $('#sr_cumm_sales_funnel_data').css('margin-left' ,'4.4em');
+                $('#sr_cumm_sales_funnel_data').css('margin-top' ,'1.75em');
             }
            
-            if(resp['cumm_sales_funnel'] != '' && (resp['cumm_sales_funnel']['total_cart_count'] != 0 || resp['cumm_sales_funnel']['total_products_added_cart'] != 0 || 
-                                                     resp['cumm_sales_funnel']['orders_placed_count'] != 0 || resp['cumm_sales_funnel']['products_purchased_count'] != 0 || 
-                                                     resp['cumm_sales_funnel']['orders_completed_count'] != 0 || resp['cumm_sales_funnel']['products_sold_count'] != 0) ) {
+            if(resp != '' && resp.hasOwnProperty('kpi') && (resp.kpi.carts > 0 || resp.kpi.carts_prod > 0 || 
+                                                            resp.kpi.orders > 0 || resp.kpi.orders_prod > 0 || 
+                                                            resp.kpi.corders > 0 || resp.kpi.corders_prod > 0) ) {
 
-                $('#sr_cumm_sales_funnel_data').empty();
+              $('#sr_cumm_sales_funnel_data').html('<img id="sr_sales_funnel" style="max-width:70%;height:80%;float:left;" src="'+ "<?php echo $sr_const['img_url'];?>" +'sales_funnel.png">' +
+                                                      '<div style="height:80%;font-size:0.7em;">'+
+                                                        '<div style="top:18%;position:relative;right:5%;"> '+ resp.kpi.carts + ' Carts • '+ resp.kpi.carts_prod +' Products </div>' +
+                                                        '<div style="top:39%;position:relative;right:11%;width:110%;"> '+ resp.kpi.orders + ' Orders Placed • '+ resp.kpi.orders_prod +' Products </div>' +
+                                                        '<div style="top:60%;position:relative;right:16%;width:110%;"> '+ resp.kpi.corders + ' Orders Completed • '+ resp.kpi.corders_prod +' Products </div>' +
+                                                      '</div>');  
 
-                $.jqplot('sr_cumm_sales_funnel_data',  [[['Added to Cart', resp['cumm_sales_funnel']['total_products_added_cart']],
-                                                         ['Orders Placed', resp['cumm_sales_funnel']['products_purchased_count']],
-                                                         ['Orders Completed',resp['cumm_sales_funnel']['products_sold_count']]]], {
-                        
-                        grid: {
-                            backgroundColor: 'transparent',
-                            drawBorder: false,
-                            shadow: false
-                        },
-
-                        gridPadding: {top:-6.5, bottom:47, left:0, right:0},
-                        // gridPadding: {top:0, bottom:47, left:0, right:0},
-
-                            series:[{startAngle: -90,
-                                  dataLabels: 'percent',
-                                  padding: 0, 
-                                  sliceMargin: 4}],
-
-
-                            cursor: {
-                              show: false
-                            },
-                           
-                           seriesDefaults: {
-                               renderer: $.jqplot.FunnelRenderer,
-
-                               shadow: false,
-                            
-                               seriesColors: ['#04c0f0','#a6dba0','#e69a01'], // FINAL
-
-                                 rendererOptions:{
-                                         sectionMargin: 5,
-                                         widthRatio: 0.3,
-                                         showDataLabels: true,
-                                        dataLabels: [[resp['cumm_sales_funnel']['total_cart_count']+' • '+resp['cumm_sales_funnel']['total_products_added_cart']],
-                                                     [resp['cumm_sales_funnel']['orders_placed_count']+' • '+resp['cumm_sales_funnel']['products_purchased_count']],
-                                                     [resp['cumm_sales_funnel']['orders_completed_count']+' • '+resp['cumm_sales_funnel']['products_sold_count']]]
-                                  }
-                            },
-
-                            legend: { 
-                                show:true,
-                                placement: 'outsideGrid',                      
-                                rendererOptions: {
-                                    numberRows: 1,
-                                    
-                                }, 
-                                location: 's',
-                                marginLeft: '-4.6em',
-                                width: '31em'
-                            }
-
-                        });
             } else {
                 $('#sr_cumm_sales_funnel_data').removeAttr('style');
                 $('#sr_cumm_sales_funnel_data').text('No Data');
@@ -2199,63 +1552,133 @@ jQuery(function($){
                 $('#sr_cumm_sales_funnel_data').css('margin-top','6.7em');
             }
 
+            Dom_Id[0] = '#sr_cumm_sales_funnel_data';
+            ajax_spinner(Dom_Id, false); 
+
+            //     $('#sr_cumm_sales_funnel_data').empty();
+
+              
+
+                                
+
+
+            //     // $.jqplot('sr_cumm_sales_funnel_data',  [[['Added to Cart', resp['cumm_sales_funnel']['total_products_added_cart']],
+            //     //                                          ['Orders Placed', resp['cumm_sales_funnel']['products_purchased_count']],
+            //     //                                          ['Orders Completed',resp['cumm_sales_funnel']['products_sold_count']]]], {
+                        
+            //     //         grid: {
+            //     //             backgroundColor: 'transparent',
+            //     //             drawBorder: false,
+            //     //             shadow: false
+            //     //         },
+
+            //     //         gridPadding: {top:-6.5, bottom:47, left:0, right:0},
+            //     //         // gridPadding: {top:0, bottom:47, left:0, right:0},
+
+            //     //             series:[{startAngle: -90,
+            //     //                   dataLabels: 'percent',
+            //     //                   padding: 0, 
+            //     //                   sliceMargin: 4}],
+
+
+            //     //             cursor: {
+            //     //               show: false
+            //     //             },
+                           
+            //     //            seriesDefaults: {
+            //     //                renderer: $.jqplot.FunnelRenderer,
+
+            //     //                shadow: false,
+                            
+            //     //                seriesColors: ['#04c0f0','#a6dba0','#e69a01'], // FINAL
+
+            //     //                  rendererOptions:{
+            //     //                          sectionMargin: 5,
+            //     //                          widthRatio: 0.3,
+            //     //                          showDataLabels: true,
+            //     //                         dataLabels: [[resp['cumm_sales_funnel']['total_cart_count']+' • '+resp['cumm_sales_funnel']['total_products_added_cart']],
+            //     //                                      [resp['cumm_sales_funnel']['orders_placed_count']+' • '+resp['cumm_sales_funnel']['products_purchased_count']],
+            //     //                                      [resp['cumm_sales_funnel']['orders_completed_count']+' • '+resp['cumm_sales_funnel']['products_sold_count']]]
+            //     //                   }
+            //     //             },
+
+            //     //             legend: { 
+            //     //                 show:true,
+            //     //                 placement: 'outsideGrid',                      
+            //     //                 rendererOptions: {
+            //     //                     numberRows: 1,
+                                    
+            //     //                 }, 
+            //     //                 location: 's',
+            //     //                 marginLeft: '-4.6em',
+            //     //                 width: '31em'
+            //     //             }
+
+            //     //         });
+            // } else {
+            //     $('#sr_cumm_sales_funnel_data').removeAttr('style');
+            //     $('#sr_cumm_sales_funnel_data').text('No Data');
+            //     $('#sr_cumm_sales_funnel_data').addClass('no_data_text');
+            //     $('#sr_cumm_sales_funnel_data').css('margin-top','6.7em');
+            // }
+
             
 
 
-            $('.jqplot-table-legend-swatch').css({"-moz-border-radius": "50px/50px",
-                                                    "-webkit-border-radius": "50px 50px",
-                                                    "border-radius": "50px/50px",
-                                                    "border-width": "6px"
-                                                    });
+            // $('.jqplot-table-legend-swatch').css({"-moz-border-radius": "50px/50px",
+            //                                         "-webkit-border-radius": "50px 50px",
+            //                                         "border-radius": "50px/50px",
+            //                                         "border-width": "6px"
+            //                                         });
 
 
-            var funnel_legend = ["Added to Cart","Orders Placed","Orders Completed"]; 
+            // var funnel_legend = ["Added to Cart","Orders Placed","Orders Completed"]; 
 
-            $('td:contains("Added to Cart"), td:contains("Orders Placed")').css({"min-width": "7em"});
-            $('td:contains("Orders Completed")').css({"min-width": "9em"});
+            // $('td:contains("Added to Cart"), td:contains("Orders Placed")').css({"min-width": "7em"});
+            // $('td:contains("Orders Completed")').css({"min-width": "9em"});
         
 
-            $('#sr_cumm_sales_funnel_data').on('jqplotDataMouseOver', function (ev, seriesIndex, pointIndex, data) {
+            // $('#sr_cumm_sales_funnel_data').on('jqplotDataMouseOver', function (ev, seriesIndex, pointIndex, data) {
 
-                    var tooltip_text_1 = "";
+            //         var tooltip_text_1 = "";
 
-                    if (data[0] == "Added to Cart") {
+            //         if (data[0] == "Added to Cart") {
 
-                        tooltip_text_1 = resp['cumm_sales_funnel']['total_cart_count'] + " Carts";
+            //             tooltip_text_1 = resp['cumm_sales_funnel']['total_cart_count'] + " Carts";
 
-                    } else if(data[0] == "Orders Placed") {
+            //         } else if(data[0] == "Orders Placed") {
 
-                        tooltip_text_1 = resp['cumm_sales_funnel']['orders_placed_count'] + " Orders Placed";
+            //             tooltip_text_1 = resp['cumm_sales_funnel']['orders_placed_count'] + " Orders Placed";
 
-                    } else {
+            //         } else {
 
-                        tooltip_text_1 = resp['cumm_sales_funnel']['orders_completed_count'] + " Orders Completed";
+            //             tooltip_text_1 = resp['cumm_sales_funnel']['orders_completed_count'] + " Orders Completed";
 
-                    }
+            //         }
 
 
-                  var mouseX = ev.pageX - 150; //these are going to be how jquery knows where to put the div that will be our tooltip
-                  var mouseY = ev.pageY;
-                  $('#chartpseudotooltip').html( '<div>' + tooltip_text_1 + '</div> <div>' + data[1] + " Products" + '</div>');
-                  var cssObj = {
-                      'position': 'absolute',
-                      'font-weight': 'bold',
-                      'left': mouseX + 'px', //usually needs more offset here
-                      'top': mouseY + 'px',
-                      'border' : '1px solid #6EADE7',
-                      'background-color': 'white',
-                      'font-size': '1.1em',
-                      'font-weight': '500',
-                      'z-index':'1'
-                  };
-                  $('#chartpseudotooltip').css(cssObj);
-                  $('#chartpseudotooltip').show();
+            //       var mouseX = ev.pageX - 150; //these are going to be how jquery knows where to put the div that will be our tooltip
+            //       var mouseY = ev.pageY;
+            //       $('#chartpseudotooltip').html( '<div>' + tooltip_text_1 + '</div> <div>' + data[1] + " Products" + '</div>');
+            //       var cssObj = {
+            //           'position': 'absolute',
+            //           'font-weight': 'bold',
+            //           'left': mouseX + 'px', //usually needs more offset here
+            //           'top': mouseY + 'px',
+            //           'border' : '1px solid #6EADE7',
+            //           'background-color': 'white',
+            //           'font-size': '1.1em',
+            //           'font-weight': '500',
+            //           'z-index':'1'
+            //       };
+            //       $('#chartpseudotooltip').css(cssObj);
+            //       $('#chartpseudotooltip').show();
 
-              });
+            //   });
 
-              $('#sr_cumm_sales_funnel_data').on('jqplotDataUnhighlight', function (ev) {
-                  $('#chartpseudotooltip').empty().hide();
-              });
+            //   $('#sr_cumm_sales_funnel_data').on('jqplotDataUnhighlight', function (ev) {
+            //       $('#chartpseudotooltip').empty().hide();
+            //   });
       });
 
     }
@@ -2280,9 +1703,9 @@ jQuery(function($){
 
             jQuery(function($) {
 
-                $(window).resize(function() {
-                   top_prod_graph_resize();
-                });
+                // $(window).resize(function() {
+                //    top_prod_graph_resize();
+                // });
 
                 var top_prod_graph_resize = function() {
                     
@@ -2373,58 +1796,59 @@ jQuery(function($){
 
             jQuery(function($) {
 
-              $.ajax({
-                    type : 'POST',
-                    // url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
-                    url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
-                    dataType:"text",
-                    async: false,
-                    action: 'sr_get_stats',
-                    data: {
-                        cmd: 'top_products_option',
-                        security : "<?php echo $sr_nonce; ?>",
-                        top_prod_option: opt_id,
-                        option : 1,
-                        start_date : $("#startdate").val(),
-                        end_date : $("#enddate").val(),
-                        SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
-                        file: "<?php echo $sr_json_file_nm; ?>"
-                    },
-                    success: function(response) {
-                        var myJsonObj    = $.parseJSON(response);
-                        var top_prod_graph_data = new Array();
-                        var tick_format_yaxis;
-                        var top_prod_data = new Array();
+              // $.ajax({
+              //       type : 'POST',
+              //       // url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+              //       url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats', 
+              //       dataType:"text",
+              //       async: false,
+              //       action: 'sr_get_stats',
+              //       data: {
+              //           cmd: 'top_products_option',
+              //           // security : "<?php echo $sr_nonce; ?>",
+              //           top_prod_option: opt_id,
+              //           option : 1,
+              //           start_date : $("#startdate").val(),
+              //           end_date : $("#enddate").val(),
+              //           params: '<?php echo json_encode($sr_const); ?>'
+              //           // SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+              //           // file: "<?php echo $sr_json_file_nm; ?>"
+              //       },
+              //       success: function(response) {
+              //           var myJsonObj    = $.parseJSON(response);
+              //           var top_prod_graph_data = new Array();
+              //           var tick_format_yaxis;
+              //           var top_prod_data = new Array();
 
-                        if (opt_id == 'sr_opt_top_prod_price') {
-                          tick_format_yaxis = '<?php echo $sr_currency_symbol;?>%s';
-                        }
-                        else {
-                          tick_format_yaxis = 'Qty: %s';
-                        }
+              //           if (opt_id == 'sr_opt_top_prod_price') {
+              //             tick_format_yaxis = "<?php echo $sr_const['currency_symbol'];?>%s";
+              //           }
+              //           else {
+              //             tick_format_yaxis = 'Qty: %s';
+              //           }
 
-                        for(var i = 0; i < myJsonObj['graph_data'].length; i++) { 
-                            var len = myJsonObj['graph_data'][i]['graph_data'].length;
-                            var graph_data = new Array();
-                            for(var j = 0; j < len; j++){
-                                graph_data[j] = new Array();
-                                graph_data[j][0] = myJsonObj['graph_data'][i]['graph_data'][j].post_date;
-                                graph_data[j][1] = myJsonObj['graph_data'][i]['graph_data'][j].sales;
-                            }
-                            top_prod_graph_data[i] = graph_data;
-                            top_prod_data[i] = myJsonObj['graph_data'][i]['max_value'];
-                        }
+              //           for(var i = 0; i < myJsonObj['graph_data'].length; i++) { 
+              //               var len = myJsonObj['graph_data'][i]['graph_data'].length;
+              //               var graph_data = new Array();
+              //               for(var j = 0; j < len; j++){
+              //                   graph_data[j] = new Array();
+              //                   graph_data[j][0] = myJsonObj['graph_data'][i]['graph_data'][j].post_date;
+              //                   graph_data[j][1] = myJsonObj['graph_data'][i]['graph_data'][j].sales;
+              //               }
+              //               top_prod_graph_data[i] = graph_data;
+              //               top_prod_data[i] = myJsonObj['graph_data'][i]['max_value'];
+              //           }
                         
-                        if(top_prod_graph_data.length > 0) {
-                            top_prod_graph_display(top_prod_graph_data,myJsonObj.tick_format,tickFormatter_top_prod,top_prod_data,myJsonObj['cumm_sales_min_date'],myJsonObj['cumm_sales_max_date'],'span_top_prod_');
-                        }
-                        else {
-                            $('#top_prod_data').text('No Data');
-                            $('#top_prod_data').addClass('no_data_text');
-                            $('#top_prod_data').css('margin-top','6.7em');
-                        }
-                    }
-                });
+              //           if(top_prod_graph_data.length > 0) {
+              //               top_prod_graph_display(top_prod_graph_data,myJsonObj.tick_format,tickFormatter_top_prod,top_prod_data,myJsonObj['cumm_sales_min_date'],myJsonObj['cumm_sales_max_date'],'span_top_prod_');
+              //           }
+              //           else {
+              //               $('#top_prod_data').text('No Data');
+              //               $('#top_prod_data').addClass('no_data_text');
+              //               $('#top_prod_data').css('margin-top','6.7em');
+              //           }
+              //       }
+              //   });
             });
           }
 
@@ -2487,7 +1911,8 @@ jQuery(function($){
                         $("#sr_opt_top_prod_qty").prop("checked",false);
                         $("#sr_opt_top_prod_price").prop("checked",true);
 
-                        get_top_prod_graph_data('sr_opt_top_prod_price');
+                        // get_top_prod_graph_data('sr_opt_top_prod_price');
+                        top_prod_display(sr_data.tp_data.kpi.sales, 'tps_');
                     }
                     else {
 
@@ -2503,8 +1928,11 @@ jQuery(function($){
 
                         $("#top_prod_selection_toggle").css('left','2.0em');
 
-                        get_top_prod_graph_data('sr_opt_top_prod_qty');
+                        // get_top_prod_graph_data('sr_opt_top_prod_qty');
+                        top_prod_display(sr_data.tp_data.kpi.qty, 'tpq_');
                     }
+
+                    sr_plot_charts(sr_data.tp_data.chart);
 
                     $('#sr_opt_top_prod_price_label').removeClass('switch-label_price');
 
@@ -2530,7 +1958,8 @@ jQuery(function($){
                         $("#sr_opt_top_prod_qty").prop("checked",true);
                         $("#sr_opt_top_prod_price").prop("checked",false);
 
-                        get_top_prod_graph_data('sr_opt_top_prod_qty');
+                        // get_top_prod_graph_data('sr_opt_top_prod_qty');
+                        top_prod_display(sr_data.tp_data.kpi.qty, 'tpq_');
                     }
                     else {
 
@@ -2545,8 +1974,11 @@ jQuery(function($){
 
                         $("#top_prod_selection_toggle").css('left','0em');
 
-                        get_top_prod_graph_data('sr_opt_top_prod_price');
+                        // get_top_prod_graph_data('sr_opt_top_prod_price');
+                        top_prod_display(sr_data.tp_data.kpi.sales, 'tps_');
                     }
+
+                    sr_plot_charts(sr_data.tp_data.chart);
 
                     $('#sr_opt_top_prod_price_label').removeClass('switch-label_price');
 
@@ -2640,8 +2072,8 @@ jQuery(function($){
                         });
 
                         var detail_view_data;// to store all the data for detailed view widget
-                        var currency = '<?php echo $sr_currency_symbol; ?>';
-                        var decimals = '<?php echo $sr_decimal_places; ?>';
+                        var currency = "<?php echo $sr_const['currency_symbol']; ?>";
+                        var decimals = "<?php echo $sr_const['sr_decimal_places']; ?>";
 
                         $('.ajax-popup-link').magnificPopup({
 
@@ -2655,95 +2087,94 @@ jQuery(function($){
                           tError: '<?php _e('The content could not be loaded.', 'smart-reporter' ); ?>',
                           callbacks:{
                             open: function() {
-                                $.ajax({
-                                            type : 'POST',
-                                            // url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
-                                            url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
-                                            dataType:"text",
-                                            async: false,
-                                            action: 'sr_get_stats',
-                                            data: {
-                                                cmd: 'monthly_detailed_view',
-                                                security : "<?php echo $sr_nonce; ?>",
-                                                detailed_view: 1,
-                                                total_monthly_sales : Master_myJsonObj['detailed_view_total_monthly_sales'],
-                                                start_date : $("#startdate").val(),
-                                                end_date : $("#enddate").val(),
-                                                SR_IS_WOO22 : '<?php echo $sr_is_woo22; ?>',
-                                                SR_CURRENCY_SYMBOL : '<?php echo $sr_currency_symbol; ?>',
-                                                SR_CURRENCY_POS    : '<?php echo $sr_currency_pos; ?>',
-                                                SR_DECIMAL_PLACES : '<?php echo $sr_decimal_places; ?>',
-                                                file: "<?php echo $sr_json_file_nm; ?>"
-                                            },
-                                            success: function(response) {
+                                // $.ajax({
+                                //             type : 'POST',
+                                //             // url : '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/sr/json-woo.php"); ?>',
+                                //             url: (ajaxurl.indexOf('?') !== -1) ? ajaxurl + '&action=sr_get_stats' : ajaxurl + '?action=sr_get_stats',
+                                //             dataType:"text",
+                                //             async: false,
+                                //             action: 'sr_get_stats',
+                                //             data: {
+                                //                 cmd: 'monthly_detailed_view',
+                                //                 detailed_view: 1,
+                                //                 total_monthly_sales : Master_myJsonObj['detailed_view_total_monthly_sales'],
+                                //                 start_date : $("#startdate").val(),
+                                //                 end_date : $("#enddate").val(),
+                                //                 params : '<?php echo json_encode($sr_const); ?>'
+                                //             },
+                                //             success: function(response) {
 
-                                                detail_view_data  = $.parseJSON(response);
-                                                var table_html;
+                                //                 detail_view_data  = $.parseJSON(response);
+                                //                 var table_html;
                                                  
-                                                for (var i = 0; i < detail_view_data['top_prod_detail_view_data'].length; i++) {
+                                //                 for (var i = 0; i < detail_view_data['top_prod_detail_view_data'].length; i++) {
                                                       
-                                                      var image = detail_view_data['top_prod_detail_view_data'][i].image;
-                                                      var prod_name = detail_view_data['top_prod_detail_view_data'][i].product_name;
-                                                      var prod_category = detail_view_data['top_prod_detail_view_data'][i].category;
-                                                      var prod_name_trimmed = "";
-                                                      var product_sales_show= detail_view_data['top_prod_detail_view_data'][i].product_sales_show;
-                                                      var prod_qty = detail_view_data['top_prod_detail_view_data'][i].product_qty;
-                                                      var prod_sku= detail_view_data['top_prod_detail_view_data'][i].sku;
-                                                      var prod_sku_cap = prod_sku.toUpperCase();
+                                //                       var image = detail_view_data['top_prod_detail_view_data'][i].image;
+                                //                       var prod_name = detail_view_data['top_prod_detail_view_data'][i].product_name;
+                                //                       var prod_category = detail_view_data['top_prod_detail_view_data'][i].category;
+                                //                       var prod_name_trimmed = "";
+                                //                       var product_sales_show= detail_view_data['top_prod_detail_view_data'][i].product_sales_show;
+                                //                       var prod_qty = detail_view_data['top_prod_detail_view_data'][i].product_qty;
+                                //                       var prod_sku= detail_view_data['top_prod_detail_view_data'][i].sku;
+                                //                       var prod_sku_cap = prod_sku.toUpperCase();
                                                        
-                                                      if (prod_name.length >= 52) {
+                                //                       if (prod_name.length >= 52) {
 
-                                                        prod_name_trimmed = prod_name.substring(0,51) + "...";
+                                //                         prod_name_trimmed = prod_name.substring(0,51) + "...";
                                                       
-                                                      } else {
+                                //                       } else {
                                                           
-                                                          prod_name_trimmed = prod_name;
+                                //                           prod_name_trimmed = prod_name;
                                                       
-                                                      }
+                                //                       }
                                                      
-                                                      if (prod_category.length >= 60) {
+                                //                       if (prod_category.length >= 60) {
 
-                                                          prod_category_trimmed = prod_category.substring(0,56) + "...";
+                                //                           prod_category_trimmed = prod_category.substring(0,56) + "...";
                                                       
-                                                      } else {
+                                //                       } else {
 
-                                                          prod_category_trimmed = prod_category;
+                                //                           prod_category_trimmed = prod_category;
                                                       
-                                                      }
+                                //                       }
                                                       
-                                                      table_html += '<tr id="'+i+'" ><td title = "'+ prod_name + '" style="width:5%;">' + image + '</td><td>' + '<div style="margin-top: 0.8em; color: #5C5C5C;" class="details_display">' + prod_name_trimmed + '</div>';
+                                //                       table_html += '<tr id="'+i+'" ><td title = "'+ prod_name + '" style="width:5%;">' + image + '</td><td>' + '<div style="margin-top: 0.8em; color: #5C5C5C;" class="details_display">' + prod_name_trimmed + '</div>';
 
-                                                      if( prod_category_trimmed != "") {
-                                                         table_html += '<div class="details_display">' + prod_category_trimmed + '</div>';
-                                                      }
+                                //                       if( prod_category_trimmed != "") {
+                                //                          table_html += '<div class="details_display">' + prod_category_trimmed + '</div>';
+                                //                       }
                                                                                                               
-                                                      if( prod_sku != "" ){
+                                //                       if( prod_sku != "" ){
                                                        
-                                                        table_html += '<div style="font-family: monospace;" class="details_display">' + prod_sku_cap + ' • <span class="sales_highlight">' + product_sales_show + '</span> • ' + prod_qty + '</div></td></tr>';
+                                //                         table_html += '<div style="font-family: monospace;" class="details_display">' + prod_sku_cap + ' • <span class="sales_highlight">' + product_sales_show + '</span> • ' + prod_qty + '</div></td></tr>';
                                                       
-                                                      } else {
+                                //                       } else {
                                                         
-                                                        table_html += '<div class="details_display"><span class="sales_highlight">'+ product_sales_show + '</span> • ' + prod_qty + '</div></td></tr>';
+                                //                         table_html += '<div class="details_display"><span class="sales_highlight">'+ product_sales_show + '</span> • ' + prod_qty + '</div></td></tr>';
                                                       
-                                                      }
+                                //                       }
 
-                                                };
+                                //                 };
 
 
-                                                if(detail_view_data['top_prod_detail_view_data'].length > 0) {
-                                                        $('#top_prod_detailed_view_widget').removeClass('no_data_text mfp-hide');
-                                                        $('#top_prod_detailed_view_widget').addClass('white-popup');
-                                                        $('#top_prod_detailed_view_widget').html(sr_detailed_view_html);
-                                                        $('#prod_details_table').html(table_html);
-                                                        $('#prod_details_table').css("cursor" , "pointer");
-                                                        $('tr#0').trigger('click'); // default load sales & graph data of first row.
-                                                }
-                                                else {
-                                                        $('#top_prod_detailed_view_widget').empty();
-                                                        $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("No Data" , "smart-reporter"); ?></div>');
-                                                    }
-                                            }
-                                        });// end of ajax
+                                //                 if(detail_view_data['top_prod_detail_view_data'].length > 0) {
+                                //                         $('#top_prod_detailed_view_widget').removeClass('no_data_text mfp-hide');
+                                //                         $('#top_prod_detailed_view_widget').addClass('white-popup');
+                                //                         $('#top_prod_detailed_view_widget').html(sr_detailed_view_html);
+                                //                         $('#prod_details_table').html(table_html);
+                                //                         $('#prod_details_table').css("cursor" , "pointer");
+                                //                         $('tr#0').trigger('click'); // default load sales & graph data of first row.
+                                //                 }
+                                //                 else {
+                                //                         $('#top_prod_detailed_view_widget').empty();
+                                //                         $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                //                     }
+                                //             }
+                                //         });// end of ajax
+
+                                  $('#top_prod_detailed_view_widget').empty();
+                                  $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("Comming Soon" , "smart-reporter"); ?></div>');
+
                                 },
 
                             parseAjax: function(mfpResponse) {
@@ -3160,68 +2591,40 @@ jQuery(function($){
   <script type="text/javascript">
 
     //Function to handle the display part of the Top Products Widget
-    var top_prod_display = function(resp) {
+    var top_prod_display = function(resp, c_id_prefix) {
 
         jQuery(function($) {
 
+            var plot_data = false;
             var table_html = '<tr><th width=45%></th><th width=55%></th></tr> ';
 
-            var tick_format = resp['tick_format'];
-            var currency_symbol = resp['currency_symbol'];
+            for ( var key in resp ) {
 
-            var tick_format_yaxis = "";
+                if ( (resp[key].hasOwnProperty('sales') && resp[key].sales > 0) || 
+                    (resp[key].hasOwnProperty('qty') && resp[key].qty > 0) ) {
 
-            if (jQuery('#sr_opt_top_prod_price').is(':checked') === true) {
-              tick_format_yaxis = '<?php echo $sr_currency_symbol;?>%s';
+                  name = (resp[key].title.length >= 25) ? resp[key].title.substring(0,24) + "..." : resp[key].title;
+
+                  table_html += '<tr><td><canvas id="'+c_id_prefix+''+key+'" class="sr_cumm_top_prod_graph"></canvas></td><td title = "'+resp[key].title+'"><b style="font-weight:bold;">'+name+'</b><br>'+"<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp[key].sales) + ' • ' + resp[key].qty + '</td></tr> ';
+                   
+                  plot_data = true;
+                }
             }
-            else {
-              tick_format_yaxis = 'Qty: %s';
-            }
 
-            var top_prod_graph_data = new Array();
-            var top_prod_data = new Array();
-
-            for (var i = 0; i < resp['top_prod_data'].length; i++) {
-              var span_id = "span_top_prod_" + i;
-              var prod_name = resp['top_prod_data'][i].product_name;
-              var prod_name_trimmed = "";
-
-              if (prod_name.length >= 25) {
-                  prod_name_trimmed = prod_name.substring(0,24) + "...";
-              }
-              else {
-                  prod_name_trimmed = prod_name;
-              }
-
-              table_html += '<tr><td><div id="'+span_id+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+prod_name+'"><b style="font-weight:bold;">'+prod_name_trimmed+'</b><br>'+resp['top_prod_data'][i].product_sales_display+'</td></tr> ';
-
-              var graph_data = new Array();
-              var len = resp['top_prod_data'][i].graph_data.length;
-
-              for(var j = 0; j < len; j++){
-                  graph_data[j] = new Array();
-                  graph_data[j][0] = resp['top_prod_data'][i].graph_data[j].post_date;
-                  graph_data[j][1] = resp['top_prod_data'][i].graph_data[j].sales;
-              }
-
-              top_prod_graph_data[i] = graph_data;
-              top_prod_data[i] = resp['top_prod_data'][i].max_value;
-
-            };
-
-
-            if(top_prod_graph_data.length > 0) {
+            if( plot_data === true ) {
                 $('#top_prod_data').removeClass('no_data_text');
                 $('#top_prod_data').removeAttr('style');
                 $('#top_prod_data').html('<table id="top_prod_table" style="margin-top: 0.05em; width: 100%"> </table>');
                 $('#top_prod_table').html(table_html);
-                top_prod_graph_display(top_prod_graph_data,tick_format,tickFormatter_top_prod,top_prod_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_prod_');    
-            }
-            else {
+            } else {
                 $('#top_prod_data').text('No Data');
                 $('#top_prod_data').addClass('no_data_text');
                 $('#top_prod_data').css('margin-top','6.7em');
             }
+
+            // for hiding the spinner
+            Dom_Id[0] = '#top_prod_data';
+            ajax_spinner(Dom_Id, false);
         });
       }
     
@@ -3286,65 +2689,53 @@ jQuery(function($){
 
             jQuery(function($) {
 
+              for ( var key in resp.kpi ) {
+
+                if( key != 'top_cust' ) {
+                  continue;
+                } 
+
+                var plot_data = false;
+
                 var table_html = '<tr><th style="text-align:left;width:70%;"></th><th style="text-align:right;width:30%;"></th></tr> ';
-                // var table_html = "";
-                for (var i = 0; i < resp['top_cust_data'].length; i++) {
-                  var span_id = "span_top_cust_" + i;
-                  var link_id = "link_" + i;
-                  var cust_name = '';
-                  var cust_name_trimmed = "";
-                  var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_cust_data'][i].billing_email+"<?php echo $sr_woo_order_search_url?>";
 
-                  if (resp['top_cust_data'][i].name) {
-                     cust_name = resp['top_cust_data'][i].name;
-                     cust_name = cust_name.replace(/^\s+|\s+$/g,""); // Code for trimming the name  
-                  }
-                  
-                  if( cust_name ) {
-                        cust_name = resp['top_cust_data'][i].name;
-                  }
-                  else {
-                        cust_name = resp['top_cust_data'][i].billing_email;
-                  }
+                for ( var m in resp.kpi[key] ) {
 
-                  if (cust_name.length >= 35) {
-                      cust_name_trimmed = cust_name.substring(0,34) + "...";
-                  }
-                  else {
-                      cust_name_trimmed = cust_name;
-                  }
+                    if ( (resp.kpi[key][m].hasOwnProperty('sales') && resp.kpi[key][m].sales > 0) ) {
 
-                  if (resp['top_cust_data'][i].name != " ") {
-                      table_html += '<tr><td title = "'+ resp['top_cust_data'][i].name +'\n('+ resp['top_cust_data'][i].billing_email +')">'+ cust_name_trimmed +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_cust_data'][i].post_ids+')>'+resp['top_cust_data'][i].total+'</a></td></tr>';  
-                  }
-                  else {
-                      table_html += '<tr><td title = "'+ resp['top_cust_data'][i].name +'('+ resp['top_cust_data'][i].billing_email +')">'+ cust_name_trimmed +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_cust_data'][i].post_ids+')>'+resp['top_cust_data'][i].total+'</a></td></tr>';  
-                  }
+                      title = (resp.kpi[key][m].name != '') ? resp.kpi[key][m].name +'\n('+ resp.kpi[key][m].email +')' : '-\n('+ resp.kpi[key][m].email +')';
+                      
+                      name = (resp.kpi[key][m].name != '') ? resp.kpi[key][m].name : resp.kpi[key][m].email;
+                      name = (name.length >= 35) ? name.substring(0,34) + "..." : name;
 
-                };
+                      table_html += '<tr><td title = "'+ title +'">'+ name +'</td><td align="right"><a href="'+(resp.meta.s_link +''+ resp.kpi[key][m].s_link )+'" target="_blank" >'+ "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp.kpi[key][m].sales)+'</a></td></tr>';  
+                       
+                      plot_data = true;
 
+                    }
+                }
 
-                if(resp['top_cust_data'].length > 0 ) {
+                if( plot_data === true ) {
                     $('#top_cust_data').removeAttr('style');
                     $('#top_cust_data').removeClass('no_data_text');
                     $('#top_cust_data').addClass('cumm_widget_table_data');
                     $('#top_cust_data').html('<table id = "top_cust_table"  class = "cumm_widget_table_body" width = "100%">');
                     jQuery('#top_cust_table').html(table_html);
-
-                }
-                else {
+                } else {
                     $('#top_cust_data').text('No Data');
                     $('#top_cust_data').removeClass('cumm_widget_table_data');
                     $('#top_cust_data').addClass('no_data_text');
                     $('#top_cust_data').css('margin-top','3.2em');
                 }
+
+                // for hiding the spinner
+                Dom_Id[0] = '#top_cust_data';
+                ajax_spinner(Dom_Id, false);
+
+              }
             });
-
           }
-
           </script>
-
-
     </div>
 
     <!-- 
@@ -3353,10 +2744,10 @@ jQuery(function($){
     // ================================================
      -->
      <div id="sr_cumm_small_widget_coupons" class="sr_cumm_small_widget_parent">
-        <div id="sr_cumm_cart_abandanment" class = "sr_cumm_small_widget blur_widget" style = "margin-right: 1.68em;">
-            <div id="sr_cumm_cart_abandanment_rate" class="average_order_total_amt">
-                <div id="sr_cumm_cart_abandanment_content" class="sr_cumm_small_widget_content"></div>
-                <p id="sr_cumm_cart_abandanment_title" class="average_order_items_text"> Cart Abandonment Rate </p>
+        <div id="sr_cumm_cart_abandonment" class = "sr_cumm_small_widget blur_widget" style = "margin-right: 1.68em;">
+            <div id="sr_cumm_cart_abandonment_rate" class="average_order_total_amt">
+                <div id="sr_cumm_cart_abandonment_content" class="sr_cumm_small_widget_content"></div>
+                <p id="sr_cumm_cart_abandonment_title" class="average_order_items_text"> Cart Abandonment Rate </p>
             </div>
         </div>
 
@@ -3369,7 +2760,7 @@ jQuery(function($){
         <div id="sr_cumm_order_coupons_count" class = "sr_cumm_small_widget blur_widget" style = "margin-right: 1.64em">
             <div id="sr_cumm_order_coupons_value" class="average_order_total_amt">
                 <div id="sr_cumm_order_coupons_content" class="sr_cumm_small_widget_content"></div>
-                <p id="average_order_items_title" class="average_order_items_text"> Sales with Coupons </p>
+                <p id="sr_cumm_order_coupons_title" class="average_order_items_text"> Sales with Coupons </p>
             </div>
         </div>
 
@@ -3392,52 +2783,50 @@ jQuery(function($){
 
         var sr_top_coupons_display = function(resp) {
 
+            // onClick=display_orders('+resp['top_coupon_data'][i].order_ids+')
+
             jQuery(function($) {
 
+                for ( var key in resp.kpi ) {
+
+                if( key != 'top_coupons' ) {
+                  continue;
+                } 
+
+                var plot_data = false;
                 var table_html = '<tr><th style="text-align:left;width:60%;"></th><th style="text-align:right;width:20%;"></th><th style="text-align:right;width:20%;"></th></tr> ';
-                for (var i = 0; i < resp['top_coupon_data'].length; i++) {
-                  var span_id = "span_top_coupon_" + i;
-                  var link_id = "link_" + i;
-                  var coupon_name = '';
-                  var coupon_name_trimmed = "";
-                  var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_coupon_data'][i].coupon_name+"<?php echo $sr_woo_order_search_url?>";
 
-                  if (resp['top_coupon_data'][i].coupon_name) {
-                     coupon_name = resp['top_coupon_data'][i].coupon_name;
-                     coupon_name = coupon_name.replace(/^\s+|\s+$/g,""); // Code for trimming the name  
-                  }
-                  
-                  if (coupon_name.length >= 35) {
-                      coupon_name_trimmed = coupon_name.substring(0,34) + "...";
-                  }
-                  else {
-                      coupon_name_trimmed = coupon_name;
-                  }
+                for ( var m in resp.kpi[key] ) {
 
-                  if (resp['top_coupon_data'][i].coupon_name != " ") {
-                      table_html += '<tr><td title = "'+ resp['top_coupon_data'][i].coupon_name +'">'+ coupon_name_trimmed +'</td><td align="right">'+ resp['top_coupon_data'][i].coupon_amount +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_coupon_data'][i].order_ids+')>'+resp['top_coupon_data'][i].coupon_count+'</a></td></tr>';  
-                  }
-                  else {
-                      table_html += '<tr><td title = "'+ resp['top_coupon_data'][i].coupon_name +'">'+ coupon_name_trimmed +'</td><td align="right">'+ resp['top_coupon_data'][i].coupon_amount +'</td><td align="right"><a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders('+resp['top_coupon_data'][i].order_ids+')>'+resp['top_coupon_data'][i].coupon_count+'</a></td></tr>';  
-                  }
+                    if ( (resp.kpi[key][m].hasOwnProperty('sales') && resp.kpi[key][m].sales > 0) ||
+                        (resp.kpi[key][m].hasOwnProperty('count') && resp.kpi[key][m].count > 0) ) {
 
-                };
+                      name = (resp.kpi[key][m].title.length >= 35) ?resp.kpi[key][m].title.replace(/^\s+|\s+$/g,"").substring(0,34) + "..." : resp.kpi[key][m].title.replace(/^\s+|\s+$/g,"");
+                      table_html += '<tr><td title = "'+ resp.kpi[key][m].title +'">'+ name +'</td><td align="right">'+ "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp.kpi[key][m].sales) +'</td><td align="right"><a href="'+(resp.meta.s_link +''+ resp.kpi[key][m].s_link )+'" target="_blank">'+resp.kpi[key][m].count+'</a></td></tr>';  
 
+                      plot_data = true;
 
-                if(resp['top_coupon_data'].length > 0 ) {
+                    }
+                }
+
+                if( plot_data === true ) {
                     $('#sr_cumm_top_coupons_data').removeAttr('style');
                     $('#sr_cumm_top_coupons_data').removeClass('no_data_text');
                     $('#sr_cumm_top_coupons_data').addClass('cumm_widget_table_data');
                     $('#sr_cumm_top_coupons_data').html('<table id = "top_coupon_table"  class = "cumm_widget_table_body" width="100%">');
                     jQuery('#top_coupon_table').html(table_html);
-
-                }
-                else {
+                } else {
                     $('#sr_cumm_top_coupons_data').text('No Data');
                     $('#sr_cumm_top_coupons_data').removeClass('cumm_widget_table_data');
                     $('#sr_cumm_top_coupons_data').addClass('no_data_text');
                     $('#sr_cumm_top_coupons_data').css('margin-top','3.2em');
                 }
+
+                // for hiding the spinner
+                Dom_Id[0] = '#sr_cumm_top_coupons_data';
+                ajax_spinner(Dom_Id, false);
+
+              }
             });
 
           }
@@ -3487,7 +2876,7 @@ jQuery(function($){
                     <?php if (defined('SRPRO') && SRPRO === true) {?>
                         var iframe = document.createElement("iframe");
                         // iframe.src = '<?php echo content_url("/plugins/smart-reporter-for-wp-e-commerce/pro/sr-summary-mails.php"); ?>' + "?cmd=top_ababdoned_products_export&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val();
-                        iframe.src = ajaxurl + "?action=top_ababdoned_products_export&security=<?php echo $sr_nonce;?>&start_date=" + $("#startdate").val() + "&end_date=" + $("#enddate").val() + "&SR_IS_WOO22=<?php echo $sr_is_woo22;?>&file=<?php echo $sr_json_file_nm;?>";
+                        iframe.src = ajaxurl + '?action=top_ababdoned_products_export&params=<?php echo urlencode(json_encode($sr_const));?>&start_date=' + $("#startdate").val() + '&end_date=' + $("#enddate").val();
                         iframe.style.display = "none";
                         document.body.appendChild(iframe);
                     <?php }else {?>
@@ -3503,71 +2892,39 @@ jQuery(function($){
 
         jQuery(function($) {
 
+            var plot_data = false;
             var table_html = '<tr><th width=40% class="top_gateways_shipping_header"></th><th width=60% class="top_gateways_shipping_header"></th></tr> ';
 
-            var tick_format = resp['tick_format'];
-            var currency_symbol = resp['currency_symbol'];
+            for ( var key in resp ) {
 
-            var top_abandoned_prod_graph_data = new Array();
-            var top_abandoned_prod_data = new Array();
+                if ( (resp[key].hasOwnProperty('sales') && resp[key].sales > 0) || 
+                    (resp[key].hasOwnProperty('aqty') && resp[key].aqty > 0) ) {
 
-            for (var i = 0; i < resp['cumm_top_abandoned_products'].length; i++) {
-              var span_id_sales_amt = "span_top_abandoned_prod_" + i;
-              var abandoned_prod_name = resp['cumm_top_abandoned_products'][i].prod_name;
+                  name = (resp[key].title.length >= 25) ? resp[key].title.substring(0,24) + "..." : resp[key].title;
 
-              // var link_id = "link_" + i;
-              // var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"<?php echo $sr_woo_order_search_url?>";
+                  table_html += '<tr><td><canvas id="tapq_'+key+'" class="sr_cumm_top_prod_graph"></canvas></td><td title = "'+resp[key].title+'"><b style="font-weight:bold;">'+name+'</b><br>'+
+                                "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp[key].sales) + ' • '
+                                          + sr_cumm_number_format(resp[key].arate) + '%  • '
+                                          + resp[key].aqty +'</td></tr> ';
 
-              var abandoned_prod_name_trimmed = "";
-              var abandoned_sales_display = resp['cumm_top_abandoned_products'][i].price + ' • '
-                                          + resp['cumm_top_abandoned_products'][i].abandoned_rate + ' • '
-                                          + resp['cumm_top_abandoned_products'][i].abondoned_qty;
-                                          
+                  plot_data = true;
+                }
+            }
 
-              if (abandoned_prod_name.length >= 25) {
-                  abandoned_prod_name_trimmed = abandoned_prod_name.substring(0,24) + "...";
-              }
-              else {
-                  abandoned_prod_name_trimmed = abandoned_prod_name;
-              }
-
-              table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+abandoned_prod_name+'"><b style="font-weight:bold;">'+abandoned_prod_name_trimmed+'</b><br>'+abandoned_sales_display+'</td></tr> ';
-
-              var cumm_abandoned_graph_data = new Array();
-
-              var cumm_abandoned_graph_data_len = resp['cumm_top_abandoned_products'][i].graph_data.length;
-
-
-              //Array for cumm top abandoned product graph.
-
-              for(var j = 0; j < cumm_abandoned_graph_data_len; j++){
-                  cumm_abandoned_graph_data[j] = new Array();
-                  cumm_abandoned_graph_data[j][0] = resp['cumm_top_abandoned_products'][i].graph_data[j].post_date;
-                  cumm_abandoned_graph_data[j][1] = resp['cumm_top_abandoned_products'][i].graph_data[j].sales;
-              }
-              
-              top_abandoned_prod_graph_data[i] = cumm_abandoned_graph_data;
-
-
-
-              top_abandoned_prod_data[i] = resp['cumm_top_abandoned_products'][i].abondoned_qty;
-              top_abandoned_prod_data[i] = resp['cumm_top_abandoned_products'][i].max_count;
-
-            };
-
-            if(top_abandoned_prod_graph_data.length > 0) {
+            if( plot_data === true ) {
                 $('#sr_cumm_top_abandoned_products_data').removeClass('no_data_text');
                 $('#sr_cumm_top_abandoned_products_data').removeAttr('style');
                 $('#sr_cumm_top_abandoned_products_data').html('<table id="top_abandoned_prod_table" style="margin-top: 0.05em; width: 100%"> </table>');
                 $('#top_abandoned_prod_table').html(table_html);
-                top_prod_graph_display(top_abandoned_prod_graph_data,tick_format,tickFormatter_top_abandoned_prod_graph,top_abandoned_prod_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_abandoned_prod_');    
-                
-            }
-            else {
+            } else {
                 $('#sr_cumm_top_abandoned_products_data').text('No Data');
                 $('#sr_cumm_top_abandoned_products_data').addClass('no_data_text');
                 $('#sr_cumm_top_abandoned_products_data').css('margin-top','6.7em');
             }
+
+            // for hiding the spinner
+            Dom_Id[0] = '#sr_cumm_top_abandoned_products_data';
+            ajax_spinner(Dom_Id, false);
         });
         
       }
@@ -3594,7 +2951,8 @@ jQuery(function($){
     </div>
     
     <div class="ajax_loader cumm_widget" style="display : none;"></div>
-    <div id="sr_cumm_total_discount_graph" class="sr_cumm_sales_graph ">  </div> 
+    <!-- <div id="sr_discount_graph" class="sr_cumm_sales_graph ">  </div>  -->
+    <canvas id="sr_discount_graph" class="sr_cumm_sales_graph ">  </canvas> 
 
 <script type="text/javascript">
 
@@ -3607,23 +2965,23 @@ jQuery(function($){
             var tick_format = resp['tick_format'];
             var currency_symbol = resp['currency_symbol'];
 
-            jQuery('#sr_cumm_total_discount_graph').empty();
-            $('#sr_cumm_total_discount_graph').removeAttr('style'); // remove styling after no data label
+            jQuery('#sr_discount_graph').empty();
+            $('#sr_discount_graph').removeAttr('style'); // remove styling after no data label
 
             if(resp['graph_cumm_discount_sales'].length > 0) {
 
                 if ( (!$(document.body).hasClass('folded')) && jqplot_flag == 1) {
-                    $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
-                    $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').css("margin-top","-2.75em");
+                    $('#sr_sales_graph, #sr_discount_graph').removeAttr('style');
+                    $('#sr_sales_graph, #sr_discount_graph').css("margin-top","-2.75em");
                 }
                 else if (($(document.body).hasClass('folded')) && jqplot_flag == 1) {
-                    $('#sr_cumm_sales_graph, #sr_cumm_total_discount_graph').removeAttr('style');
+                    $('#sr_sales_graph, #sr_discount_graph').removeAttr('style');
                 }
                 else if(jqplot_flag != 2) {
                     jqplot_flag = 1;
                 }
 
-                $('#sr_cumm_total_discount_graph').removeClass().addClass('sr_cumm_sales_graph_not_collapsed sr_cumm_sales_graph');
+                $('#sr_discount_graph').removeClass().addClass('sr_cumm_sales_graph_not_collapsed sr_cumm_sales_graph');
 
                 for(var i = 0, len = resp['graph_cumm_discount_sales'].length; i < len; i++) {
                     discount_trend[i] = new Array();
@@ -3631,7 +2989,7 @@ jQuery(function($){
                     discount_trend[i][1] = resp['graph_cumm_discount_sales'][i].sales;
                 }
 
-                jQuery.jqplot('sr_cumm_total_discount_graph',  [discount_trend], {
+                jQuery.jqplot('sr_discount_graph',  [discount_trend], {
                 axes: {
                      yaxis: {  
                           tickOptions: {
@@ -3696,10 +3054,10 @@ jQuery(function($){
             }
 
             else {
-                $('#sr_cumm_total_discount_graph').removeClass();            
-                $('#sr_cumm_total_discount_graph').text('No Data');
-                $('#sr_cumm_total_discount_graph').addClass('no_data_text');
-                $('#sr_cumm_total_discount_graph').css('margin-top','5.4em');
+                $('#sr_discount_graph').removeClass();            
+                $('#sr_discount_graph').text('No Data');
+                $('#sr_discount_graph').addClass('no_data_text');
+                $('#sr_discount_graph').css('margin-top','5.4em');
             }
         });
     }
@@ -3729,9 +3087,9 @@ jQuery(function($){
 
 
     <div class="ajax_loader cumm_widget" style="display : none;"></div>
-    <div id="sr_cumm_taxes_data" style="height:87%;width:100%">
-      
-    </div>
+    <!-- <div id="sr_cumm_taxes_data" style="height:87%;width:100%"> </div>-->
+    <canvas id="sr_cumm_taxes_data" style="height:25.5%;width:40%;margin-top:1.5em"> </canvas>
+    
     <script type="text/javascript">
 
     //FUnction to round off the numbers
@@ -3757,131 +3115,97 @@ jQuery(function($){
 
             var taxes_data = new Array();
 
-            $('#sr_cumm_taxes_data').empty();
-            
-            if(resp['result_monthly_sales'].length > 0) {
+            $('#sr_cumm_taxes_data, #sr_cumm_taxes_legend').empty();
 
-                $('#sr_cumm_taxes_data').empty();
-                // jQuery('#sr_cumm_taxes_data').html('');
+            if( resp.kpi.sales > 0 ) {
                 
-                // jQuery('#sr_cumm_taxes_data').css('width','100%');
                 if ($('#sr_cumm_taxes_data').hasClass('no_data_text')) {
-                    $('#sr_cumm_taxes_data').removeClass('no_data_text');
-                    $('#sr_cumm_taxes_data').removeAttr('style');
-
-                    $('#sr_cumm_taxes_data').css('height' ,'87%');
-                    $('#sr_cumm_taxes_data').css('width' ,'100%');
+                    $('#sr_cumm_taxes_data').remove();
+                    $('#sr_cumm_taxes').append('<canvas id="sr_cumm_taxes_data" style="height:25.5%;width:40%;margin-top:1.5em;"> </canvas>');
                 }
-                
-                // $('#sr_cumm_taxes_data.jqplot-table-legend').removeAttr('style');
-                // $('#sr_cumm_taxes_data').css('margin-top','-6.5px');
-                // $('#sr_cumm_taxes_data').removeAttr('style');
 
-                
-
-
-              taxes_data[0] = new Array();
-              taxes_data[0][0] = 'Tax';
-              taxes_data[0][1] = resp['cumm_taxes']['tax'];
-              taxes_data[0][2] = precise_round((resp['cumm_taxes']['tax']/resp['cumm_taxes']['total_sales'])*100 , resp['decimal_places']) + '%';
-        
-              taxes_data[1] = new Array();
-              taxes_data[1][0] = 'Shipping Tax';
-              taxes_data[1][1] = resp['cumm_taxes']['shipping_tax'];
-              taxes_data[1][2] = precise_round((resp['cumm_taxes']['shipping_tax']/resp['cumm_taxes']['total_sales'])*100 , resp['decimal_places']) + '%';
-
-              taxes_data[2] = new Array();
-              taxes_data[2][0] = 'Shipping';
-              taxes_data[2][1] = resp['cumm_taxes']['shipping'];
-              taxes_data[2][2] = precise_round((resp['cumm_taxes']['shipping']/resp['cumm_taxes']['total_sales'])*100, resp['decimal_places']) + '%';
-
-              taxes_data[3] = new Array();
-              taxes_data[3][0] = 'Net Sales';
-              taxes_data[3][1] = resp['cumm_taxes']['net_sales'];
-              taxes_data[3][2] = precise_round((resp['cumm_taxes']['net_sales']/resp['cumm_taxes']['total_sales'])*100 , resp['decimal_places']) + '%';
-
-
-                    jQuery.jqplot('sr_cumm_taxes_data',  [taxes_data], {
-                        
-                        grid: {
-                            backgroundColor: 'transparent',
-                            drawBorder: false,
-                            shadow: false
-
-
-                        },
-
-                        gridPadding: {top:-6.5, bottom:47, left:0, right:0},
-                        // gridPadding: {top:0, bottom:47, left:0, right:0},
-
-                        series:[{startAngle: -90,
-                              dataLabels: 'percent',
-                              padding: 0, 
-                              sliceMargin: 4}],
-
-
-                        cursor: {
-                          show: false
-                        },
-
-                        seriesDefaults: {
-                            shadow: false,
-                            // seriesColors: ['#04c0f0','#a6dba0','#e66101','#5e3c99'], // FINAL
-                            seriesColors: ['#04c0f0','#a6dba0','#e66101','#69639d'], // FINAL
-                            
-                            renderer: jQuery.jqplot.DonutRenderer,
-                            rendererOptions: {
-                                
+              var data = [
+                            {
+                                value: resp.kpi.tax,
+                                color:"#539EBD",
+                                highlight: "#7CBBD6",
+                                label: "Tax"
+                            },
+                            {
+                                value: resp.kpi.shipping,
+                                color: "#F8CC69",
+                                highlight: "#FFDD91",
+                                label: "Shipping"
+                            },
+                            {
+                                value: resp.kpi.shipping_tax,
+                                color:"#72479E",
+                                highlight: "#926CB9",
+                                label: "Shipping Tax"
+                            },
+                            {
+                                value: (resp.kpi.sales-(resp.kpi.tax+resp.kpi.shipping_tax+resp.kpi.shipping)),
+                                color: "#DB485F",
+                                highlight: "#F27085",
+                                label: "Net Sales"
                             }
-                        },
-                        legend: { 
-                            show:true,
-                            placement: 'outsideGrid',                      
-                            rendererOptions: {
-                                numberRows: 1
-                            }, 
-                            location: 's',
-                            // marginTop: '-15px',
-                            borderWidth: 0,
-                            marginLeft: '0.8em'
-                        }
+                        ];  
+              
+              var options = {
+                                segmentShowStroke : false,
+                                percentageInnerCutout : 65,
+                                animateRotate : true,
+                                animationEasing : "easeOutBounce",
+                                responsive: true,
+                                legendTemplate : "<table id=\"sr_cumm_taxes_legend\" style=\"border:1px solid #E5E5E5;margin-top:0.7em;margin-left:2.5em;\"><tbody> <tr><% for (var i=0; i<segments.length; i++){%><% if(i == 0) {%><td style=\"padding: 0px !important;padding-left: 4px !important;\"><% }else {%><td style=\"padding: 0px !important;\"><% } %><div style=\"border-style: solid;border-radius: 50px;border-width: 6px;border-color:<%=segments[i].fillColor%>\"></div></td><td style=\"font-size:0.75em;\"><%if(segments[i].label){%><%=segments[i].label%><%}%></td><%}%></tr></tbody></table>",
+                                customTooltips: function(tooltip) {
 
-                    });
+                                    var tooltipEl = $('#chartjs-tooltip');
+
+                                    // tooltip will be false if tooltip is not visible or should be hidden
+                                    if (!tooltip) {
+                                        tooltipEl.hide();
+                                        return;
+                                    }
+
+                                    // Set caret Position
+                                    tooltipEl.removeClass('above below');
+                                    tooltipEl.addClass(tooltip.yAlign);
+
+                                    v = tooltip.text.split(':');
+                                    tooltipEl.html(v[0]+': '+"<?php echo $sr_const['currency_symbol'];?>"+v[1].substring(1)+' ('+sr_cumm_number_format( (v[1]/resp.kpi.sales)*100 )+'%)');
+
+
+                                    // Find Y Location on page
+                                    var top;
+                                    if (tooltip.yAlign == 'above') {
+                                        top = tooltip.y - tooltip.caretHeight - tooltip.caretPadding;
+                                    } else {
+                                        top = tooltip.y + tooltip.caretHeight + tooltip.caretPadding;
+                                    }
+
+                                    // Display, position, and set styles for font
+                                    tooltipEl.css({
+                                        left: tooltip.chart.canvas.offsetLeft + tooltip.x + 'px',
+                                        top: tooltip.chart.canvas.offsetTop + top + 'px',
+                                        fontFamily: tooltip.fontFamily,
+                                        fontSize: tooltip.fontSize,
+                                        fontStyle: tooltip.fontStyle,
+                                    });
+
+                                    tooltipEl.show();
+                                }
+                            };
+
+              var taxeschart = new Chart($("#sr_cumm_taxes_data").get(0).getContext("2d")).Doughnut(data,options);
+
+              $('#sr_cumm_taxes').append(taxeschart.generateLegend());
 
             } else {
-                $('#sr_cumm_taxes_data').removeAttr('style');
-                $('#sr_cumm_taxes_data').text('No Data');
-                $('#sr_cumm_taxes_data').addClass('no_data_text');
-                $('#sr_cumm_taxes_data').css('margin-top','6.7em');
+                $('#sr_cumm_taxes_data').remove();
+                $('#sr_cumm_taxes').append('<div id="sr_cumm_taxes_data" class="no_data_text" style="margin-top:6.7em;">No Data</div>');
             }
         
-        
-            $('#sr_cumm_taxes_data').on('jqplotDataMouseOver', function (ev, seriesIndex, pointIndex, data) {
-
-
-              var mouseX = ev.pageX - 150; //these are going to be how jquery knows where to put the div that will be our tooltip
-              var mouseY = ev.pageY;
-              $('#chartpseudotooltip').html( '<div>' + data[0] +': ' + resp['currency_symbol'] + data[1] + '</div> <div style:"text-align:center"> (' + data[2] + ')</div>'  );
-              var cssObj = {
-                  'position': 'absolute',
-                  'font-weight': 'bold',
-                  'left': mouseX + 'px', //usually needs more offset here
-                  'top': mouseY + 'px',
-                  'border' : '1px solid #6EADE7',
-                  'background-color': 'white',
-                  'font-size': '1.1em',
-                  'font-weight': '500',
-                  'z-index':'1'
-              };
-              $('#chartpseudotooltip').css(cssObj);
-              $('#chartpseudotooltip').show();
-
-          });
-
-          $('#sr_cumm_taxes_data').on('jqplotDataUnhighlight', function (ev) {
-              $('#chartpseudotooltip').empty().hide();
-          });
-
       });
 
     }
@@ -3901,105 +3225,155 @@ jQuery(function($){
     </div>
 
     <div class="ajax_loader cumm_widget" style="display : none;"></div>
-    <div id = "sr_cumm_order_by_gateways_data">
+    <div id = "sr_cumm_order_by_pm_data">
             
     </div>
 
     <script type="text/javascript">
 
-    //Function to handle the display part of the Top Gateway Widget
-    var top_gateway_display = function(resp) {
+    //Function to handle the display part of the Top Gateway & Top Shipping Widget
+    var top_payment_shipping_display = function(resp) {
 
         jQuery(function($) {
 
-            var table_html = '<tr><th width=25% class="top_gateways_shipping_header">Sales</th><th width=25% class="top_gateways_shipping_header">Qty</th><th width=50% class="top_gateways_shipping_header"></th></tr> ';
+            for ( var key in resp.kpi ) {
 
-            var tick_format = resp['tick_format'];
-            var currency_symbol = resp['currency_symbol'];
+              if( key != 'sm' && key != 'pm' ) {
+                continue;
+              }
 
-            var tick_format_yaxis_sales_amt_graph ='<?php echo $sr_currency_symbol;?>%s';
-            var tick_format_yaxis_sales_count_graph = 'No. of Orders: %s';
+              var plot_data = false;
 
-            var top_gateway_graph_sales_amt_data = new Array();
-            var top_gateway_graph_sales_count_data = new Array();
+              var table_html = '<tr><th width=25% class="top_gateways_shipping_header">Sales</th><th width=25% class="top_gateways_shipping_header">Qty</th><th width=50% class="top_gateways_shipping_header"></th></tr> ';
 
-            var top_gateway_sales_amt_data  = new Array();
-            var top_gateway_sales_count_data  = new Array();
+              for ( var m in resp.kpi[key] ) {
 
-            for (var i = 0; i < resp['top_gateway_data'].length; i++) {
-              var span_id_sales_amt = "span_top_gateway_sales_amt_" + i;
-              var span_id_sales_count = "span_top_gateway_sales_count_" + i;
-              var gateway_name = resp['top_gateway_data'][i].payment_method;
+                  if ( (resp.kpi[key][m].hasOwnProperty('sales') && resp.kpi[key][m].sales > 0)
+                        || (resp.kpi[key][m].hasOwnProperty('orders') && resp.kpi[key][m].orders > 0) ) {
 
-              var link_id = "link_" + i;
-              var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"<?php echo $sr_woo_order_search_url?>";
+                    // var name = resp.kpi[key][m].title;
+                    title = (resp.kpi[key][m].title.length >= 25) ? resp.kpi[key][m].title.substring(0,24) + "..." : resp.kpi[key][m].title;
 
-              var gateway_name_trimmed = "";
-              var gateway_sales_display = resp['top_gateway_data'][i].gateway_sales_display + ' • '
-                                          + resp['top_gateway_data'][i].gateway_sales_percent + ' • '
-                                          + '<a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders("'+resp['top_gateway_data'][i].order_ids+'")>' + resp['top_gateway_data'][i].sales_count + '</a>';
+                    var orders = "<?php echo $sr_const['currency_symbol'];?>"+ sr_cumm_number_format(resp.kpi[key][m].sales) + ' • '
+                                            + ( (resp.kpi.hasOwnProperty('sales') && resp.kpi.sales > 0) ? ( sr_cumm_number_format( (resp.kpi[key][m].sales/resp.kpi.sales)*100 ) + '%') : 'NA') + ' • '
+
+                    if ( resp.kpi[key][m].hasOwnProperty('s_link') ) {
+                        orders += '<a href="'+ (resp.meta.s_link +''+ resp.kpi[key][m].s_link ) +'" target="_blank">' + resp.kpi[key][m].orders + '</a>';
+                    } else {
+                        orders += resp.kpi[key][m].orders;
+                    } 
+
+                    table_html += '<tr><td><canvas id="'+ (key+'_'+m+'_sales') +'" class="sr_cumm_top_prod_graph"></canvas></td><td><canvas id="'+(key+'_'+m+'_orders')+'" class="sr_cumm_top_prod_graph"></canvas></td><td title = "'+resp.kpi[key][m].title+'"><b style="font-weight:bold;">'+title+'</b><br>'+orders+'</td></tr> ';
+                     
+                    plot_data = true;
+
+                  }
+              }
+
+              if( plot_data === true ) {
+                  $('#sr_cumm_order_by_'+key+'_data').removeClass('no_data_text');
+                  $('#sr_cumm_order_by_'+key+'_data').removeAttr('style');
+                  $('#sr_cumm_order_by_'+key+'_data').html('<table id="top_'+key+'_table" style="margin-top: 0.05em; width: 100%"> </table>');
+                  $('#top_'+key+'_table').html(table_html);
+              } else {
+                  $('#sr_cumm_order_by_'+key+'_data').text('No Data');
+                  $('#sr_cumm_order_by_'+key+'_data').addClass('no_data_text');
+                  $('#sr_cumm_order_by_'+key+'_data').css('margin-top','6.7em');
+              }
+
+              // for hiding the spinner
+              Dom_Id[0] = '#sr_cumm_order_by_'+key+'_data';
+              ajax_spinner(Dom_Id, false);
+
+            }
+
+            
+            // var tick_format = resp['tick_format'];
+            // var currency_symbol = resp['currency_symbol'];
+
+            // var tick_format_yaxis_sales_amt_graph ="<?php echo $sr_const['currency_symbol'];?>%s";
+            // var tick_format_yaxis_sales_count_graph = 'No. of Orders: %s';
+
+            // var top_gateway_graph_sales_amt_data = new Array();
+            // var top_gateway_graph_sales_count_data = new Array();
+
+            // var top_gateway_sales_amt_data  = new Array();
+            // var top_gateway_sales_count_data  = new Array();
+
+            // for (var i = 0; i < resp['top_gateway_data'].length; i++) {
+            //   var span_id_sales_amt = "span_top_gateway_sales_amt_" + i;
+            //   var span_id_sales_count = "span_top_gateway_sales_count_" + i;
+            //   var gateway_name = resp['top_gateway_data'][i].payment_method;
+
+            //   var link_id = "link_" + i;
+            //   var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+resp['top_gateway_data'][i].payment_method+"<?php echo $sr_woo_order_search_url?>";
+
+            //   var gateway_name_trimmed = "";
+            //   var gateway_sales_display = resp['top_gateway_data'][i].gateway_sales_display + ' • '
+            //                               + resp['top_gateway_data'][i].gateway_sales_percent + ' • '
+            //                               + '<a id="'+link_id+'" href="'+site_url+'" target="_blank" onClick=display_orders("'+resp['top_gateway_data'][i].order_ids+'")>' + resp['top_gateway_data'][i].sales_count + '</a>';
                                           
 
-              if (gateway_name.length >= 25) {
-                  gateway_name_trimmed = gateway_name.substring(0,24) + "...";
-              }
-              else {
-                  gateway_name_trimmed = gateway_name;
-              }
+            //   if (gateway_name.length >= 25) {
+            //       gateway_name_trimmed = gateway_name.substring(0,24) + "...";
+            //   }
+            //   else {
+            //       gateway_name_trimmed = gateway_name;
+            //   }
 
-              table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td><div id="'+span_id_sales_count+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+gateway_name+'"><b style="font-weight:bold;">'+gateway_name_trimmed+'</b><br>'+gateway_sales_display+'</td></tr> ';
+            //   table_html += '<tr><td><div id="'+span_id_sales_amt+'" class="sr_cumm_top_prod_graph"></div></td><td><div id="'+span_id_sales_count+'" class="sr_cumm_top_prod_graph"></div></td><td title = "'+gateway_name+'"><b style="font-weight:bold;">'+gateway_name_trimmed+'</b><br>'+gateway_sales_display+'</td></tr> ';
 
-              var sales_amt_graph_data = new Array();
-              var sales_count_graph_data = new Array();
+            //   var sales_amt_graph_data = new Array();
+            //   var sales_count_graph_data = new Array();
 
-              var sales_amt_len = 0;
-              var sales_count_len = 0;
+            //   var sales_amt_len = 0;
+            //   var sales_count_len = 0;
 
-                if ( resp['top_gateway_data'][i].hasOwnProperty('graph_data_sales_amt') ) {
-                    sales_amt_len = resp['top_gateway_data'][i].graph_data_sales_amt.length;
-                }
+            //     if ( resp['top_gateway_data'][i].hasOwnProperty('graph_data_sales_amt') ) {
+            //         sales_amt_len = resp['top_gateway_data'][i].graph_data_sales_amt.length;
+            //     }
 
-                if ( resp['top_gateway_data'][i].hasOwnProperty('graph_data_sales_count') ) {
-                    sales_count_len = resp['top_gateway_data'][i].graph_data_sales_count.length;
-                }
+            //     if ( resp['top_gateway_data'][i].hasOwnProperty('graph_data_sales_count') ) {
+            //         sales_count_len = resp['top_gateway_data'][i].graph_data_sales_count.length;
+            //     }
 
-              //Array for gateway sales amt.
+            //   //Array for gateway sales amt.
 
-              for(var j = 0; j < sales_amt_len; j++){
-                  sales_amt_graph_data[j] = new Array();
-                  sales_amt_graph_data[j][0] = resp['top_gateway_data'][i].graph_data_sales_amt[j].post_date;
-                  sales_amt_graph_data[j][1] = resp['top_gateway_data'][i].graph_data_sales_amt[j].sales;
-              }
+            //   for(var j = 0; j < sales_amt_len; j++){
+            //       sales_amt_graph_data[j] = new Array();
+            //       sales_amt_graph_data[j][0] = resp['top_gateway_data'][i].graph_data_sales_amt[j].post_date;
+            //       sales_amt_graph_data[j][1] = resp['top_gateway_data'][i].graph_data_sales_amt[j].sales;
+            //   }
               
-              //Array for gateway sales count
-              for(var j = 0; j < sales_count_len; j++){
-                  sales_count_graph_data[j] = new Array();
-                  sales_count_graph_data[j][0] = resp['top_gateway_data'][i].graph_data_sales_count[j].post_date;
-                  sales_count_graph_data[j][1] = resp['top_gateway_data'][i].graph_data_sales_count[j].sales;
-              }
+            //   //Array for gateway sales count
+            //   for(var j = 0; j < sales_count_len; j++){
+            //       sales_count_graph_data[j] = new Array();
+            //       sales_count_graph_data[j][0] = resp['top_gateway_data'][i].graph_data_sales_count[j].post_date;
+            //       sales_count_graph_data[j][1] = resp['top_gateway_data'][i].graph_data_sales_count[j].sales;
+            //   }
 
-              top_gateway_graph_sales_amt_data[i] = sales_amt_graph_data;
-              top_gateway_graph_sales_count_data[i] = sales_count_graph_data;
+            //   top_gateway_graph_sales_amt_data[i] = sales_amt_graph_data;
+            //   top_gateway_graph_sales_count_data[i] = sales_count_graph_data;
 
-              top_gateway_sales_amt_data[i] = resp['top_gateway_data'][i].max_value_sales_amt;
-              top_gateway_sales_count_data[i] = resp['top_gateway_data'][i].max_value_sales_count;
+            //   top_gateway_sales_amt_data[i] = resp['top_gateway_data'][i].max_value_sales_amt;
+            //   top_gateway_sales_count_data[i] = resp['top_gateway_data'][i].max_value_sales_count;
 
-            };
+            // };
 
 
-            if(top_gateway_graph_sales_amt_data.length > 0 && top_gateway_graph_sales_count_data.length > 0) {
-                $('#sr_cumm_order_by_gateways_data').removeClass('no_data_text');
-                $('#sr_cumm_order_by_gateways_data').removeAttr('style');
-                $('#sr_cumm_order_by_gateways_data').html('<table id="top_gateway_table" style="margin-top: 0.05em; width: 100%"> </table>');
-                $('#top_gateway_table').html(table_html);
-                top_prod_graph_display(top_gateway_graph_sales_amt_data,tick_format,tickFormatter,top_gateway_sales_amt_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_gateway_sales_amt_');    
-                top_prod_graph_display(top_gateway_graph_sales_count_data,tick_format,tickFormatter_top_gateway_shipping_sales_count,top_gateway_sales_count_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_gateway_sales_count_');    
-            }
-            else {
-                $('#sr_cumm_order_by_gateways_data').text('No Data');
-                $('#sr_cumm_order_by_gateways_data').addClass('no_data_text');
-                $('#sr_cumm_order_by_gateways_data').css('margin-top','6.7em');
-            }
+            // if(top_gateway_graph_sales_amt_data.length > 0 && top_gateway_graph_sales_count_data.length > 0) {
+            //     $('#sr_cumm_order_by_pm_data').removeClass('no_data_text');
+            //     $('#sr_cumm_order_by_pm_data').removeAttr('style');
+            //     $('#sr_cumm_order_by_pm_data').html('<table id="top_gateway_table" style="margin-top: 0.05em; width: 100%"> </table>');
+            //     $('#top_gateway_table').html(table_html);
+            //     top_prod_graph_display(top_gateway_graph_sales_amt_data,tick_format,tickFormatter,top_gateway_sales_amt_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_gateway_sales_amt_');    
+            //     top_prod_graph_display(top_gateway_graph_sales_count_data,tick_format,tickFormatter_top_gateway_shipping_sales_count,top_gateway_sales_count_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_gateway_sales_count_');    
+            // }
+            // else {
+            //     $('#sr_cumm_order_by_pm_data').text('No Data');
+            //     $('#sr_cumm_order_by_pm_data').addClass('no_data_text');
+            //     $('#sr_cumm_order_by_pm_data').css('margin-top','6.7em');
+            // }
         });
       }
     
@@ -4025,20 +3399,24 @@ jQuery(function($){
     
     <div class="ajax_loader cumm_widget sr_cumm_sales_countries" style="display : none;"></div>
     <div id="sr_cumm_sales_countries_graph" style="height:85%;width:100%;margin-top:0.5em">  </div>
+    <!-- <div id="sr_cumm_sales_countries_graph" style="height:19.3em;width:50em;margin-top:0.5em">  </div> -->
 <script type="text/javascript">
 
 //Function to handle the display part of the Top Abandoned Products Widget
     var cumm_sales_billing_country = function(resp) {
-        var values = resp['cumm_sales_billing_country_values'];
-        var tooltip = resp['cumm_sales_billing_country_tooltip'];
-
+        
         jQuery(function($){
+
+            // for hiding the spinner
+            Dom_Id[0] = '#sr_cumm_sales_countries_graph';
+            ajax_spinner(Dom_Id, false);
 
             $('#sr_cumm_sales_countries_graph').empty();
 
-            if(values.length != 0) {
+            if( typeof (resp) != 'undefined' && resp.hasOwnProperty('sales') && Object.keys(resp.sales).length > 0) {
                 $('#sr_cumm_sales_countries_graph').removeClass('no_data_text');
                 $('#sr_cumm_sales_countries_graph').css('margin-top','0.5em');
+                // $('#sr_cumm_sales_countries_graph').css({"margin-top" :"0.5em","height" :"85%","width" :"100%"});
 
                 $('#sr_cumm_sales_countries_graph').vectorMap({
                     map: 'world_mill_en',
@@ -4056,7 +3434,7 @@ jQuery(function($){
                     },
                     series: {
                         regions: [{
-                            values: values,
+                            values: resp.sales,
                             scale: ['#C8EEFF', '#006491'], // two colors: for minimum and maximum values
                             attribute: 'fill' 
                         }]
@@ -4066,36 +3444,15 @@ jQuery(function($){
                     hoverOpacity: 0.7,
                     hoverColor: false,
                     onRegionClick: function(event, code){
-
-                        var tooltip_code = resp['cumm_sales_billing_country_tooltip'][code];
-
-                        if (resp['cumm_sales_billing_country_tooltip'].hasOwnProperty(code) && tooltip_code.hasOwnProperty('order_ids')) {
-                            display_orders(tooltip_code.order_ids); // code for storing the ids in cookie
-                            var site_url = resp['siteurl'] + "/wp-admin/edit.php?s="+code+"<?php echo $sr_woo_order_search_url?>";
-                            window.open(site_url,'_newtab');
-                        }
-
-                        
+                        window.open( resp.s_link + "&s="+code+"&s_col=billing_country&s_val="+code ,'_newtab');
                     },
                     onRegionLabelShow: function(event, label, code){
-                        var tooltip_code = resp['cumm_sales_billing_country_tooltip'][code];
-                        var sales = '0';
-                        var count = '0';
-
-                        if (resp['cumm_sales_billing_country_tooltip'].hasOwnProperty(code) && tooltip_code.hasOwnProperty('sales')) {
-                            sales = tooltip_code.sales;
-                        }
-
-                        if (resp['cumm_sales_billing_country_tooltip'].hasOwnProperty(code) && tooltip_code.hasOwnProperty('count')) {
-                            count = tooltip_code.count;
-                        }
-
                         label.html(
-                            '<b>'+label.html()+'</b></br>'+'<b>Sales: </b>'+sales+'</br><b>Orders Count: </b>'+count
+                            '<b>'+label.html()+'</b></br>'+'<b>Sales: </b>'+( "<?php echo $sr_const['currency_symbol'];?>" + (resp.sales.hasOwnProperty(code)) ? sr_cumm_number_format(resp.sales[code]) : 0)+'</br><b>Orders Count: </b>'+ ((resp.orders.hasOwnProperty(code)) ? resp.orders[code] : 0)
                         )
                     },
                     onRegionOver: function(event, code){
-                        if (resp['cumm_sales_billing_country_tooltip'].hasOwnProperty(code)) {
+                        if (resp.sales.hasOwnProperty(code)) {
                             document.body.style.cursor = 'pointer';
                         }
                     },
@@ -4110,6 +3467,8 @@ jQuery(function($){
                 $('#sr_cumm_sales_countries_graph').addClass('no_data_text');
                 $('#sr_cumm_sales_countries_graph').css('margin-top','6.7em');
             }
+
+            
 
         });
     }
@@ -4131,7 +3490,7 @@ jQuery(function($){
     </div>
 
     <div class="ajax_loader cumm_widget" style="display : none;"></div>
-    <div id = "sr_cumm_order_by_shipping_method_data">
+    <div id = "sr_cumm_order_by_sm_data">
             
     </div>
 
@@ -4147,7 +3506,7 @@ jQuery(function($){
             var tick_format = resp['tick_format'];
             var currency_symbol = resp['currency_symbol'];
 
-            var tick_format_yaxis_sales_amt_graph ='<?php echo $sr_currency_symbol;?>%s';
+            var tick_format_yaxis_sales_amt_graph ="<?php echo $sr_const['currency_symbol'];?>%s";
             var tick_format_yaxis_sales_count_graph = 'No. of Orders: %s';
 
             var top_shipping_method_graph_sales_amt_data = new Array();
@@ -4223,17 +3582,17 @@ jQuery(function($){
 
 
             if(top_shipping_method_graph_sales_amt_data.length > 0 && top_shipping_method_graph_sales_count_data.length > 0) {
-                $('#sr_cumm_order_by_shipping_method_data').removeClass('no_data_text');
-                $('#sr_cumm_order_by_shipping_method_data').removeAttr('style');
-                $('#sr_cumm_order_by_shipping_method_data').html('<table id="top_shipping_method_table" style="margin-top: 0.05em; width: 100%"> </table>');
+                $('#sr_cumm_order_by_sm_data').removeClass('no_data_text');
+                $('#sr_cumm_order_by_sm_data').removeAttr('style');
+                $('#sr_cumm_order_by_sm_data').html('<table id="top_shipping_method_table" style="margin-top: 0.05em; width: 100%"> </table>');
                 $('#top_shipping_method_table').html(table_html);
                 top_prod_graph_display(top_shipping_method_graph_sales_amt_data,tick_format,tickFormatter,top_shipping_method_sales_amt_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_shipping_method_sales_amt_');    
                 top_prod_graph_display(top_shipping_method_graph_sales_count_data,tick_format,tickFormatter_top_gateway_shipping_sales_count,top_shipping_method_sales_count_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_shipping_method_sales_count_');
             }
             else {
-                $('#sr_cumm_order_by_shipping_method_data').text('No Data');
-                $('#sr_cumm_order_by_shipping_method_data').addClass('no_data_text');
-                $('#sr_cumm_order_by_shipping_method_data').css('margin-top','6.7em');
+                $('#sr_cumm_order_by_sm_data').text('No Data');
+                $('#sr_cumm_order_by_sm_data').addClass('no_data_text');
+                $('#sr_cumm_order_by_sm_data').css('margin-top','6.7em');
             }
         });
       }
@@ -4286,7 +3645,7 @@ jQuery(function($){
 <?php
 smart_reporter_footer();
 }
-else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_GET['page'] == 'smart-reporter-wpsc') ) {
+else if ( !empty($_GET['page']) && ($_GET['page'] == 'wc-reports' || $_GET['page'] == 'smart-reporter-wpsc') ) {
 
     // to set javascript variable of file exists
     // $fileExists = (SRPRO === true) ? 1 : 0;
@@ -4360,7 +3719,7 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
     }
 
     if( ( isset($_GET['post_type']) && $_GET['post_type'] == 'wpsc-product') || ( isset($_GET['page']) && $_GET['page'] == 'smart-reporter-wpsc') 
-        || (isset($_GET['tab']) && $_GET['tab'] == "smart_reporter_old") ) {
+        || ((isset($_GET['view']) && $_GET['view'] == "smart_reporter_old") || ( !empty($sr_const['is_woo22']) && $sr_const['is_woo22'] == "false" ) ) ) {
 
         echo "<script type='text/javascript'>
         var adminUrl             = '" .ADMIN_URL. "';
@@ -4373,7 +3732,7 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'smart-reporter-woo' || $_G
             }   
         echo "
         var jsonFileNm           = '" .SR_JSON_FILE_NM. "';
-        var srNonce           = '" .$sr_nonce. "';
+        var srNonce           = '" .$sr_const['security']. "';
         var imgURL               = '" .SR_IMG_URL . "';
         var fileExists           = '" .$fileExists. "';
         var ordersDetailsLink   = '" . $orders_details_url . "';
