@@ -4,7 +4,7 @@ Donate link: http://www.storeapps.org/
 Tags: administration, woocommerce, wp e-commerce, ecommerce, management, reporting, analysis, sales, products, orders, history, customers, graphs, charts, drill down
 Requires at least: 2.0.2
 Tested up to: 4.3
-Stable tag: 2.9.4
+Stable tag: 2.9.6
 
 A phenomenal plugin that solves all your business related issues, from business analysis to reporting on your WooCommerce and WordPress eCommerce website.
 
@@ -81,6 +81,13 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 3. Smart Reporter Pro Products Dashboard (old) (for WooCommerce and WP eCommerce) (some features only in paid versions)
 
 == Changelog ==
+
+= 2.9.6 =
+* Fix: Remove PHP anonymous functions for PHP<v5.3 [Smart Reporter Beta] (WooCommerce)
+
+= 2.9.5 =
+* Fix: Remove Debug Warnings [Smart Reporter Beta] (WooCommerce)
+* Fix: Minor Fixes
 
 = 2.9.4 =
 * Update: Major performance Improvements [Smart Reporter Beta] (WooCommerce)
@@ -233,6 +240,12 @@ Yes. Currently you can export only the abandoned products using Smart Reporter. 
 
 
 == Upgrade Notice ==
+
+= 2.9.6 =
+Removed PHP anonymous functions for supporting lower versions of php [Smart Reporter Beta] (WooCommerce), recommended upgrade.
+
+= 2.9.5 =
+Removed debug warnings [Smart Reporter Beta] (WooCommerce) along with some important fixes, recommended upgrade.
 
 = 2.9.4 =
 UI & Major Performance Improvements [Smart Reporter Beta] (WooCommerce) along with some important fixes, recommended upgrade.

@@ -214,7 +214,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 
 					// assigning products titles
 					foreach ( $data as &$arr ) {
-						
+
 						$key = array_search($row['id'], $params['t_v_ids']);
 
 						if ( !empty($arr[$row['id']]) ) {
@@ -304,6 +304,11 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 		}
 
 		return $data;
+	}
+
+	//formatting top prod keys
+	function format_top_prod_keys(&$value, $key, $prefix) { 
+		$value = $prefix. $value;
 	}
 
 	//Cummulative sales Query function
@@ -598,7 +603,9 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 
 				$keys = array_keys($returns['kpi']['top_prod']['sales']);
 
-				array_walk($keys, function(&$value, $key) { $value = 'tps_'. $value; });
+				// array_walk($keys, function(&$value, $key) { $value = 'tps_'. $value; });
+				array_walk($keys, 'format_top_prod_keys', 'tps_');
+
 				$chart_keys = ( count($keys) > 0 ) ? array_merge($chart_keys, $keys) : $chart_keys;
 
 				$prod_cond = (!empty($t_p_ids)) ? ' AND ( (product_id IN ('. implode(",",$t_p_ids) .') AND variation_id = 0)' : '';
@@ -661,7 +668,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 
 				$keys = array_keys($returns['kpi']['top_prod']['qty']);
 
-				array_walk($keys, function(&$value, $key) { $value = 'tpq_'. $value; });
+				array_walk($keys, 'format_top_prod_keys', 'tpq_');
 				$chart_keys = ( count($keys) > 0 ) ? array_merge($chart_keys, $keys) : $chart_keys;
 
 				$prod_cond = (!empty($t_p_ids)) ? ' AND ( (product_id IN ('. implode(",",$t_p_ids) .') AND variation_id = 0)' : '';
@@ -1159,6 +1166,13 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
      	}
 
 		global $wpdb, $sr_domain;
+
+		//chk if the SR db dump table exists or not
+    	$table_name = "{$wpdb->prefix}woo_sr_orders";
+     	if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+     		return '';
+     	}
+
 
 	    $dates = array();
 
