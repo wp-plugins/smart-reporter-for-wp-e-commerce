@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9.4
+Version: 2.9.6
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -100,7 +100,10 @@ function sr_activate() {
 			$wpdb_obj = clone $wpdb;
 			$wpdb->blogid = $blog_id;
 			$wpdb->set_prefix( $wpdb->base_prefix );
-			$create_table_order_items_query = "
+
+			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+
+			$query = "
 				CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}sr_woo_order_items` (
 				  `product_id` bigint(20) unsigned NOT NULL default '0',
 				  `order_id` bigint(20) unsigned NOT NULL default '0',
@@ -116,25 +119,44 @@ function sr_activate() {
 				  KEY `order_id` (`order_id`)
 				) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
 			";
+			dbDelta( $query );
 
-			$create_table_abandoned_items_query = "CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}sr_woo_abandoned_items` (
-				  `id` int(11) NOT NULL AUTO_INCREMENT,
-				  `user_id` bigint(20) unsigned NOT NULL default '0',
-				  `product_id` bigint(20) unsigned NOT NULL default '0',
-				  `quantity` int(10) unsigned NOT NULL default '0',
-				  `cart_id` bigint(20),
-				  `abandoned_cart_time` int(11) unsigned NOT NULL,
-				  `product_abandoned` int(1) unsigned NOT NULL default '0',
-				  `order_id` bigint(20),
-				  PRIMARY KEY (`id`),
-				  KEY `product_id` (`product_id`),
-				  KEY `user_id` (`user_id`)
-				) ENGINE=MyISAM  DEFAULT CHARSET=utf8;";
 
-			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-	   		dbDelta( $create_table_order_items_query );
-	   		dbDelta( $create_table_abandoned_items_query );
-	   		
+			$table_name_old = "{$wpdb->prefix}sr_woo_abandoned_items";
+			$table_name_new = "{$wpdb->prefix}woo_sr_cart_items";
+
+			if( $wpdb->get_var("SHOW TABLES LIKE '$table_name_old'") == $table_name_old ) {
+
+				// code for renaming the 'sr_woo_abandoned_items' table
+				if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name_new'") == $table_name_new) {
+					$wpdb->query( "DROP TABLE ".$table_name_new);
+				}
+
+				$wpdb->query("RENAME TABLE ".$table_name_old." TO ".$table_name_new.";");
+
+				$wpdb->query("ALTER TABLE ".$table_name_new."
+								CHANGE quantity qty int(10),
+								CHANGE abandoned_cart_time last_update_time int(11),
+								CHANGE product_abandoned cart_is_abandoned int(1);");
+				
+			} else if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name_new'") == $table_name_new) {
+
+				$query = "CREATE TABLE IF NOT EXISTS ".$table_name_new." (
+								  `id` int(11) NOT NULL AUTO_INCREMENT,
+								  `user_id` bigint(20) unsigned NOT NULL default '0',
+								  `product_id` bigint(20) unsigned NOT NULL default '0',
+								  `qty` int(10) unsigned NOT NULL default '0',
+								  `cart_id` bigint(20),
+								  `last_update_time` int(11) unsigned NOT NULL,
+								  `cart_is_abandoned` int(1) unsigned NOT NULL default '0',
+								  `order_id` bigint(20),
+								  PRIMARY KEY (`id`),
+								  KEY `product_id` (`product_id`),
+								  KEY `user_id` (`user_id`)
+								) ENGINE=MyISAM  DEFAULT CHARSET=utf8;";
+				dbDelta( $query );
+			}
+
 			add_action( 'load_sr_woo_order_items', 'load_sr_woo_order_items' );
 	   		do_action( 'load_sr_woo_order_items', $wpdb );
 	   		$wpdb = clone $wpdb_obj;
@@ -230,7 +252,7 @@ function is_pro_updated() {
 
 		if($car_items_count > 1) {
 
-			$query_cart_id = "SELECT MAX(cart_id) FROM {$wpdb->prefix}sr_woo_abandoned_items";
+			$query_cart_id = "SELECT MAX(cart_id) FROM {$wpdb->prefix}woo_sr_cart_items";
 			$results_cart_id = $wpdb->get_col( $query_cart_id );
 			$rows_cart_id = $wpdb->num_rows;			
 
@@ -247,14 +269,14 @@ function is_pro_updated() {
 		//Updating the cart id for the removed item
 
 		$query_max_id = "SELECT MAX(id) 
-						FROM {$wpdb->prefix}sr_woo_abandoned_items
+						FROM {$wpdb->prefix}woo_sr_cart_items
 						WHERE user_id = ".$user_id."
 						AND product_id = ".$product_id;
 		$results_max_id = $wpdb->get_col( $query_max_id );				
 		$results_max_id = implode (",", $results_max_id);
 
-		$query_update_cart_id = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
-								SET product_abandoned = 1
+		$query_update_cart_id = "UPDATE {$wpdb->prefix}woo_sr_cart_items
+								SET cart_is_abandoned = 1
 									$cart_update
 								WHERE user_id = ".$user_id."
 									AND product_id = ".$product_id."
@@ -280,21 +302,21 @@ function is_pro_updated() {
 
 			$product_id = (!empty($item['variation_id'])) ? $item['variation_id'] : ((version_compare ( WOOCOMMERCE_VERSION, '2.0', '<' )) ? $item['id'] : $item['product_id']);
 
-			$query_abandoned = "SELECT * FROM {$wpdb->prefix}sr_woo_abandoned_items
+			$query_abandoned = "SELECT * FROM {$wpdb->prefix}woo_sr_cart_items
 								WHERE user_id = ".$user_id."
 								AND product_id IN (". $product_id .")
-								AND product_abandoned = 0";
+								AND cart_is_abandoned = 0";
 
 			$results_abandoned = $wpdb->get_results( $query_abandoned, 'ARRAY_A' );
 			$rows_abandoned = $wpdb->num_rows;
 
 			if ($rows_abandoned > 0) {
-				$query_update_order = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
-									SET product_abandoned = 1,
+				$query_update_order = "UPDATE {$wpdb->prefix}woo_sr_cart_items
+									SET cart_is_abandoned = 1,
 										order_id = ". $order_id ."
 									WHERE user_id=".$user_id."
 										AND product_id IN (". $product_id .")
-										AND product_abandoned='0'";
+										AND cart_is_abandoned='0'";
 				$wpdb->query( $query_update_order );
 			}
 
@@ -329,8 +351,8 @@ function is_pro_updated() {
 		//Query to get the max cart id
 
 		$query_cart_id = "SELECT cart_id, abandoned_cart_time
-							FROM {$wpdb->prefix}sr_woo_abandoned_items
-							WHERE product_abandoned = 0
+							FROM {$wpdb->prefix}woo_sr_cart_items
+							WHERE cart_is_abandoned = 0
 								AND user_id=".$user_id;
 		$results_cart_id = $wpdb->get_results( $query_cart_id, 'ARRAY_A' );
 		$rows_cart_id = $wpdb->num_rows;
@@ -338,7 +360,7 @@ function is_pro_updated() {
 		if ($rows_cart_id > 0 && $compare_time < $results_cart_id[0]['abandoned_cart_time']) {
 			$cart_id = $results_cart_id[0]['cart_id'];	
 		} else {
-			$query_cart_id = "SELECT MAX(cart_id) FROM {$wpdb->prefix}sr_woo_abandoned_items";
+			$query_cart_id = "SELECT MAX(cart_id) FROM {$wpdb->prefix}woo_sr_cart_items";
 			$results_cart_id_max = $wpdb->get_col( $query_cart_id );
 			$rows_cart_id = $wpdb->num_rows;			
 
@@ -354,17 +376,17 @@ function is_pro_updated() {
 
 			$product_id = ( $cart_content['variation_id'] > 0 ) ? $cart_content['variation_id'] : $cart_content['product_id'];
 			
-            $query_abandoned = "SELECT * FROM {$wpdb->prefix}sr_woo_abandoned_items
+            $query_abandoned = "SELECT * FROM {$wpdb->prefix}woo_sr_cart_items
 					WHERE user_id = ".$user_id."
 						AND product_id IN (". $product_id .")
-						AND product_abandoned = 0";
+						AND cart_is_abandoned = 0";
 
 			$results_abandoned = $wpdb->get_results( $query_abandoned, 'ARRAY_A' );
 			$rows_abandoned = $wpdb->num_rows;
 
 
-			$insert_query = "INSERT INTO {$wpdb->prefix}sr_woo_abandoned_items
-						(user_id, product_id, quantity, cart_id, abandoned_cart_time, product_abandoned)
+			$insert_query = "INSERT INTO {$wpdb->prefix}woo_sr_cart_items
+						(user_id, product_id, qty, cart_id, last_update_time, cart_is_abandoned)
 						VALUES ('".$user_id."', '".$product_id."', '".$cart_content['quantity']."','".$cart_id."', '".$current_time."', '0')";
 
 
@@ -374,8 +396,8 @@ function is_pro_updated() {
 
 			} else if ($compare_time > $results_abandoned[0]['abandoned_cart_time']) {
 
-				$query_ignored = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
-						SET product_abandoned = 1
+				$query_ignored = "UPDATE {$wpdb->prefix}woo_sr_cart_items
+						SET cart_is_abandoned = 1
 						WHERE user_id=".$user_id."
 							AND product_id IN (". $product_id .")";
 
@@ -385,12 +407,12 @@ function is_pro_updated() {
 				$wpdb->query( $insert_query );
 
 			} else {
-				$query_update = "UPDATE {$wpdb->prefix}sr_woo_abandoned_items
-						SET quantity = ". $cart_content['quantity'] .",
-							abandoned_cart_time = ". $current_time ."
+				$query_update = "UPDATE {$wpdb->prefix}woo_sr_cart_items
+						SET qty = ". $cart_content['quantity'] .",
+							last_update_time = ". $current_time ."
 						WHERE user_id=".$user_id."
 							AND product_id IN (". $product_id .")
-							AND product_abandoned='0'";
+							AND cart_is_abandoned='0'";
 				$wpdb->query( $query_update );
 			}
 
@@ -405,17 +427,6 @@ function is_pro_updated() {
 	function sr_schedule_daily_summary_mails() {
 
 		global $wpdb;
-
-		// code for renaming the 'sr_woo_abandoned_items' table
-		$table_name = "{$wpdb->prefix}sr_woo_abandoned_items";
-		if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
-			$wpdb->query("RENAME TABLE {$wpdb->prefix}sr_woo_abandoned_items TO {$wpdb->prefix}woo_sr_cart_items;");
-
-			$wpdb->query("ALTER TABLE {$wpdb->prefix}woo_sr_cart_items
-							CHANGE quantity qty int(10),
-							CHANGE abandoned_cart_time last_update_time int(11),
-							CHANGE product_abandoned cart_is_abandoned int(1);");
-		}
 
 		if ( in_array( 'woocommerce/woocommerce.php', get_option( 'active_plugins' ) ) || ( is_multisite() && in_array( 'woocommerce/woocommerce.php', get_option( 'active_sitewide_plugins' ) ) ) ) {
 
@@ -606,6 +617,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
             wp_enqueue_script( 'jquery' );
         }
 
+        $ver = (!empty($sr_plugin_info ['Version'])) ? $sr_plugin_info ['Version'] : '';
+
         // condition for SR_Beta
 		if ( ( isset($_GET['page']) && $_GET['page'] == 'wc-reports') && empty($_GET['view']) && (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") ) {
 
@@ -613,22 +626,22 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	        wp_register_script ( 'sr_jvectormap', plugins_url ( 'resources/jvectormap/jquery-jvectormap-1.2.2.min.js', __FILE__ ), array ('sr_datepicker' ));
 	        wp_register_script ( 'sr_jvectormap_world_map', plugins_url ( 'resources/jvectormap/jquery-jvectormap-world-mill-en.js', __FILE__ ), array ('sr_jvectormap' ));
 	        wp_register_script ( 'sr_magnific_popup', plugins_url ( 'resources/magnific-popup/jquery.magnific-popup.js', __FILE__ ), array ('sr_jvectormap_world_map' ));
-	        wp_register_script ( 'sr_main', plugins_url ( 'resources/chartjs/Chart.min.js', __FILE__ ), array ('sr_magnific_popup' ), $sr_plugin_info ['Version']);
+	        wp_register_script ( 'sr_main', plugins_url ( 'resources/chartjs/Chart.min.js', __FILE__ ), array ('sr_magnific_popup' ), $ver);
 		} elseif ( ((defined('SR_WOO_RUNNING') && SR_WOO_RUNNING === true) && ((!empty($_GET['view']) && $_GET['view'] == "smart_reporter_old") || (defined('SR_IS_WOO22') && SR_IS_WOO22 == "false")) ) 
 				|| (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) ) {
 
 			wp_register_script ( 'sr_ext_all', plugins_url ( 'resources/ext/ext-all.js', __FILE__ ), array ('jquery'), $ext_version );
 
 			if ( defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true ) {
-				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );
+				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter.js', __FILE__ ), array ('sr_ext_all' ), $ver );
 			} else if ( (defined('SR_WOO_RUNNING') && SR_WOO_RUNNING === true) && ( (!empty($_GET['view']) && $_GET['view'] == "smart_reporter_old") || (defined('SR_IS_WOO22') && SR_IS_WOO22 == "false") ) ) {
-				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $sr_plugin_info ['Version'] );	
+				wp_register_script ( 'sr_main', plugins_url ( '/sr/smart-reporter-woo.js', __FILE__ ), array ('sr_ext_all' ), $ver );	
 			}
 
 		}
 
 		if ( defined('SRPRO') && SRPRO === true ) {
-			wp_register_script ( 'sr_functions', plugins_url ( '/pro/sr.js', __FILE__ ), array ('sr_main' ), $sr_plugin_info ['Version'] );
+			wp_register_script ( 'sr_functions', plugins_url ( '/pro/sr.js', __FILE__ ), array ('sr_main' ), $ver );
 			wp_enqueue_script ( 'sr_functions' );
 		} else {
 			wp_enqueue_script ( 'sr_main' );
@@ -638,6 +651,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	function sr_admin_styles() {
 
 		global $sr_plugin_info, $ext_version;
+
+		$deps = '';
 
 		// condition for SR_Beta
 		if ( ( isset($_GET['page']) && $_GET['page'] == 'wc-reports') && empty($_GET['view']) && (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") ) {
@@ -654,7 +669,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			$deps = array('sr_ext_all');
 		}
 			
-		wp_register_style ( 'sr_main', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), $deps, $sr_plugin_info ['Version'] );
+		$ver = (!empty($sr_plugin_info ['Version'])) ? $sr_plugin_info ['Version'] : '';
+
+		wp_register_style ( 'sr_main', plugins_url ( '/sr/smart-reporter.css', __FILE__ ), $deps, $ver );
 		wp_enqueue_style ( 'sr_main' );
 	}
 	
@@ -1258,7 +1275,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		    }
 		</style>    
 		<?php 
-		
+
+
 		//set the number of days data to show in lite version.
 		define ( 'SR_AVAIL_DAYS', 30);
 		
@@ -1266,8 +1284,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$is_pro_updated = is_pro_updated ();
 		
 		if ( isset($_GET ['action']) && $_GET ['action'] == 'sr-settings') {
-
-
 			sr_settings_page (SR_PLUGIN_FILE);
 		} else {
 			$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
@@ -1338,13 +1354,20 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	            // 	$plug_page = '';
 	            // }
 	            // else {
-	            	$before_plug_page .= ' | <a href="admin.php?page=smart-reporter-';
+
+	            if ( defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true ) {
+					$before_plug_page .= ' | <a href="admin.php?page=smart-reporter-wpsc';
+				} else if( defined('SR_WOO_RUNNING') && SR_WOO_RUNNING === true ) {
+					$before_plug_page .= ' | <a href="admin.php?page=wc-reports';
+				}
+
+	            	
 	            	$after_plug_page = '&action=sr-settings">Settings</a>';
 	            // }
 
 	        }
 
-			printf ( __ ( '%1s%2s%3s%4s'), $switch_version, $before_plug_page, $plug_page, $after_plug_page);		
+			printf ( __ ( '%1s%2s%3s'), $switch_version, $before_plug_page, $after_plug_page);		
 		?>
 		</span>
 		<?php
