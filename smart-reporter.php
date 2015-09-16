@@ -3,7 +3,7 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9.6
+Version: 2.9.7
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
@@ -350,14 +350,14 @@ function is_pro_updated() {
 
 		//Query to get the max cart id
 
-		$query_cart_id = "SELECT cart_id, abandoned_cart_time
+		$query_cart_id = "SELECT cart_id, last_update_time
 							FROM {$wpdb->prefix}woo_sr_cart_items
 							WHERE cart_is_abandoned = 0
 								AND user_id=".$user_id;
 		$results_cart_id = $wpdb->get_results( $query_cart_id, 'ARRAY_A' );
 		$rows_cart_id = $wpdb->num_rows;
 		
-		if ($rows_cart_id > 0 && $compare_time < $results_cart_id[0]['abandoned_cart_time']) {
+		if ($rows_cart_id > 0 && $compare_time < $results_cart_id[0]['last_update_time']) {
 			$cart_id = $results_cart_id[0]['cart_id'];	
 		} else {
 			$query_cart_id = "SELECT MAX(cart_id) FROM {$wpdb->prefix}woo_sr_cart_items";
@@ -394,7 +394,7 @@ function is_pro_updated() {
 				
 				$wpdb->query( $insert_query );
 
-			} else if ($compare_time > $results_abandoned[0]['abandoned_cart_time']) {
+			} else if ($compare_time > $results_abandoned[0]['last_update_time']) {
 
 				$query_ignored = "UPDATE {$wpdb->prefix}woo_sr_cart_items
 						SET cart_is_abandoned = 1
@@ -444,6 +444,245 @@ function is_pro_updated() {
 
 		}
 	}
+
+
+	add_action( 'woocommerce_order_status_changed', 'sr_woo_add_order',10,1 );
+
+	function sr_get_attributes_name_to_slug() {
+        global $wpdb;
+        
+        $attributes_name_to_slug = array();
+        
+        $query = "SELECT DISTINCT meta_value AS product_attributes,
+                         post_id AS product_id
+                  FROM {$wpdb->prefix}postmeta
+                  WHERE meta_key LIKE '_product_attributes'
+                ";
+        $results = $wpdb->get_results( $query, 'ARRAY_A' );
+        $num_rows = $wpdb->num_rows;
+
+        if ($num_rows > 0) {
+        	foreach ( $results as $result ) {
+                $attributes = maybe_unserialize( $result['product_attributes'] );
+                if ( is_array($attributes) && !empty($attributes) ) {
+                    foreach ( $attributes as $slug => $attribute ) {
+                        $attributes_name_to_slug[ $result['product_id'] ][ $attribute['name'] ] = $slug;
+                    }
+                }
+            }	
+        }
+        
+        return $attributes_name_to_slug;
+    }
+
+
+	function sr_items_to_values( $all_order_items = array() ) {
+        global $wpdb;
+
+        if ( count( $all_order_items ) <= 0 || !defined( 'SR_IS_WOO16' ) || !defined( 'SR_IS_WOO22' ) ) return $all_order_items;
+        $values = array();
+        $attributes_name_to_slug = sr_get_attributes_name_to_slug();
+        $prefix = ( (defined( 'SR_IS_WOO16' ) && SR_IS_WOO16 == "true") ) ? '' : '_';
+        
+        if( !empty( $all_order_items['order_date'] ) ){
+        
+        $order_date = $all_order_items['order_date'];
+        
+        }
+        
+        if( !empty( $all_order_items['order_status'] ) ){
+        
+        $order_status = $all_order_items['order_status'];
+        
+        }
+        unset($all_order_items['order_date']);
+        unset($all_order_items['order_status']);
+
+        foreach ( $all_order_items as $order_id => $order_items ) {
+            foreach ( $order_items as $item ) {
+                    $order_item = array();
+
+                    $order_item['order_id'] = $order_id;
+
+                    if( ! function_exists( 'get_product' ) ) {
+                        $product_id = ( !empty( $prefix ) && (!empty( $item[$prefix.'id'])) ) ? $item[$prefix.'id'] : $item['id'];
+                    } else {
+                    	$product_id = ( !empty($item['product_id']) ) ? $item['product_id'] : '';
+                        $product_id = ( !empty( $prefix ) && ( !empty($item[$prefix.'product_id']) ) ) ? $item[$prefix.'product_id'] : $product_id;
+                    }// end if
+
+                    $order_item['product_name'] = get_the_title( $product_id );
+                    $variation_id 				= ( !empty( $item['variation_id'] ) ) ? $item['variation_id'] : '';
+                    $variation_id 				= ( !empty( $prefix ) && ( !empty($item[$prefix.'variation_id']) ) ) ? $item[$prefix.'variation_id'] : $variation_id;
+                    $order_item['product_id'] 	= ( $variation_id > 0 ) ? $variation_id : $product_id;
+
+                    if ( $variation_id > 0 ) {
+                            $variation_name = array();
+                            if( ! function_exists( 'get_product' ) && count( $item['item_meta'] ) > 0 ) {
+                                foreach ( $item['item_meta'] as $items ) {
+                                    $variation_name[ 'attribute_' . $items['meta_name'] ] = $items['meta_value'];
+                                }
+                            } else {
+
+                            	$att_name_to_slug_prod = (!empty($attributes_name_to_slug[$product_id])) ? $attributes_name_to_slug[$product_id] : array();
+
+                                foreach ( $item as $item_meta_key => $item_meta_value ) {
+                                    if ( array_key_exists( $item_meta_key, $att_name_to_slug_prod ) ) {
+                                        $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && ( !empty( $item_meta_value[0] ) ) ) ? $item_meta_value[0] : $item_meta_value;
+                                    } elseif ( in_array( $item_meta_key, $att_name_to_slug_prod ) ) {
+                                        $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && ( !empty( $item_meta_value[0] ) ) ) ? $item_meta_value[0] : $item_meta_value;
+                                    }
+                                }
+                            }
+                            
+                            $order_item['product_name'] .= ' (' . woocommerce_get_formatted_variation( $variation_name, true ) . ')'; 
+                    }
+
+                    $qty 						= ( !empty( $item['qty'] ) ) ? $item['qty']: '';
+                    $order_item['quantity'] 	= ( !empty( $prefix ) && ( !empty($item[$prefix.'qty']) ) ) ? $item[$prefix.'qty'] : $qty;
+                    $line_total             	= ( !empty( $item['line_total'] ) ) ? $item['line_total'] : '' ;
+                    $line_total             	= ( !empty( $prefix ) && ( !empty($item[$prefix.'line_total']) ) ) ? $item[$prefix.'line_total'] : $line_total;
+                    $order_item['sales']    	= $line_total;
+                    $line_subtotal          	= ( !empty( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
+                    $line_subtotal              = ( !empty( $prefix ) && ( !empty($item[$prefix.'line_subtotal']) ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
+                    $order_item['order_date']   = ( !empty($item['order_date'])) ? $item['order_date'] : $order_date;
+                    $order_item['order_status'] = ( !empty($item['order_status'])) ? $item['order_status'] : $order_status;
+                    $order_item['discount']     = $line_subtotal - $line_total;
+                   
+                    if(!empty($item['sku'])) {
+                    	$order_item['sku'] = $item['sku'];
+                    }
+                    else {
+                    		
+                    		$prod_sku = get_post_meta($product_id, '_sku' , true);
+                    	    $order_item['sku'] = !empty($prod_sku) ? $prod_sku: '';
+                    }
+
+                    if(!empty($item['category'])) {
+                    	$order_item['category'] = $item['category'];
+                    }
+                    else {
+                    		
+                    		$category = get_the_terms($product_id, 'product_cat');
+                    	    $order_item['category'] = !empty( $category ) ? $category[0]->name : '';
+                    }
+
+                    if ( empty( $order_item['product_id'] ) || empty( $order_item['order_id'] ) || empty( $order_item['quantity'] ) ) 
+                        continue;
+                    $values[] = "( " .$wpdb->_real_escape($order_item['product_id']). ", " .$wpdb->_real_escape($order_item['order_id']). ",'" .$wpdb->_real_escape($order_item['order_date']). "', '" .$wpdb->_real_escape($order_item['order_status']). "', '" .$wpdb->_real_escape($order_item['product_name']). "', '" .$wpdb->_real_escape($order_item['sku']). "' , '" .$wpdb->_real_escape($order_item['category']). "' , " .$wpdb->_real_escape($order_item['quantity']). ", " . (empty($order_item['sales']) ? 0 : $wpdb->_real_escape($order_item['sales']) ) . ", " . (empty($order_item['discount']) ? 0 : $wpdb->_real_escape($order_item['discount']) ) . " )";
+            }
+        }
+
+        return $values;
+    }
+
+	function sr_woo_add_order( $order_id, $refund_id = '' ) {
+
+       global $wpdb;
+
+		$order = new WC_Order( $order_id );
+		$order_items = array( $order_id => $order->get_items() );
+
+		$order_items['order_date'] = $order->order_date;
+		$order_items['order_status'] = $order->post_status;
+
+		$order_is_sale = 1;
+
+		//Condn for woo 2.2 compatibility
+		if (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") {
+			$order_status = substr($order->post_status, 3);
+		} else {
+			$order_status = wp_get_object_terms( $order_id, 'shop_order_status', array('fields' => 'slugs') );
+			$order_status = (!empty($order_status)) ? $order_status[0] : '';
+		}
+
+		if ( $order_status == 'on-hold' || $order_status == 'processing' || $order_status == 'completed' ) {
+			$insert_query = "REPLACE INTO {$wpdb->prefix}sr_woo_order_items 
+						( `product_id`, `order_id`, `order_date`, `order_status`, `product_name`, `sku`, `category`, `quantity`, `sales`, `discount` ) VALUES ";
+            
+            $values = sr_items_to_values( $order_items );
+            if ( count( $values ) > 0 ) {
+            	$insert_query .= implode(",",$values);
+                $wpdb->query( $insert_query );
+            }
+
+		} else {
+			$wpdb->query( "DELETE FROM {$wpdb->prefix}sr_woo_order_items WHERE order_id = {$order_id}" );
+			$order_is_sale = 0;
+		}
+
+        //chk if the SR Beta Snapshot table exists or not
+	    $table_name = "{$wpdb->prefix}woo_sr_orders";
+	    if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+
+	    	$oi_type = 'S';
+
+	    	// For handling manual refunds
+	    	if(!empty( $refund_id )) {
+	    		$order_id = $refund_id;
+	    		$order = new WC_Order( $order_id );
+				$oi_type = 'R';
+	    	}
+
+	    	$order_items = $order->get_items( array('line_item', 'shipping') );
+
+	    	$order_meta = get_post_meta($order_id);
+	    	$order_sm = $order->get_shipping_methods();
+
+	    	$oi_values = array();
+	    	$t_qty = 0;
+	    	$sm_id = '';
+
+	    	foreach ( $order_items as $oi_id => $item ) {
+
+	    		if ( $item['type'] == 'shipping' ) {
+	    			$sm_id = ( !empty($item['item_meta']['method_id'][0]) ) ? $item['item_meta']['method_id'][0] : '';
+	    		} else {
+	    			$t_qty += $item['qty'];
+		    		
+		    		$oi_values[] = "( ". $wpdb->_real_escape($oi_id) .", '". $wpdb->_real_escape(substr($order->order_date,0,10) ) ."', 
+		    							'". $wpdb->_real_escape(substr($order->order_date,12) ) ."', ". $wpdb->_real_escape($order_is_sale) .", 
+		    							". $wpdb->_real_escape($item['product_id']) .", ". $wpdb->_real_escape($item['variation_id']) .",
+		    						 	". $wpdb->_real_escape($order_id) .", '". $wpdb->_real_escape($oi_type) ."', ". $wpdb->_real_escape($item['qty']) .",
+		    						 	". $wpdb->_real_escape($item['line_total']) ." )";	
+	    		}
+	    	}
+
+	    	$query = "REPLACE INTO {$wpdb->prefix}woo_sr_orders 
+						( `order_id`, `created_date`, `created_time`, `status`, `type`, `parent_id`, `total`, `currency`, `discount`, `cart_discount`, `shipping`, 
+							`shipping_tax`, `shipping_method`, `tax`, `qty`, `payment_method`, `user_id`, `billing_email`,
+							`billing_country`, `customer_name` ) VALUES
+							( ". $wpdb->_real_escape($order->id) .", '". $wpdb->_real_escape(substr($order->order_date,0,10) ) ."',
+							'". $wpdb->_real_escape(substr($order->order_date,12) ) ."', '". $wpdb->_real_escape($order->post_status) ."',
+							'". $wpdb->_real_escape($order->post->post_type) ."', ". $wpdb->_real_escape($order->post->post_parent) .", 
+							". $wpdb->_real_escape( !empty($order_meta['_order_total'][0]) ? $order_meta['_order_total'][0] : 0) .",
+							'". $wpdb->_real_escape(!empty($order_meta['_order_currency'][0]) ? $order_meta['_order_currency'][0] : '') ."', 
+							". $wpdb->_real_escape(!empty($order_meta['_order_discount'][0]) ? $order_meta['_order_discount'][0] : 0) .",
+							". $wpdb->_real_escape(!empty($order_meta['_cart_discount'][0]) ? $order_meta['_cart_discount'][0] : 0) .",
+							". $wpdb->_real_escape(!empty($order_meta['_order_shipping'][0]) ? $order_meta['_order_shipping'][0] : 0) .", 
+							". $wpdb->_real_escape(!empty($order_meta['_order_shipping_tax'][0]) ? $order_meta['_order_shipping_tax'][0] : 0) .",
+							'". $wpdb->_real_escape( $sm_id ) ."', 
+							". $wpdb->_real_escape(!empty($order_meta['_order_tax'][0]) ? $order_meta['_order_tax'][0] : 0) .", 
+							". $wpdb->_real_escape((!empty($t_qty)) ? $t_qty : 1) .",
+							'". $wpdb->_real_escape(!empty($order_meta['_payment_method'][0]) ? $order_meta['_payment_method'][0] : '') ."', 
+							". $wpdb->_real_escape(!empty($order_meta['_customer_user'][0]) ? $order_meta['_customer_user'][0] : 0) .",
+							'". $wpdb->_real_escape(!empty($order_meta['_billing_email'][0]) ? $order_meta['_billing_email'][0] : '') ."', 
+							'". $wpdb->_real_escape(!empty($order_meta['_billing_country'][0]) ? $order_meta['_billing_country'][0] : '') ."',
+							'". $wpdb->_real_escape(!empty($order_meta['_billing_first_name'][0]) ? $order_meta['_billing_first_name'][0] : '') .' '. $wpdb->_real_escape(!empty($order_meta['_billing_last_name'][0]) ? $order_meta['_billing_last_name'][0] : '') ."' ) ";	
+
+			$wpdb->query( $query );
+
+			$query = "REPLACE INTO {$wpdb->prefix}woo_sr_order_items
+							( `order_item_id`, `order_date`, `order_time`, `order_is_sale`, `product_id`, `variation_id`, `order_id`, `type`,
+							`qty`, `total` ) VALUES ";
+
+			if ( count($oi_values) > 0 ) {
+				$query .= implode(',',$oi_values);
+				$wpdb->query( $query );
+			}
+	    }
+    }
+
 
 
 /**
@@ -496,6 +735,8 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	$sr_plugin_info = $ext_version ='';
 
 	function sr_admin_init() {
+
+		global $wpdb;
 
 		$plugin_info 	= get_plugins ();
 		$sr_plugin_info = $plugin_info [SR_PLUGIN_FILE];
@@ -576,9 +817,18 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	            add_action ( 'wp_ajax_top_ababdoned_products_export', 'sr_top_ababdoned_products_export' );
 	            add_action ( 'wp_ajax_sr_save_settings', 'sr_save_settings' );
 	        }			
+		} else {
+			if ( is_admin() ) {
+				if(isset($_GET['sr_dismiss_admin_notice']) && $_GET['sr_dismiss_admin_notice'] == '1'){
+		            update_option('sr_dismiss_admin_notice', true);
+		            wp_safe_redirect($_SERVER['HTTP_REFERER']);
+		        }
+		    }
 		}
 
-		if ( defined('SR_WOO_ACTIVATED') && SR_WOO_ACTIVATED === true ) {
+		//adding the SR dashboard widget
+	    $table_name = "{$wpdb->prefix}woo_sr_orders";
+		if ( defined('SR_WOO_ACTIVATED') && SR_WOO_ACTIVATED === true && ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) ) {
 	    	add_action( 'wp_dashboard_setup', 'sr_wp_dashboard_widget' );
 	    }
 
@@ -600,6 +850,58 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	    }
 	}
 	
+
+	// Function to handle SR IN App Promo
+	function sr_add_promo_notices() {
+
+		$sr_promo_msg = '';
+
+		$timezone_format = _x('Y-m-d H:i:s', 'timezone date format');
+		$current_wp_date = date_i18n($timezone_format);
+
+		$sr_lite_activation_date = get_option('sr_lite_activation_date');
+
+		if ( $sr_lite_activation_date === false ) {
+			
+			$sr_lite_activation_date = $current_wp_date;
+			add_option('sr_lite_activation_date',$sr_lite_activation_date);
+		}
+
+		$date_diff = date_diff( date_create($sr_lite_activation_date),date_create($current_wp_date) );
+
+		if ( $date_diff->days == 0 ) {
+			$sr_promo_msg = '<b>'. __('Big Savings!!!', SR_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bf6f7&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR20%OFF", target="_storeapps">'. '<b> ' . __('20% OFF ', SR_DOMAIN) . ' </b>' . __('on Smart Reporter Pro!', SR_DOMAIN) .'</a> ';
+		} else if ( $date_diff->days == 1 ) {
+			$sr_promo_msg = '<b>'. __('Missed yesterday!!!', SR_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bfadf&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR15%OFF", target="_storeapps">'. '<b> ' . __('15% OFF ', SR_DOMAIN) . ' </b>' . __('on Smart Reporter Pro', SR_DOMAIN) .'</a> '. __('only for you!', SR_DOMAIN);
+		} else if ( $date_diff->days == 2 ) {
+			$sr_promo_msg = '<b>'. __('Last chance!!!', SR_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bfec8&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR10%OFF", target="_storeapps">'.  '<b> ' . __('10% OFF ', SR_DOMAIN) . ' </b>' . __('on Smart Reporter Pro!', SR_DOMAIN) .'</a> ';
+		} else if ( $date_diff->days > 2 ) {
+			update_option('sr_in_app_promo',0);
+		}
+
+		if ( !empty($sr_promo_msg) ) {
+			update_option('sr_in_app_promo',1); // flag for defining that the promo is on
+			$sr_promo_msg .= '<br /> <a href="http://www.storeapps.org/product/smart-reporter" target=_storeapps> '. __( 'Learn more about Pro version', SR_DOMAIN ) . '</a> ' . __( 'or take a', SR_DOMAIN ) . ' <a href="http://demo.storeapps.org/?demo=sr-woo" target=_livedemo> ' . __( 'Live Demo', SR_DOMAIN ) . ' </a>';
+			echo '<div id="sr_promo_msg" class="updated fade"> 
+					<table> 
+						<tbody> 
+							<tr>
+								<td> 
+									<span class="dashicons dashicons-awards" style="font-size:3em;color:#b32727;margin-left: -0.2em;margin-right: 0.4em;margin-bottom: 0.45em;"></span> 
+								</td> 
+								<td style="padding:0.5em;">'
+									. $sr_promo_msg .
+								'</td> 
+								<td style="width:63.5%;text-align:right;">
+									<a href="?sr_dismiss_admin_notice=1">'. __('No, I don\'t like offers...', SR_DOMAIN).'</a>
+								</td>
+							</tr> 
+						</tbody> 
+					</table> 
+				</div>';
+		}
+	}
+
 	// is_plugin_active ( basename(WPSC_URL).'/wp-shopping-cart.php' )
 	function sr_admin_notices() {
 		if (! is_plugin_active ( 'woocommerce/woocommerce.php' ) && ! is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
@@ -742,16 +1044,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	add_action( 'woocommerce_order_actions_start', 'sr_woo_refresh_order' );			// Action to be performed on clicking 'Save Order' button from Order panel
 
 	
-
-	// Actions on order change
-	add_action( 'woocommerce_order_status_pending', 	'sr_woo_add_order' );
-	add_action( 'woocommerce_order_status_failed', 		'sr_woo_add_order' );
-	add_action( 'woocommerce_order_status_refunded', 	'sr_woo_add_order' );
-	add_action( 'woocommerce_order_status_cancelled', 	'sr_woo_add_order' );
-	add_action( 'woocommerce_order_status_on-hold', 	'sr_woo_add_order' );
-	add_action( 'woocommerce_order_status_processing', 	'sr_woo_add_order' );
-	add_action( 'woocommerce_order_status_complete', 	'sr_woo_add_order' );
-
 	add_action ( 'woocommerce_order_refunded' , 'sr_woo_add_order',10,2 ); // added for handling manual refunds
 
 	function sr_woo_refresh_order( $order_id ) {
@@ -770,32 +1062,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		}
 	}
         
-        function sr_get_attributes_name_to_slug() {
-            global $wpdb;
-            
-            $attributes_name_to_slug = array();
-            
-            $query = "SELECT DISTINCT meta_value AS product_attributes,
-                             post_id AS product_id
-                      FROM {$wpdb->prefix}postmeta
-                      WHERE meta_key LIKE '_product_attributes'
-                    ";
-            $results = $wpdb->get_results( $query, 'ARRAY_A' );
-            $num_rows = $wpdb->num_rows;
-
-            if ($num_rows > 0) {
-            	foreach ( $results as $result ) {
-	                $attributes = maybe_unserialize( $result['product_attributes'] );
-	                if ( is_array($attributes) && !empty($attributes) ) {
-	                    foreach ( $attributes as $slug => $attribute ) {
-	                        $attributes_name_to_slug[ $result['product_id'] ][ $attribute['name'] ] = $slug;
-	                    }
-	                }
-	            }	
-            }
-            
-            return $attributes_name_to_slug;
-        }
         
         function sr_get_term_name_to_slug( $taxonomy_prefix = '' ) {
             global $wpdb;
@@ -860,212 +1126,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                 }
         }
 
-        function sr_items_to_values( $all_order_items = array() ) {
-            global $wpdb;
-
-            if ( count( $all_order_items ) <= 0 || !defined( 'SR_IS_WOO16' ) || !defined( 'SR_IS_WOO22' ) ) return $all_order_items;
-            $values = array();
-            $attributes_name_to_slug = sr_get_attributes_name_to_slug();
-            $prefix = ( (defined( 'SR_IS_WOO16' ) && SR_IS_WOO16 == "true") ) ? '' : '_';
-            
-            if( !empty( $all_order_items['order_date'] ) ){
-            
-            $order_date = $all_order_items['order_date'];
-            
-            }
-            
-            if( !empty( $all_order_items['order_status'] ) ){
-            
-            $order_status = $all_order_items['order_status'];
-            
-            }
-            unset($all_order_items['order_date']);
-            unset($all_order_items['order_status']);
-
-            foreach ( $all_order_items as $order_id => $order_items ) {
-                foreach ( $order_items as $item ) {
-                        $order_item = array();
-
-                        $order_item['order_id'] = $order_id;
-
-                        if( ! function_exists( 'get_product' ) ) {
-                            $product_id = ( !empty( $prefix ) && (!empty( $item[$prefix.'id'])) ) ? $item[$prefix.'id'] : $item['id'];
-                        } else {
-                        	$product_id = ( !empty($item['product_id']) ) ? $item['product_id'] : '';
-                            $product_id = ( !empty( $prefix ) && ( !empty($item[$prefix.'product_id']) ) ) ? $item[$prefix.'product_id'] : $product_id;
-                        }// end if
-
-                        $order_item['product_name'] = get_the_title( $product_id );
-                        $variation_id 				= ( !empty( $item['variation_id'] ) ) ? $item['variation_id'] : '';
-                        $variation_id 				= ( !empty( $prefix ) && ( !empty($item[$prefix.'variation_id']) ) ) ? $item[$prefix.'variation_id'] : $variation_id;
-                        $order_item['product_id'] 	= ( $variation_id > 0 ) ? $variation_id : $product_id;
-
-                        if ( $variation_id > 0 ) {
-                                $variation_name = array();
-                                if( ! function_exists( 'get_product' ) && count( $item['item_meta'] ) > 0 ) {
-                                    foreach ( $item['item_meta'] as $items ) {
-                                        $variation_name[ 'attribute_' . $items['meta_name'] ] = $items['meta_value'];
-                                    }
-                                } else {
-
-                                	$att_name_to_slug_prod = (!empty($attributes_name_to_slug[$product_id])) ? $attributes_name_to_slug[$product_id] : array();
-
-                                    foreach ( $item as $item_meta_key => $item_meta_value ) {
-                                        if ( array_key_exists( $item_meta_key, $att_name_to_slug_prod ) ) {
-                                            $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && ( !empty( $item_meta_value[0] ) ) ) ? $item_meta_value[0] : $item_meta_value;
-                                        } elseif ( in_array( $item_meta_key, $att_name_to_slug_prod ) ) {
-                                            $variation_name[ 'attribute_' . $item_meta_key ] = ( is_array( $item_meta_value ) && ( !empty( $item_meta_value[0] ) ) ) ? $item_meta_value[0] : $item_meta_value;
-                                        }
-                                    }
-                                }
-                                
-                                $order_item['product_name'] .= ' (' . woocommerce_get_formatted_variation( $variation_name, true ) . ')'; 
-                        }
-
-                        $qty 						= ( !empty( $item['qty'] ) ) ? $item['qty']: '';
-                        $order_item['quantity'] 	= ( !empty( $prefix ) && ( !empty($item[$prefix.'qty']) ) ) ? $item[$prefix.'qty'] : $qty;
-                        $line_total             	= ( !empty( $item['line_total'] ) ) ? $item['line_total'] : '' ;
-                        $line_total             	= ( !empty( $prefix ) && ( !empty($item[$prefix.'line_total']) ) ) ? $item[$prefix.'line_total'] : $line_total;
-                        $order_item['sales']    	= $line_total;
-                        $line_subtotal          	= ( !empty( $item['line_subtotal'] ) ) ? $item['line_subtotal'] : '';
-                        $line_subtotal              = ( !empty( $prefix ) && ( !empty($item[$prefix.'line_subtotal']) ) ) ? $item[$prefix.'line_subtotal'] : $line_subtotal;
-                        $order_item['order_date']   = ( !empty($item['order_date'])) ? $item['order_date'] : $order_date;
-                        $order_item['order_status'] = ( !empty($item['order_status'])) ? $item['order_status'] : $order_status;
-                        $order_item['discount']     = $line_subtotal - $line_total;
-                       
-                        if(!empty($item['sku'])) {
-                        	$order_item['sku'] = $item['sku'];
-                        }
-                        else {
-                        		
-                        		$prod_sku = get_post_meta($product_id, '_sku' , true);
-                        	    $order_item['sku'] = !empty($prod_sku) ? $prod_sku: '';
-                        }
-
-                        if(!empty($item['category'])) {
-                        	$order_item['category'] = $item['category'];
-                        }
-                        else {
-                        		
-                        		$category = get_the_terms($product_id, 'product_cat');
-                        	    $order_item['category'] = !empty( $category ) ? $category[0]->name : '';
-                        }
-
-                        if ( empty( $order_item['product_id'] ) || empty( $order_item['order_id'] ) || empty( $order_item['quantity'] ) ) 
-                            continue;
-                        $values[] = "( " .$wpdb->_real_escape($order_item['product_id']). ", " .$wpdb->_real_escape($order_item['order_id']). ",'" .$wpdb->_real_escape($order_item['order_date']). "', '" .$wpdb->_real_escape($order_item['order_status']). "', '" .$wpdb->_real_escape($order_item['product_name']). "', '" .$wpdb->_real_escape($order_item['sku']). "' , '" .$wpdb->_real_escape($order_item['category']). "' , " .$wpdb->_real_escape($order_item['quantity']). ", " . (empty($order_item['sales']) ? 0 : $wpdb->_real_escape($order_item['sales']) ) . ", " . (empty($order_item['discount']) ? 0 : $wpdb->_real_escape($order_item['discount']) ) . " )";
-                }
-            }
-
-            return $values;
-        }
-        
-    function sr_woo_add_order( $order_id, $refund_id = '' ) {
-
-       global $wpdb;
-
-			$order = new WC_Order( $order_id );
-			$order_items = array( $order_id => $order->get_items() );
-
-			$order_items['order_date'] = $order->order_date;
-			$order_items['order_status'] = $order->post_status;
-
-			$order_is_sale = 1;
-
-			//Condn for woo 2.2 compatibility
-			if (defined('SR_IS_WOO22') && SR_IS_WOO22 == "true") {
-				$order_status = substr($order->post_status, 3);
-			} else {
-				$order_status = wp_get_object_terms( $order_id, 'shop_order_status', array('fields' => 'slugs') );
-				$order_status = (!empty($order_status)) ? $order_status[0] : '';
-			}
-
-			if ( $order_status == 'on-hold' || $order_status == 'processing' || $order_status == 'completed' ) {
-				$insert_query = "REPLACE INTO {$wpdb->prefix}sr_woo_order_items 
-							( `product_id`, `order_id`, `order_date`, `order_status`, `product_name`, `sku`, `category`, `quantity`, `sales`, `discount` ) VALUES ";
-                
-	            $values = sr_items_to_values( $order_items );
-	            if ( count( $values ) > 0 ) {
-	            	$insert_query .= implode(",",$values);
-	                $wpdb->query( $insert_query );
-	            }
-
-			} else {
-				$wpdb->query( "DELETE FROM {$wpdb->prefix}sr_woo_order_items WHERE order_id = {$order_id}" );
-				$order_is_sale = 0;
-			}
-
-            //chk if the SR Beta Snapshot table exists or not
-		    $table_name = "{$wpdb->prefix}woo_sr_orders";
-		    if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
-
-		    	$oi_type = 'S';
-
-		    	// For handling manual refunds
-		    	if(!empty( $refund_id )) {
-		    		$order_id = $refund_id;
-		    		$order = new WC_Order( $order_id );
-					$oi_type = 'R';
-		    	}
-
-		    	$order_items = $order->get_items( array('line_item', 'shipping') );
-
-		    	$order_meta = get_post_meta($order_id);
-		    	$order_sm = $order->get_shipping_methods();
-
-		    	$oi_values = array();
-		    	$t_qty = 0;
-		    	$sm_id = '';
-
-		    	foreach ( $order_items as $oi_id => $item ) {
-
-		    		if ( $item['type'] == 'shipping' ) {
-		    			$sm_id = ( !empty($item['item_meta']['method_id'][0]) ) ? $item['item_meta']['method_id'][0] : '';
-		    		} else {
-		    			$t_qty += $item['qty'];
-			    		
-			    		$oi_values[] = "( ". $wpdb->_real_escape($oi_id) .", '". $wpdb->_real_escape(substr($order->order_date,0,10) ) ."', 
-			    							'". $wpdb->_real_escape(substr($order->order_date,12) ) ."', ". $wpdb->_real_escape($order_is_sale) .", 
-			    							". $wpdb->_real_escape($item['product_id']) .", ". $wpdb->_real_escape($item['variation_id']) .",
-			    						 	". $wpdb->_real_escape($order_id) .", '". $wpdb->_real_escape($oi_type) ."', ". $wpdb->_real_escape($item['qty']) .",
-			    						 	". $wpdb->_real_escape($item['line_total']) ." )";	
-		    		}
-		    	}
-
-		    	$query = "REPLACE INTO {$wpdb->prefix}woo_sr_orders 
-							( `order_id`, `created_date`, `created_time`, `status`, `type`, `parent_id`, `total`, `currency`, `discount`, `cart_discount`, `shipping`, 
-								`shipping_tax`, `shipping_method`, `tax`, `qty`, `payment_method`, `user_id`, `billing_email`,
-								`billing_country`, `customer_name` ) VALUES
-								( ". $wpdb->_real_escape($order->id) .", '". $wpdb->_real_escape(substr($order->order_date,0,10) ) ."',
-								'". $wpdb->_real_escape(substr($order->order_date,12) ) ."', '". $wpdb->_real_escape($order->post_status) ."',
-								'". $wpdb->_real_escape($order->post->post_type) ."', ". $wpdb->_real_escape($order->post->post_parent) .", 
-								". $wpdb->_real_escape( !empty($order_meta['_order_total'][0]) ? $order_meta['_order_total'][0] : 0) .",
-								'". $wpdb->_real_escape($order_meta['_order_currency'][0]) ."', 
-								". $wpdb->_real_escape(!empty($order_meta['_order_discount'][0]) ? $order_meta['_order_discount'][0] : 0) .",
-								". $wpdb->_real_escape(!empty($order_meta['_cart_discount'][0]) ? $order_meta['_cart_discount'][0] : 0) .",
-								". $wpdb->_real_escape(!empty($order_meta['_order_shipping'][0]) ? $order_meta['_order_shipping'][0] : 0) .", 
-								". $wpdb->_real_escape(!empty($order_meta['_order_shipping_tax'][0]) ? $order_meta['_order_shipping_tax'][0] : 0) .",
-								'". $wpdb->_real_escape( $sm_id ) ."', 
-								". $wpdb->_real_escape(!empty($order_meta['_order_tax'][0]) ? $order_meta['_order_tax'][0] : 0) .", 
-								". $wpdb->_real_escape((!empty($t_qty)) ? $t_qty : 1) .",
-								'". $wpdb->_real_escape($order_meta['_payment_method'][0]) ."', 
-								". $wpdb->_real_escape(!empty($order_meta['_customer_user'][0]) ? $order_meta['_customer_user'][0] : 0) .",
-								'". $wpdb->_real_escape($order_meta['_billing_email'][0]) ."', '". $wpdb->_real_escape($order_meta['_billing_country'][0]) ."',
-								'". $wpdb->_real_escape($order_meta['_billing_first_name'][0]) .' '. $wpdb->_real_escape($order_meta['_billing_last_name'][0]) ."' ) ";	
-
-				$wpdb->query( $query );
-
-				$query = "REPLACE INTO {$wpdb->prefix}woo_sr_order_items
-								( `order_item_id`, `order_date`, `order_time`, `order_is_sale`, `product_id`, `variation_id`, `order_id`, `type`,
-								`qty`, `total` ) VALUES ";
-
-				if ( count($oi_values) > 0 ) {
-					$query .= implode(',',$oi_values);
-					$wpdb->query( $query );
-				}
-		    }
-        }
-	
 	function sr_woo_remove_order( $order_id ) {
 		global $wpdb;
 		$wpdb->query( "DELETE FROM {$wpdb->prefix}sr_woo_order_items WHERE order_id = {$order_id}" );
@@ -1288,9 +1348,31 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		} else {
 			$base_path = WP_PLUGIN_DIR . '/' . str_replace ( basename ( __FILE__ ), "", plugin_basename ( __FILE__ ) ) . 'sr/';
 
+			if ( SRPRO === false ) {
+
+				if ( !get_option('sr_dismiss_admin_notice') ) {
+					// Code to handle SR IN App Promo
+					if ( is_admin() ) {
+
+						if(!get_option('sr_dismiss_admin_notice')){
+							sr_add_promo_notices();
+						}
+					}	
+				} else {
+						?>
+					<div id="message" class="updated fade">
+						<p><?php
+							printf( ('<b>' . __( 'Important:', SR_DOMAIN ) . '</b> ' . __( 'To get the sales and sales KPI\'s for more than 30 days upgrade to Pro', SR_DOMAIN ) . " " . '<br /><a href="%1s" target=_storeapps>' . " " .__( 'Learn more about Pro version', SR_DOMAIN ) . '</a> ' . __( 'or take a', SR_DOMAIN ) . " " . '<a href="%2s" target=_livedemo>' . " " . __( 'Live Demo', SR_DOMAIN ) . '</a>'), 'http://www.storeapps.org/product/smart-reporter', 'http://demo.storeapps.org/?demo=sr-woo' );
+							?>
+						</p>
+					</div>
+				<?php
+				}
+			}
+
 			?>
 
-			<div class="wrap">
+			<div class="wrap" style="height:1em;">
 
 			<?php
 
@@ -1329,13 +1411,15 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 			if ( defined('SR_IS_WOO22') && SR_IS_WOO22 == "true" ) {
 				if (isset($_GET['view']) && $_GET['view'] == "smart_reporter_old") {
-					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports') .'" title="'. __( 'Switch back to new view', 'smart-reporter' ) .'"> ' . __( 'Switch back to new view', 'smart-reporter' ) .'</a> | ';
+					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports') .'" title="'. __( 'Switch back to new view', 'smart-reporter' ) .'"> ' . __( 'Switch back to new view', 'smart-reporter' ) .'</a>';
 				} else {
-					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports&view=smart_reporter_old') .'" title="'. __( 'Switch to old view', 'smart-reporter' ) .'"> ' . __( 'Switch to old view', 'smart-reporter' ) .'</a> | ';
+					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports&view=smart_reporter_old') .'" title="'. __( 'Switch to old view', 'smart-reporter' ) .'"> ' . __( 'Switch to old view', 'smart-reporter' ) .'</a>';
 				}	
 			}
 			
 			if ( SRPRO === true ) {
+
+				$switch_version .= ' | ';
 
 	            if ( !wp_script_is( 'thickbox' ) ) {
 	                if ( !function_exists( 'add_thickbox' ) ) {
@@ -1387,18 +1471,6 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
    <h6 align="right">
 </h2>
 </div>
-
-<?php
-if (SRPRO === false) {
-				?>
-<div id="message" class="updated fade">
-<p><?php
-printf ( __ ( "<b>Important:</b> To get the sales and sales KPI's for more than 30 days upgrade to Pro . Take a <a href='%2s' target=_livedemo> Live Demo here </a>." ), 'http://demo.storeapps.org/' );
-				?></p>
-</div>
-<?php
-}
-			?>
 <?php
 			$error_message = '';
 

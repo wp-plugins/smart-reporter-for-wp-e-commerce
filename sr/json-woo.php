@@ -28,7 +28,7 @@ function sr_number_format($input, $places)
     $mult = pow(10, $places);
 
 
-    if ( defined('SR_NUMBER_FORMAT') && SR_NUMBER_FORMAT == 0 ) {
+    if ( defined('SR_NUMBER_FORMAT') && SR_NUMBER_FORMAT == 1 ) {
     	return (
         $input > 0
             // precision of 3 decimal places
@@ -1104,7 +1104,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 	    	if ( !empty($val['params']['cmp_format']) && $val['params']['cmp_format'] == '$' ) {
 				$diff = sr_number_format(abs(round(($val['c'] - $val['lp']),2)),$const ['SR_DECIMAL_PLACES']);	
 			} else if ( !empty($val['params']['cmp_format']) && $val['params']['cmp_format'] == '%' ) {
-				$diff = ( !empty($val['lp']) ) ? abs(round(((($val['c'] - $val['lp'])/$val['lp']) * 100),2)) . '%' : round($val['c'],2) . '%';
+				$diff = sr_number_format(( (!empty($val['lp']) && $val['lp'] != 0 ) ? abs(round(((($val['c'] - $val['lp'])/$val['lp']) * 100),2)) : round($val['c'],2)),$const ['SR_DECIMAL_PLACES']). '%';
 			} else {
 				$diff = '';
 			}
@@ -1580,7 +1580,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 			$slimit = 0;
 
 		} else {
-			$slimit = (($_POST['part']-1)*250);
+			$slimit = (($_POST['part']-1)*100);
 		}
 
 		// empty temp tables
@@ -1592,7 +1592,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 					SELECT ID as order_id, DATE(post_date) as date, TIME(post_date) as time, post_status as status, post_type as type, post_parent as parent_id 
 					FROM  {$wpdb->prefix}posts
 					WHERE post_type in ('shop_order', 'shop_order_refund')
-					LIMIT ". $slimit .", 250");
+					LIMIT ". $slimit .", 100");
 
 		$o_ids = $wpdb->get_col("SELECT order_id FROM {$wpdb->prefix}woo_sr_orders WHERE update_flag = 0");
 		
