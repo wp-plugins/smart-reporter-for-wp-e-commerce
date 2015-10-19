@@ -1551,6 +1551,10 @@ vertical-align: top;
   /*font-family : Helvetica, Arial, sans-serif;*/
 }
 
+/*For hiding the update notices on subscriptions page*/
+.update-nag, .updated, .error { 
+  display: none; 
+}
 
 
 /*CHART JS*/

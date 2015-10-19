@@ -3,10 +3,12 @@
 Plugin Name: Smart Reporter for e-commerce
 Plugin URI: http://www.storeapps.org/product/smart-reporter/
 Description: <strong>Lite Version Installed.</strong> Store analysis like never before. 
-Version: 2.9.7
+Version: 2.9.8
 Author: Store Apps
 Author URI: http://www.storeapps.org/about/
 Copyright (c) 2011, 2012, 2013, 2014, 2015 Store Apps All rights reserved.
+Text Domain: smart-reporter-for-wp-e-commerce
+Domain Path: /languages/
 */
 
 //Hooks
@@ -41,6 +43,27 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 	}
 }
 
+//Language loader
+
+define ( 'SR_TEXT_DOMAIN', 'smart-reporter-for-wp-e-commerce' );
+
+add_action ( 'init', 'localize_smart_reporter' );
+	 
+function localize_smart_reporter() {
+
+    $text_domain = SR_TEXT_DOMAIN;
+
+    $plugin_dirname = dirname( plugin_basename(__FILE__) );
+
+    $locale = apply_filters( 'plugin_locale', get_locale(), $text_domain );
+
+    $loaded = load_textdomain( $text_domain, WP_LANG_DIR . '/' . $plugin_dirname . '/' . $text_domain . '-' . $locale . '.mo' );    
+
+    if ( ! $loaded ) {
+        $loaded = load_plugin_textdomain( $text_domain, false, $plugin_dirname . '/languages/' );
+    }
+
+}
 
 // Code for custom order searches
 
@@ -139,7 +162,7 @@ function sr_activate() {
 								CHANGE abandoned_cart_time last_update_time int(11),
 								CHANGE product_abandoned cart_is_abandoned int(1);");
 				
-			} else if(  $wpdb->get_var("SHOW TABLES LIKE '$table_name_new'") == $table_name_new) {
+			} else {
 
 				$query = "CREATE TABLE IF NOT EXISTS ".$table_name_new." (
 								  `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -421,7 +444,6 @@ function is_pro_updated() {
     	
     }
 
-
 	add_action ( 'init', 'sr_schedule_daily_summary_mails' );
 
 	function sr_schedule_daily_summary_mails() {
@@ -683,8 +705,6 @@ function is_pro_updated() {
 	    }
     }
 
-
-
 /**
  * Throw an error on admin page when WP e-Commerece plugin is not activated.
  */
@@ -706,12 +726,11 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	define ( 'SR_PLUGIN_DIRNAME', plugins_url ( '', __FILE__ ) );
 	define ( 'SR_IMG_URL', SR_PLUGIN_DIRNAME . '/resources/themes/images/' );        
 
-	define ( 'SR_DOMAIN', 'smart-reporter-for-wp-e-commerce' );
-
 	// EOF
 	
 	add_action ( 'admin_notices', 'sr_admin_notices' );
 	add_action ( 'admin_init', 'sr_admin_init' );
+	
 
 	add_action( 'admin_enqueue_scripts', 'sr_admin_scripts' );
 	add_action( 'admin_enqueue_scripts', 'sr_admin_styles' );
@@ -729,6 +748,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			add_action ('network_admin_menu', 'sr_add_license_key_page', 11);
 			
 	}
+
 
 	// add_action('woocommerce_cart_updated', 'sr_demo');
 
@@ -821,7 +841,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 			if ( is_admin() ) {
 				if(isset($_GET['sr_dismiss_admin_notice']) && $_GET['sr_dismiss_admin_notice'] == '1'){
 		            update_option('sr_dismiss_admin_notice', true);
-		            wp_safe_redirect($_SERVER['HTTP_REFERER']);
+		            wp_redirect($_SERVER['HTTP_REFERER']);
 		        }
 		    }
 		}
@@ -870,19 +890,19 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 		$date_diff = date_diff( date_create($sr_lite_activation_date),date_create($current_wp_date) );
 
 		if ( $date_diff->days == 0 ) {
-			$sr_promo_msg = '<b>'. __('Big Savings!!!', SR_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bf6f7&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR20%OFF", target="_storeapps">'. '<b> ' . __('20% OFF ', SR_DOMAIN) . ' </b>' . __('on Smart Reporter Pro!', SR_DOMAIN) .'</a> ';
+			$sr_promo_msg = '<b>'. __('Big Savings!!!', SR_TEXT_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bf6f7&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR20%OFF", target="_storeapps">'. '<b> ' . __('20% OFF ', SR_TEXT_DOMAIN) . ' </b>' . __('on Smart Reporter Pro!', SR_TEXT_DOMAIN) .'</a> ';
 		} else if ( $date_diff->days == 1 ) {
-			$sr_promo_msg = '<b>'. __('Missed yesterday!!!', SR_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bfadf&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR15%OFF", target="_storeapps">'. '<b> ' . __('15% OFF ', SR_DOMAIN) . ' </b>' . __('on Smart Reporter Pro', SR_DOMAIN) .'</a> '. __('only for you!', SR_DOMAIN);
+			$sr_promo_msg = '<b>'. __('Missed yesterday!!!', SR_TEXT_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bfadf&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR15%OFF", target="_storeapps">'. '<b> ' . __('15% OFF ', SR_TEXT_DOMAIN) . ' </b>' . __('on Smart Reporter Pro', SR_TEXT_DOMAIN) .'</a> '. __('only for you!', SR_TEXT_DOMAIN);
 		} else if ( $date_diff->days == 2 ) {
-			$sr_promo_msg = '<b>'. __('Last chance!!!', SR_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bfec8&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR10%OFF", target="_storeapps">'.  '<b> ' . __('10% OFF ', SR_DOMAIN) . ' </b>' . __('on Smart Reporter Pro!', SR_DOMAIN) .'</a> ';
+			$sr_promo_msg = '<b>'. __('Last chance!!!', SR_TEXT_DOMAIN) .' </b> <a href="http://www.storeapps.org/?buy-now=752&qty=1&coupon=55f938e2bfec8&page=721&with-cart=0&utm_source=SR&utm_medium=Lite&utm_campaign=SR10%OFF", target="_storeapps">'.  '<b> ' . __('10% OFF ', SR_TEXT_DOMAIN) . ' </b>' . __('on Smart Reporter Pro!', SR_TEXT_DOMAIN) .'</a> ';
 		} else if ( $date_diff->days > 2 ) {
 			update_option('sr_in_app_promo',0);
 		}
 
 		if ( !empty($sr_promo_msg) ) {
 			update_option('sr_in_app_promo',1); // flag for defining that the promo is on
-			$sr_promo_msg .= '<br /> <a href="http://www.storeapps.org/product/smart-reporter" target=_storeapps> '. __( 'Learn more about Pro version', SR_DOMAIN ) . '</a> ' . __( 'or take a', SR_DOMAIN ) . ' <a href="http://demo.storeapps.org/?demo=sr-woo" target=_livedemo> ' . __( 'Live Demo', SR_DOMAIN ) . ' </a>';
-			echo '<div id="sr_promo_msg" class="updated fade"> 
+			$sr_promo_msg .= '<br /> <a href="http://www.storeapps.org/product/smart-reporter" target=_storeapps> '. __( 'Learn more about Pro version', SR_TEXT_DOMAIN ) . '</a> ' . __( 'or take a', SR_TEXT_DOMAIN ) . ' <a href="http://demo.storeapps.org/?demo=sr-woo" target=_livedemo> ' . __( 'Live Demo', SR_TEXT_DOMAIN ) . ' </a>';
+			echo '<div id="sr_promo_msg" class="updated fade" style="display:block !important;"> 
 					<table> 
 						<tbody> 
 							<tr>
@@ -893,7 +913,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 									. $sr_promo_msg .
 								'</td> 
 								<td style="width:63.5%;text-align:right;">
-									<a href="?sr_dismiss_admin_notice=1">'. __('No, I don\'t like offers...', SR_DOMAIN).'</a>
+									<a href="'.admin_url('admin.php?page=wc-reports&tab=smart_reporter&sr_dismiss_admin_notice=1').'">'. __('No, I don\'t like offers...', SR_TEXT_DOMAIN).'</a>
 								</td>
 							</tr> 
 						</tbody> 
@@ -981,7 +1001,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 		$reports = array();
 		$reports['smart_reporter'] = array( 
-											'title'  	=> __( 'Smart Reporter', 'smart_reporter' ) .' '. ((SRPRO === true) ? __( 'Pro' ) : __( 'Lite' ) ),
+											'title'  	=> __( 'Smart Reporter', SR_TEXT_DOMAIN ) .' '. ((SRPRO === true) ? __( 'Pro', SR_TEXT_DOMAIN ) : __( 'Lite', SR_TEXT_DOMAIN ) ),
 											'reports' 	=> array(
 																"smart_reporter" => array(
 																									'title'       => '',
@@ -1360,9 +1380,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 					}	
 				} else {
 						?>
-					<div id="message" class="updated fade">
+					<div id="message" class="updated fade" style="display:block !important;">
 						<p><?php
-							printf( ('<b>' . __( 'Important:', SR_DOMAIN ) . '</b> ' . __( 'To get the sales and sales KPI\'s for more than 30 days upgrade to Pro', SR_DOMAIN ) . " " . '<br /><a href="%1s" target=_storeapps>' . " " .__( 'Learn more about Pro version', SR_DOMAIN ) . '</a> ' . __( 'or take a', SR_DOMAIN ) . " " . '<a href="%2s" target=_livedemo>' . " " . __( 'Live Demo', SR_DOMAIN ) . '</a>'), 'http://www.storeapps.org/product/smart-reporter', 'http://demo.storeapps.org/?demo=sr-woo' );
+							printf( ('<b>' . __( 'Important:', SR_TEXT_DOMAIN ) . '</b> ' . __( 'To get the sales and sales KPI\'s for more than 30 days upgrade to Pro', SR_TEXT_DOMAIN ) . " " . '<br /><a href="%1s" target=_storeapps>' . " " .__( 'Learn more about Pro version', SR_TEXT_DOMAIN ) . '</a> ' . __( 'or take a', SR_TEXT_DOMAIN ) . " " . '<a href="%2s" target=_livedemo>' . " " . __( 'Live Demo', SR_TEXT_DOMAIN ) . '</a>'), 'http://www.storeapps.org/product/smart-reporter', 'http://demo.storeapps.org/?demo=sr-woo' );
 							?>
 						</p>
 					</div>
@@ -1384,9 +1404,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 				echo _e ( 'Smart Reporter' );
 				echo ' ';
 					if (SRPRO === true) {
-						echo _e ( 'Pro' );
+						echo _e ( 'Pro', SR_TEXT_DOMAIN );
 					} else {
-						echo _e ( 'Lite' );
+						echo _e ( 'Lite', SR_TEXT_DOMAIN );
 					}
 			}
 			?>
@@ -1411,9 +1431,9 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
 			if ( defined('SR_IS_WOO22') && SR_IS_WOO22 == "true" ) {
 				if (isset($_GET['view']) && $_GET['view'] == "smart_reporter_old") {
-					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports') .'" title="'. __( 'Switch back to new view', 'smart-reporter' ) .'"> ' . __( 'Switch back to new view', 'smart-reporter' ) .'</a>';
+					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports') .'" title="'. __( 'Switch back to new view', SR_TEXT_DOMAIN ) .'"> ' . __( 'Switch back to new view', SR_TEXT_DOMAIN ) .'</a>';
 				} else {
-					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports&view=smart_reporter_old') .'" title="'. __( 'Switch to old view', 'smart-reporter' ) .'"> ' . __( 'Switch to old view', 'smart-reporter' ) .'</a>';
+					$switch_version = '<a href="'. admin_url('admin.php?page=wc-reports&view=smart_reporter_old') .'" title="'. __( 'Switch to old view', SR_TEXT_DOMAIN ) .'"> ' . __( 'Switch to old view', SR_TEXT_DOMAIN ) .'</a>';
 				}	
 			}
 			
@@ -1487,27 +1507,27 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	                                include_once ($base_path . 'reporter-console.php');
 	                                return;
 	                        } else {
-	                                $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
+	                                $error_message = __( "A required Smart Reporter file is missing. Can't continue.", SR_TEXT_DOMAIN );
 	                        }
 	                    } else {
-	                        $error_message = __( 'Smart Reporter currently works only with WP e-Commerce 3.7 or above.', 'smart-reporter' );
+	                        $error_message = __( 'Smart Reporter currently works only with WP e-Commerce 3.7 or above.', SR_TEXT_DOMAIN );
 	                    }
                 }
 
 			} else if (is_plugin_active( 'woocommerce/woocommerce.php' )) {
                 if ((defined('SR_IS_WOO13')) && SR_IS_WOO13 == "true") {
-                        $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
+                        $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', SR_TEXT_DOMAIN );
                 } else {
                     if (file_exists( $base_path . 'reporter-console.php' )) {
                             include_once ($base_path . 'reporter-console.php');
                             return;
                     } else {
-                            $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
+                            $error_message = __( "A required Smart Reporter file is missing. Can't continue.", SR_TEXT_DOMAIN );
                     }
                 }
 			}
                         else {
-                            $error_message = "<b>" . __( 'Smart Reporter', 'smart-reporter' ) . "</b> " . __( 'add-on requires', 'smart-reporter' ) . " " .'<a href="http://www.storeapps.org/wpec/">' . __( 'WP e-Commerce', 'smart-reporter' ) . "</a>" . " " . __( 'plugin or', 'smart-reporter' ) . " " . '<a href="http://www.storeapps.org/woocommerce/">' . __( 'WooCommerce', 'smart-reporter' ) . "</a>" . " " . __( 'plugin. Please install and activate it.', 'smart-reporter' );
+                            $error_message = "<b>" . __( 'Smart Reporter', SR_TEXT_DOMAIN ) . "</b> " . __( 'add-on requires', SR_TEXT_DOMAIN ) . " " .'<a href="http://www.storeapps.org/wpec/">' . __( 'WP e-Commerce', SR_TEXT_DOMAIN ) . "</a>" . " " . __( 'plugin or', SR_TEXT_DOMAIN ) . " " . '<a href="http://www.storeapps.org/woocommerce/">' . __( 'WooCommerce', SR_TEXT_DOMAIN ) . "</a>" . " " . __( 'plugin. Please install and activate it.', SR_TEXT_DOMAIN );
                         }
                     } else if (file_exists( WP_PLUGIN_DIR . '/wp-e-commerce/wp-shopping-cart.php' )) {
                         if (is_plugin_active( 'wp-e-commerce/wp-shopping-cart.php' )) {
@@ -1517,13 +1537,13 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
                                         include_once ($base_path . 'reporter-console.php');
                                         return;
                                 } else {
-                                        $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
+                                        $error_message = __( "A required Smart Reporter file is missing. Can't continue.", SR_TEXT_DOMAIN );
                                 }
                             } else {
-                                $error_message = __( 'Smart Reporter currently works only with WP e-Commerce 3.7 or above.', 'smart-reporter' );
+                                $error_message = __( 'Smart Reporter currently works only with WP e-Commerce 3.7 or above.', SR_TEXT_DOMAIN );
                             }
                         } else {
-                                $error_message = __( 'WP e-Commerce plugin is not activated.', 'smart-reporter' ) . "<br/><b>" . _e( 'Smart Reporter', 'smart-reporter' ) . "</b> " . _e( 'add-on requires WP e-Commerce plugin, please activate it.', 'smart-reporter' );
+                                $error_message = __( 'WP e-Commerce plugin is not activated.', SR_TEXT_DOMAIN ) . "<br/><b>" . _e( 'Smart Reporter', SR_TEXT_DOMAIN ) . "</b> " . _e( 'add-on requires WP e-Commerce plugin, please activate it.', SR_TEXT_DOMAIN );
                         }
                     } else if (file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' )) {
 
@@ -1531,21 +1551,21 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 
                         if (is_plugin_active( 'woocommerce/woocommerce.php' )) {
                             if ((defined('SR_IS_WOO13')) && SR_IS_WOO13 == "true") {
-                                    $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', 'smart-reporter' );
+                                    $error_message = __( 'Smart Reporter currently works only with WooCommerce 1.4 or above.', SR_TEXT_DOMAIN );
                             } else {
                                 if (file_exists( $base_path . 'reporter-console.php' )) {
                                     include_once ($base_path . 'reporter-console.php');
                                     return;
                                 } else {
-                                    $error_message = __( "A required Smart Reporter file is missing. Can't continue.", 'smart-reporter' );
+                                    $error_message = __( "A required Smart Reporter file is missing. Can't continue.", SR_TEXT_DOMAIN );
                                 }
                             }
                         } else {
-                            $error_message = __( 'WooCommerce plugin is not activated.', 'smart-reporter' ) . "<br/><b>" . __( 'Smart Reporter', 'smart-reporter' ) . "</b> " . __( 'add-on requires WooCommerce plugin, please activate it.', 'smart-reporter' );
+                            $error_message = __( 'WooCommerce plugin is not activated.', SR_TEXT_DOMAIN ) . "<br/><b>" . __( 'Smart Reporter', SR_TEXT_DOMAIN ) . "</b> " . __( 'add-on requires WooCommerce plugin, please activate it.', SR_TEXT_DOMAIN );
                         }
                     }
                     else {
-                        $error_message = "<b>" . __( 'Smart Reporter', 'smart-reporter' ) . "</b> " . __( 'add-on requires', 'smart-reporter' ) . " " .'<a href="http://www.storeapps.org/wpec/">' . __( 'WP e-Commerce', 'smart-reporter' ) . "</a>" . " " . __( 'plugin or', 'smart-reporter' ) . " " . '<a href="http://www.storeapps.org/woocommerce/">' . __( 'WooCommerce', 'smart-reporter' ) . "</a>" . " " . __( 'plugin. Please install and activate it.', 'smart-reporter' );
+                        $error_message = "<b>" . __( 'Smart Reporter', SR_TEXT_DOMAIN ) . "</b> " . __( 'add-on requires', SR_TEXT_DOMAIN ) . " " .'<a href="http://www.storeapps.org/wpec/">' . __( 'WP e-Commerce', SR_TEXT_DOMAIN ) . "</a>" . " " . __( 'plugin or', SR_TEXT_DOMAIN ) . " " . '<a href="http://www.storeapps.org/woocommerce/">' . __( 'WooCommerce', SR_TEXT_DOMAIN ) . "</a>" . " " . __( 'plugin. Please install and activate it.', SR_TEXT_DOMAIN );
                     }
 
 			if ($error_message != '') {
@@ -1578,7 +1598,7 @@ if ( is_admin () || ( is_multisite() && is_network_admin() ) ) {
 	            include_once ($base_path . 'json-woo.php');
 				$sr_daily_widget_data = sr_get_daily_kpi_data(SR_NONCE);
 				
-				wp_add_dashboard_widget( 'sr_dashboard_kpi', __( 'Sales Summary', 'smart_reporter' ), 'sr_dashboard_widget_kpi','',array('security' => SR_NONCE, 'data' => $sr_daily_widget_data) );
+				wp_add_dashboard_widget( 'sr_dashboard_kpi', __( 'Sales Summary', SR_TEXT_DOMAIN ), 'sr_dashboard_widget_kpi','',array('security' => SR_NONCE, 'data' => $sr_daily_widget_data) );
 	        }
 
 		}
