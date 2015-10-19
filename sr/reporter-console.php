@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) || !is_user_logged_in() || !is_admin() ) {
     exit; // Exit if accessed directly
 }
 
-global $wpdb, $_wp_admin_css_colors, $sr_json_file_nm;
+global $wpdb, $_wp_admin_css_colors, $sr_json_file_nm, $sr_text_domain;
 
 if ( !function_exists('sr_add_social_links') ) {
     function sr_add_social_links() {
@@ -40,7 +40,7 @@ if ( !function_exists('sr_add_social_links') ) {
 
 $orders_details_url = '';
 
-$sr_domain = ( defined('SR_DOMAIN') ) ? SR_DOMAIN : 'smart-reporter-for-wp-e-commerce';
+$sr_text_domain = ( defined('SR_TEXT_DOMAIN') ) ? SR_TEXT_DOMAIN : 'smart-reporter-for-wp-e-commerce';
 
 if (defined('SR_WPSC_RUNNING') && SR_WPSC_RUNNING === true) {
     $currency_type = get_option( 'currency_type' );   //Maybe
@@ -230,10 +230,10 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
         ?>
 
-          <div id="sr_data_sync_msg" class="updated woocommerce-message wc-connect" style="margin-top:25%;text-align:center;border:0px;">
+          <div id="sr_data_sync_msg" class="updated woocommerce-message wc-connect" style="margin-top:25%;text-align:center;border:0px;display: block!important;">
             <input id="sr_data_sync_orders" type="hidden" value="<?php echo $order_count; ?>"> 
-            <p><?php _e( '<strong>Smart Reporter Data Sync Required</strong> &#8211; We just need to sync your orders for faster reporting', $sr_domain ); ?></p>
-            <p class="submit"> <a id="sr_sync_link" href="<?php echo esc_url( add_query_arg( 'sr_data_sync', 'true', admin_url( 'admin.php?page=wc-reports&tab=smart_reporter' ) ) ); ?>" class="wc-update-now button-primary"><?php _e( 'Sync Now', $sr_domain ); ?></a> </p> 
+            <p><?php _e( '<strong>Smart Reporter Data Sync Required</strong> &#8211; We just need to sync your orders for faster reporting', $sr_text_domain ); ?></p>
+            <p class="submit"> <a id="sr_sync_link" href="<?php echo esc_url( add_query_arg( 'sr_data_sync', 'true', admin_url( 'admin.php?page=wc-reports&tab=smart_reporter' ) ) ); ?>" class="wc-update-now button-primary"><?php _e( 'Sync Now', $sr_text_domain ); ?></a> </p> 
             <label id="sr_data_sync_per">  </label> </p>
             
           </div>
@@ -442,17 +442,17 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
             <span id ="sr_smart_date" class="sr_cumm_date_picker"> 
                 <select id ="sr_smart_date_select" style="height:auto;font-size:1.2em;padding:0px;margin-top:-0.05em;" >
                   <option value="" style="display:none;color: #333 !important;" selected> Select Date </option>
-                  <option value="TODAY">Today</option>
-                  <option value="YESTERDAY">Yesterday</option>
-                  <option value="CURRENT_WEEK">Current Week</option>
-                  <option value="LAST_WEEK">Last Week</option>
-                  <option value="CURRENT_MONTH" <?php echo ($fileExists) ? 'selected' : ''; ?> >Current Month</option>
-                  <option value="LAST_MONTH">Last Month</option>
-                  <option value="3_MONTHS">3 Months</option>
-                  <option value="6_MONTHS">6 Months</option>
-                  <option value="CURRENT_YEAR">Current Year</option>
-                  <option value="LAST_YEAR">Last Year</option>
-                  <option value="CUSTOM_DATE">Custom Date</option>
+                  <option value="TODAY"> <?php _e('Today', $sr_text_domain); ?></option>
+                  <option value="YESTERDAY"> <?php _e('Yesterday', $sr_text_domain); ?></option>
+                  <option value="CURRENT_WEEK"> <?php _e('Current', $sr_text_domain); ?> Week</option>
+                  <option value="LAST_WEEK"> <?php _e('Last', $sr_text_domain); ?> Week</option>
+                  <option value="CURRENT_MONTH" <?php echo ($fileExists) ? 'selected' : ''; ?> > <?php _e('Current Month', $sr_text_domain); ?></option>
+                  <option value="LAST_MONTH"> <?php _e('Last', $sr_text_domain); ?> Month</option>
+                  <option value="3_MONTHS"> <?php _e('3', $sr_text_domain); ?> Months</option>
+                  <option value="6_MONTHS"> <?php _e('6', $sr_text_domain); ?> Months</option>
+                  <option value="CURRENT_YEAR"> <?php _e('Current', $sr_text_domain); ?> Year</option>
+                  <option value="LAST_YEAR"> <?php _e('Last', $sr_text_domain); ?> Year</option>
+                  <option value="CUSTOM_DATE"> <?php _e('Custom', $sr_text_domain); ?> Date</option>
                 </select>
             </span>
 
@@ -668,39 +668,40 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                 // Function to show spinner on loading
                 var ajax_spinner = function(id,show){
                         
-                            if ( typeof id == undefined || id == '' ) {
-                                id = ["#sr_sales_graph", "#sr_cumm_sales_funnel_data", "#top_prod_data", "#sr_cumm_top_abandoned_products_data", "#top_cust_data", "#sr_cumm_top_coupons_data", "#sr_discount_graph", "#sr_cumm_taxes_data", "#sr_cumm_order_by_pm_data", "#sr_cumm_sales_countries_graph", "#sr_cumm_order_by_sm_data"];
-                            }
+                    jQuery(function($) {
+                      if ( typeof id == undefined || id == '' ) {
+                          id = ["#sr_sales_graph", "#sr_cumm_sales_funnel_data", "#top_prod_data", "#sr_cumm_top_abandoned_products_data", "#top_cust_data", "#sr_cumm_top_coupons_data", "#sr_discount_graph", "#sr_cumm_taxes_data", "#sr_cumm_order_by_pm_data", "#sr_cumm_sales_countries_graph", "#sr_cumm_order_by_sm_data"];
+                      }
 
-                            for (var i = 0; i < id.length; i++) {
-                                                                                      
-                                if(show){
+                      for (var i = 0; i < id.length; i++) {
+                                                                                
+                          if(show){
 
-                                    $(id[i]).hide();
-                                    var height = $(id[i]).parents('.cumm_widget').height();
-                                    var width = $(id[i]).parents('.cumm_widget').width();
-                                    var pos = $(id[i]).parents('.cumm_widget').offset();
-                                    var adjHeight = $(id[i]).parents('.cumm_widget').find('.cumm_header').height();
-                                    var top = pos.top;
-                                    var Y = height - ( adjHeight * 4 );
-                                    if ( $(window).width() <= 557 ) {
-                                        top = top + 20;
-                                        Y = height - ( adjHeight * 2 );
-                                    }
-                                    var X = width - 3;
-                                    
-                                    $(id[i]).prev('div.ajax_loader').css("cssText" ,"width :" + X + "px !important");
-                                    $(id[i]).prev('div.ajax_loader').css({"height" : + Y , "top" : + top});
-                                    $(id[i]).prev('div.ajax_loader').show();
+                              $(id[i]).hide();
+                              var height = $(id[i]).parents('.cumm_widget').height();
+                              var width = $(id[i]).parents('.cumm_widget').width();
+                              var pos = $(id[i]).parents('.cumm_widget').offset();
+                              var adjHeight = $(id[i]).parents('.cumm_widget').find('.cumm_header').height();
+                              var top = pos.top;
+                              var Y = height - ( adjHeight * 4 );
+                              if ( $(window).width() <= 557 ) {
+                                  top = top + 20;
+                                  Y = height - ( adjHeight * 2 );
+                              }
+                              var X = width - 3;
+                              
+                              $(id[i]).prev('div.ajax_loader').css("cssText" ,"width :" + X + "px !important");
+                              $(id[i]).prev('div.ajax_loader').css({"height" : + Y , "top" : + top});
+                              $(id[i]).prev('div.ajax_loader').show();
 
-                                }else{
+                          }else{
 
-                                    $(id[i]).prev('div.ajax_loader').hide();
-                                    $(id[i]).show();
-                                }
-                            };
-
-                        };
+                              $(id[i]).prev('div.ajax_loader').hide();
+                              $(id[i]).show();
+                          }
+                      };
+                    });
+                  };
 
 
               //Function to get the data for all the widgets on selection of any date
@@ -736,6 +737,8 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                 },
                             success: function(response) {
 
+                                Dom_Id = new Array();
+
                                 resp = $.parseJSON(response);  
 
                                 chart_data = resp.chart;
@@ -770,7 +773,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_avg_order_tot_img" class="'+ ( ( c_avg_tot > l_avg_tot ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
                                     ' <span id ="sr_cumm_avg_order_tot_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( l_avg_tot > 0 ) ? ( ((c_avg_tot - l_avg_tot)/l_avg_tot) * 100 ) : c_avg_tot ) +'%' +'</span></div>');
                                 }else {
-                                    $('#sr_cumm_avg_order_tot_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#sr_cumm_avg_order_tot_content').text("<?php _e('No Data',  $sr_text_domain); ?>").addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
                                     $('#average_order_tot_title').css({'margin-top':'1.5em'});
                                 }
 
@@ -809,7 +812,6 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                 resp = $.parseJSON(response);  
 
                                 chart_data = resp.chart;
-                                
 
                                 for ( var key in chart_data ) {
                                     if ( key == 'period' || key.substring(0,2) == 'tp' ) {
@@ -822,14 +824,17 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
                                 delete resp.chart;
 
-                                sr_data.bc_data = resp.kpi.billing_country;
-                                sr_data.bc_data.s_link = resp.meta.s_link;
+                                if ( JSON.stringify(sr_data.bc_data) !== '{}' ) {
+                                  sr_data.bc_data = resp.kpi.billing_country;
+                                  sr_data.bc_data.s_link = (resp.meta.hasOwnProperty('s_link')) ? resp.meta.s_link : '';  
+                                  cumm_sales_billing_country(sr_data.bc_data);
+                                }
+                                
 
                                
 
                                 top_cust_display(resp);
                                 sr_top_coupons_display(resp);
-                                cumm_sales_billing_country(sr_data.bc_data);
                                 top_prod_display(resp.kpi.top_prod.sales, 'tps_');
                                 top_ababdoned_products_display(resp.kpi.top_aprod);
                                
@@ -846,7 +851,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_avg_order_items_img" class="'+ ( ( resp['kpi']['aipc'] > resp['kpi']['lp_aipc'] ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
                                     ' <span id ="sr_cumm_avg_order_items_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( resp['kpi']['lp_aipc'] > 0 ) ? (resp['kpi']['aipc'] - resp['kpi']['lp_aipc']) : resp['kpi']['aipc'] ) +'</span></div>');
                                 } else {
-                                    $('#sr_cumm_avg_order_items_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#sr_cumm_avg_order_items_content').text("<?php _e('No Data',  $sr_text_domain); ?>").addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
                                     $('#average_order_items_title').css({'margin-top':'1.5em'});
                                 }
 
@@ -857,7 +862,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_cart_abandonment_img" class="'+ ( ( resp['kpi']['car'] > resp['kpi']['lp_car'] ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
                                     ' <span id ="sr_cumm_cart_abandonment_count_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( resp['kpi']['lp_car'] > 0 ) ? (resp['kpi']['car'] - resp['kpi']['lp_car']) : resp['kpi']['car'] ) +' % </span></div>');
                                 } else {
-                                    $('#sr_cumm_cart_abandonment_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#sr_cumm_cart_abandonment_content').text("<?php _e('No Data',  $sr_text_domain); ?>").addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
                                     $('#sr_cumm_cart_abandonment_title').css({'margin-top':'1.5em'});
                                 }
 
@@ -868,7 +873,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     '  <div class="sr_cumm_avg_tot_content"> <i id="sr_cumm_order_coupons_img" class="'+ ( ( resp['kpi']['swc'] > resp['kpi']['lp_swc'] ) ? "<?php echo $sr_const['img_up_green'];?>" : "<?php echo $sr_const['img_down_red'];?>" ) +'" > </i>'+
                                     ' <span id ="sr_cumm_order_coupons_count_diff" style="font-size : 0.5em;">'+ sr_cumm_number_format( ( resp['kpi']['lp_swc'] > 0 ) ? (resp['kpi']['swc'] - resp['kpi']['lp_swc']) : resp['kpi']['swc'] ) +' % </span></div>');
                                 } else {
-                                    $('#sr_cumm_order_coupons_content').text('No Data').addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
+                                    $('#sr_cumm_order_coupons_content').text("<?php _e('No Data',  $sr_text_domain); ?>").addClass('no_data_text').css({'margin-top':'2.65em', 'margin-bottom':'1.2em','font-size':'0.55em'});
                                     $('#sr_cumm_order_coupons_title').css({'margin-top':'1.5em'});
                                 }
 
@@ -1066,7 +1071,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
     <div id="sr_cumm_sales_value" style="height:60px;width:100%;">
           <div class="cumm_header">
               <i class="fa fa-bar-chart-o icon_cumm_widgets" ></i>
-              Sales
+              <?php _e('Sales', $sr_text_domain); ?>
           </div>
           <div id="sr_cumm_sales_total" class="cumm_total">
               <span id ="sr_cumm_sales_actual"> </span>  <i id="sr_cumm_sales_indicator" ></i> <span id ="diff_cumm_sales" style="font-size : 0.5em;"></span>
@@ -1092,7 +1097,6 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
     jQuery(function($){
 
         $(window).resize(function() {
-
             cumm_sales_billing_country(sr_data.bc_data);
         });
     });
@@ -1489,7 +1493,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
             else {
                 $('#sr_sales_graph').removeClass();            
-                $('#sr_sales_graph').text('No Data');
+                $('#sr_sales_graph').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#sr_sales_graph').addClass('no_data_text');
                 $('#sr_sales_graph').css('margin-top','5.4em');
             }
@@ -1538,7 +1542,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 <div id="sr_cumm_sales_funnel" class="cumm_widget">    
     <div class="cumm_header">
       <i class="fa fa-filter icon_cumm_widgets" ></i>
-      Sales Funnel
+      <?php _e('Sales Funnel', $sr_text_domain); ?>
     </div>
 
     <!-- <div id="sr_cumm_sales_funnel_data" class="no_data_text" style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;"> -->
@@ -1577,7 +1581,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
             } else {
                 $('#sr_cumm_sales_funnel_data').removeAttr('style');
-                $('#sr_cumm_sales_funnel_data').text('No Data');
+                $('#sr_cumm_sales_funnel_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#sr_cumm_sales_funnel_data').addClass('no_data_text');
                 $('#sr_cumm_sales_funnel_data').css('margin-top','6.7em');
             }
@@ -1647,7 +1651,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
             //     //         });
             // } else {
             //     $('#sr_cumm_sales_funnel_data').removeAttr('style');
-            //     $('#sr_cumm_sales_funnel_data').text('No Data');
+            //     $('#sr_cumm_sales_funnel_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
             //     $('#sr_cumm_sales_funnel_data').addClass('no_data_text');
             //     $('#sr_cumm_sales_funnel_data').css('margin-top','6.7em');
             // }
@@ -1835,13 +1839,13 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
               //       action: 'sr_get_stats',
               //       data: {
               //           cmd: 'top_products_option',
-              //           // security : "<?php echo $sr_nonce; ?>",
+              //           // security : "<?php echo $sr_const['security']; ?>",
               //           top_prod_option: opt_id,
               //           option : 1,
               //           start_date : $("#startdate").val(),
               //           end_date : $("#enddate").val(),
               //           params: '<?php echo json_encode($sr_const); ?>'
-              //           // SR_IS_WOO22 : "<?php echo $sr_is_woo22; ?>",
+              //           // SR_IS_WOO22 : "<?php echo $sr_const['is_woo22']; ?>",
               //           // file: "<?php echo $sr_json_file_nm; ?>"
               //       },
               //       success: function(response) {
@@ -1873,7 +1877,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
               //               top_prod_graph_display(top_prod_graph_data,myJsonObj.tick_format,tickFormatter_top_prod,top_prod_data,myJsonObj['cumm_sales_min_date'],myJsonObj['cumm_sales_max_date'],'span_top_prod_');
               //           }
               //           else {
-              //               $('#top_prod_data').text('No Data');
+              //               $('#top_prod_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
               //               $('#top_prod_data').addClass('no_data_text');
               //               $('#top_prod_data').css('margin-top','6.7em');
               //           }
@@ -2024,7 +2028,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
     
             <i class = "fa fa-star icon_cumm_widgets"> </i>     
 
-            Top Products
+            <?php _e('Top Products', $sr_text_domain); ?>
 
                 <span id="sr_cumm_top_prod_detailed_view" title="Expand" class="top_prod_detailed_view" >
                     <i id="sr_cumm_top_prod_detailed_view_icon" class= "fa fa-ellipsis-h icon_cumm_widgets" style="color:#B1ADAD" ></i>
@@ -2032,9 +2036,9 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
                 <div class="switch switch-blue">
                   <input type="radio" class="switch-input" name="top_prod_toggle_price_option_nm" value="sr_opt_top_prod_price" id="sr_opt_top_prod_price" style="display:none">
-                  <label id="sr_opt_top_prod_price_label" for="sr_opt_top_prod_price" class="switch-label switch-label_price switch-label-on">Price</label>
+                  <label id="sr_opt_top_prod_price_label" for="sr_opt_top_prod_price" class="switch-label switch-label_price switch-label-on"> <?php _e('Price', $sr_text_domain); ?></label>
                   <input type="radio" class="switch-input" name="top_prod_toggle_price_option_nm" value="sr_opt_top_prod_qty" id="sr_opt_top_prod_qty" style="display:none">
-                  <label id="sr_opt_top_prod_qty_label" for="sr_opt_top_prod_qty" class="switch-label switch-label-off">Qty</label>
+                  <label id="sr_opt_top_prod_qty_label" for="sr_opt_top_prod_qty" class="switch-label switch-label-off"> <?php _e('Qty', $sr_text_domain); ?></label>
                   <span id="top_prod_selection_toggle" class="switch-selection"></span>
                 </div>
 
@@ -2066,7 +2070,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                             <table id="kpi_display_table" class="kpi_table"></table> \
                                         </div> \
                                         <div id="sr_recent_orders" class="recent_orders"> \
-                                            <h3 id="recent_orders_heading" class="recent_orders_heading"><?php _e("Recent Orders" , "smart-reporter"); ?></h3>\
+                                            <h3 id="recent_orders_heading" class="recent_orders_heading"><?php _e("Recent Orders" , $sr_text_domain); ?></h3>\
                                             <div id="recent_orders_container" class="recent_orders_container"> \
                                             <table id="recent_orders_table" class="recent_orders_table"></table> \
                                             </div> \
@@ -2097,13 +2101,13 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     
                             <?php   }else {?>
                            
-                                    alert('<?php _e( "Sorry! Expand Detailed View functionality is available only in Pro version" , "smart-reporter" );?>');
+                                    alert('<?php _e( "Sorry! Expand Detailed View functionality is available only in Pro version" , $sr_text_domain );?>');
                             <?php   }?>      
                         });
 
                         var detail_view_data;// to store all the data for detailed view widget
                         var currency = "<?php echo $sr_const['currency_symbol']; ?>";
-                        var decimals = "<?php echo $sr_const['sr_decimal_places']; ?>";
+                        var decimals = "<?php echo $sr_const['decimal_places']; ?>";
 
                         $('.ajax-popup-link').magnificPopup({
 
@@ -2114,7 +2118,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                           closeBtnInside: true,
                           // closeOnBgClick: true,
                           showCloseBtn  : true,
-                          tError: '<?php _e('The content could not be loaded.', 'smart-reporter' ); ?>',
+                          tError: "<?php _e('The content could not be loaded.',  $sr_text_domain ); ?>",
                           callbacks:{
                             open: function() {
                                 // $.ajax({
@@ -2197,13 +2201,13 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                 //                 }
                                 //                 else {
                                 //                         $('#top_prod_detailed_view_widget').empty();
-                                //                         $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                //                         $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("No Data" , $sr_text_domain); ?></div>');
                                 //                     }
                                 //             }
                                 //         });// end of ajax
 
                                   $('#top_prod_detailed_view_widget').empty();
-                                  $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("Comming Soon" , "smart-reporter"); ?></div>');
+                                  $('#top_prod_detailed_view_widget').append('<div class="no_data_text" style="margin-top:2.37em;height:3em;"><?php _e("Comming Soon" , $sr_text_domain); ?></div>');
 
                                 },
 
@@ -2249,11 +2253,11 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                 non_discount_qty      = index.non_discount_qty;
                                 non_discount_qty_show = index.non_discount_qty_show;
                             
-                            table_data = '<tr><td><span class="kpi_widgets_price">'+per_day_sales+'</span><p class ="kpi_widgets_text"><?php _e(" per Day Sales" , "smart-reporter"); ?></p></td>';
-                            table_data+= '<td><span class="kpi_widgets_price">'+one_sale_every+'</span><p class ="kpi_widgets_text"><?php _e("1 Sale Every" , "smart-reporter"); ?></p></td>';
-                            table_data+= '<td><span class="kpi_widgets_price">'+no_of_orders+'</span><p class ="kpi_widgets_text"><?php _e( "Orders Placed" , "smart-reporter" );?></p></td>';
-                            table_data+= '<td><span class="kpi_widgets_price">'+abandonment_rate+'</span><p class ="kpi_widgets_text"><?php _e( "Abandonment Rate" , "smart-reporter"); ?></p></td>';
-                            table_data+= '<td><span class="kpi_widgets_price">'+refund_rate+'</span><p class ="kpi_widgets_text"><?php _e("Refund Rate " , "smart-reporter"); ?></p></td></tr>';
+                            table_data = '<tr><td><span class="kpi_widgets_price">'+per_day_sales+'</span><p class ="kpi_widgets_text"><?php _e(" per Day Sales" , $sr_text_domain); ?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+one_sale_every+'</span><p class ="kpi_widgets_text"><?php _e("1 Sale Every" , $sr_text_domain); ?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+no_of_orders+'</span><p class ="kpi_widgets_text"><?php _e( "Orders Placed" , $sr_text_domain );?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+abandonment_rate+'</span><p class ="kpi_widgets_text"><?php _e( "Abandonment Rate" , $sr_text_domain); ?></p></td>';
+                            table_data+= '<td><span class="kpi_widgets_price">'+refund_rate+'</span><p class ="kpi_widgets_text"><?php _e("Refund Rate " , $sr_text_domain); ?></p></td></tr>';
 
 
                             $('#kpi_display_table').html(table_data);
@@ -2322,7 +2326,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     $.jqplot('draw_sales_funnel',  [[['Added to Cart', sales_funnel['total_cart_qty']],
                                                                          ['Orders Placed', sales_funnel['total_ordered_qty']],
                                                                          ['Orders Completed',sales_funnel['total_completed_qty']]]], {
-                                        title: '<?php _e("Sales Funnel" , "smart-reporter"); ?>',                                        
+                                        title: '<?php _e("Sales Funnel" , $sr_text_domain); ?>',                                        
                                         grid: {
                                             backgroundColor: 'transparent',
                                             drawBorder: false,
@@ -2378,8 +2382,8 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                 
                                 } else {
                                     $('#draw_sales_funnel').removeAttr('style');
-                                    $('#draw_sales_funnel').append('<div class="sales_funnel_title" style="color: #727277;"><?php _e("Sales Funnel" , "smart-reporter"); ?></div>');
-                                    $('#draw_sales_funnel').append('<div class="no_data_text" ><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                    $('#draw_sales_funnel').append('<div class="sales_funnel_title" style="color: #727277;"><?php _e("Sales Funnel" , $sr_text_domain); ?></div>');
+                                    $('#draw_sales_funnel').append('<div class="no_data_text" ><?php _e("No Data" , $sr_text_domain); ?></div>');
                                 }
 
                                 $('.jqplot-table-legend-swatch').addClass('sales_funnel_table-legend-swatch');
@@ -2406,7 +2410,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                         if( prod_sales !== 0) {
                                         
                                            top_prod_detailed_plot = $.jqplot('draw_sales_graph',  [sales_trend], {
-                                           title: '<?php _e("Sales Trend" , "smart-reporter"); ?>',
+                                           title: '<?php _e("Sales Trend" , $sr_text_domain); ?>',
                                            axes: {
                                                      yaxis: {  
                                                           tickOptions: {
@@ -2476,8 +2480,8 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                                     } else{
                                         
                                         $('#draw_sales_graph').removeAttr('style');
-                                        $('#draw_sales_graph').append('<div class="sales_graph_donut_title" ><?php _e("Sales Trend" , "smart-reporter"); ?></div>');
-                                        $('#draw_sales_graph').append('<div class="no_data_text" ><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                        $('#draw_sales_graph').append('<div class="sales_graph_donut_title" ><?php _e("Sales Trend" , $sr_text_domain); ?></div>');
+                                        $('#draw_sales_graph').append('<div class="no_data_text" ><?php _e("No Data" , $sr_text_domain); ?></div>');
                                     }
                                 }
                             
@@ -2544,7 +2548,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
 
                                         $.jqplot('sr_sales_donut',  [kpi_data], {
-                                        title: '<?php _e("Sales Distribution", "smart-reporter"); ?>',
+                                        title: '<?php _e("Sales Distribution", $sr_text_domain); ?>',
                                             grid: {
                                                 backgroundColor: 'transparent',
                                                 drawBorder: false,
@@ -2604,8 +2608,8 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
                                 } else {
                                     $('#sr_sales_donut').removeAttr('style');
-                                    $('#sr_sales_donut').append('<div class="sales_graph_donut_title" ><?php _e("Sales Distribution" , "smart-reporter"); ?></div>');
-                                    $('#sr_sales_donut').append('<div class="no_data_text" ><?php _e("No Data" , "smart-reporter"); ?></div>');
+                                    $('#sr_sales_donut').append('<div class="sales_graph_donut_title" ><?php _e("Sales Distribution" , $sr_text_domain); ?></div>');
+                                    $('#sr_sales_donut').append('<div class="no_data_text" ><?php _e("No Data" , $sr_text_domain); ?></div>');
                                 }
                                 $('.jqplot-table-legend').css({"border": "0px solid #ccc"});
                             }
@@ -2647,7 +2651,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                 $('#top_prod_data').html('<table id="top_prod_table" style="margin-top: 0.05em; width: 100%"> </table>');
                 $('#top_prod_table').html(table_html);
             } else {
-                $('#top_prod_data').text('No Data');
+                $('#top_prod_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#top_prod_data').addClass('no_data_text');
                 $('#top_prod_data').css('margin-top','6.7em');
             }
@@ -2675,7 +2679,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
         <div id="sr_cumm_avg_order_tot" class = "sr_cumm_small_widget blur_widget">
             <div id="sr_cumm_avg_order_tot_value" class="average_order_total_amt">
                 <div id="sr_cumm_avg_order_tot_content" class="sr_cumm_small_widget_content"></div>
-                <p id="average_order_tot_title" class="average_order_total_text"> Avg Order Total </p>
+                <p id="average_order_tot_title" class="average_order_total_text"> <?php _e('Avg Order Total', $sr_text_domain); ?> </p>
             </div>
         </div>
 
@@ -2683,7 +2687,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
         <div id="sr_cumm_avg_order_count" class = "sr_cumm_small_widget blur_widget">
             <div id="sr_cumm_avg_order_items_value" class="average_order_total_amt">
                 <div id="sr_cumm_avg_order_items_content" class="sr_cumm_small_widget_content"> </div>
-                <p id="average_order_items_title" class="average_order_items_text"> Avg Items Per Customer </p>
+                <p id="average_order_items_title" class="average_order_items_text"> <?php _e('Avg Items Per Customer', $sr_text_domain); ?> </p>
             </div>
         </div>
 
@@ -2697,7 +2701,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
               <div class="cumm_header">
                   <i class = "fa fa-group icon_cumm_widgets"> </i>
 
-                  Top Customers
+                  <?php _e('Top Customers', $sr_text_domain); ?>
               
               </div>
 
@@ -2752,7 +2756,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                     $('#top_cust_data').html('<table id = "top_cust_table"  class = "cumm_widget_table_body" width = "100%">');
                     jQuery('#top_cust_table').html(table_html);
                 } else {
-                    $('#top_cust_data').text('No Data');
+                    $('#top_cust_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                     $('#top_cust_data').removeClass('cumm_widget_table_data');
                     $('#top_cust_data').addClass('no_data_text');
                     $('#top_cust_data').css('margin-top','3.2em');
@@ -2777,7 +2781,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
         <div id="sr_cumm_cart_abandonment" class = "sr_cumm_small_widget blur_widget" style = "margin-right: 1.68em;">
             <div id="sr_cumm_cart_abandonment_rate" class="average_order_total_amt">
                 <div id="sr_cumm_cart_abandonment_content" class="sr_cumm_small_widget_content"></div>
-                <p id="sr_cumm_cart_abandonment_title" class="average_order_items_text"> Cart Abandonment Rate </p>
+                <p id="sr_cumm_cart_abandonment_title" class="average_order_items_text"> <?php _e('Cart Abandonment Rate', $sr_text_domain); ?> </p>
             </div>
         </div>
 
@@ -2790,7 +2794,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
         <div id="sr_cumm_order_coupons_count" class = "sr_cumm_small_widget blur_widget" style = "margin-right: 1.64em">
             <div id="sr_cumm_order_coupons_value" class="average_order_total_amt">
                 <div id="sr_cumm_order_coupons_content" class="sr_cumm_small_widget_content"></div>
-                <p id="sr_cumm_order_coupons_title" class="average_order_items_text"> Sales with Coupons </p>
+                <p id="sr_cumm_order_coupons_title" class="average_order_items_text"> <?php _e('Sales with Coupons', $sr_text_domain); ?> </p>
             </div>
         </div>
 
@@ -2803,7 +2807,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
             <div class="cumm_header">
               <i class = "fa fa-tags icon_cumm_widgets"> </i>     
-              Top Coupons
+              <?php _e('Top Coupons', $sr_text_domain); ?>
             </div>
             <div class="ajax_loader cumm_widget" style="display : none;"></div>
             <div id = "sr_cumm_top_coupons_data" class= "cumm_widget_table_data" > </div>
@@ -2846,7 +2850,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                     $('#sr_cumm_top_coupons_data').html('<table id = "top_coupon_table"  class = "cumm_widget_table_body" width="100%">');
                     jQuery('#top_coupon_table').html(table_html);
                 } else {
-                    $('#sr_cumm_top_coupons_data').text('No Data');
+                    $('#sr_cumm_top_coupons_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                     $('#sr_cumm_top_coupons_data').removeClass('cumm_widget_table_data');
                     $('#sr_cumm_top_coupons_data').addClass('no_data_text');
                     $('#sr_cumm_top_coupons_data').css('margin-top','3.2em');
@@ -2875,7 +2879,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
     <div class="cumm_header" style="padding:4px 0 8px 6px;">
       <i class="fa fa-shopping-cart" style="font-size: 1.2em;"></i>
       <i class="fa fa-share" style="vertical-align: super;margin-left:-0.7em;font-size: 0.9em;"></i>
-      Abandoned Products
+      <?php _e('Abandoned Products', $sr_text_domain); ?>
 
       <span id="sr_cumm_top_abandoned_products_export" title="Export" class="top_abandoned_prod_export">
         <!-- <input type="button" name="top_abandoned_prod_export" id="top_abandoned_prod_export" value="Export" onclick="top_ababdoned_products_export()"> -->
@@ -2947,7 +2951,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                 $('#sr_cumm_top_abandoned_products_data').html('<table id="top_abandoned_prod_table" style="margin-top: 0.05em; width: 100%"> </table>');
                 $('#top_abandoned_prod_table').html(table_html);
             } else {
-                $('#sr_cumm_top_abandoned_products_data').text('No Data');
+                $('#sr_cumm_top_abandoned_products_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#sr_cumm_top_abandoned_products_data').addClass('no_data_text');
                 $('#sr_cumm_top_abandoned_products_data').css('margin-top','6.7em');
             }
@@ -2973,7 +2977,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
           <div class="cumm_header">
               <i class="fa fa-location-arrow icon_cumm_widgets" ></i>
               <!-- <i class="fa fa-rocket icon_cumm_widgets" ></i> -->
-              Discounts
+              <?php _e('Discounts', $sr_text_domain); ?>
           </div>
           <div id="sr_cumm_total_discount_total" class="cumm_total">
               <span id ="sr_cumm_total_discount_actual"> </span>  <i id="sr_cumm_total_discount_indicator" ></i> <span id ="diff_cumm_total_discount" style="font-size : 0.5em;"></span>
@@ -3085,7 +3089,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 
             else {
                 $('#sr_discount_graph').removeClass();            
-                $('#sr_discount_graph').text('No Data');
+                $('#sr_discount_graph').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#sr_discount_graph').addClass('no_data_text');
                 $('#sr_discount_graph').css('margin-top','5.4em');
             }
@@ -3107,7 +3111,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 <div id="sr_cumm_taxes" class="cumm_widget">    
     <div class="cumm_header">
       <i class="fa fa-bolt icon_cumm_widgets" ></i>
-      Taxes & Shipping
+      <?php _e('Taxes & Shipping', $sr_text_domain); ?>
     </div>
 
     <!-- style="line-height: 0.75em; margin-top:2.17em;font-size:3.36em;" -->
@@ -3251,7 +3255,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 <div id="sr_cumm_order_by_gateways" class="cumm_widget">    
     <div class="cumm_header">
       <i class="fa fa-credit-card icon_cumm_widgets" ></i>
-      Payment Gateways
+      <?php _e('Payment Gateways', $sr_text_domain); ?>
     </div>
 
     <div class="ajax_loader cumm_widget" style="display : none;"></div>
@@ -3265,6 +3269,8 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
     var top_payment_shipping_display = function(resp) {
 
         jQuery(function($) {
+
+            Dom_Id = new Array();
 
             for ( var key in resp.kpi ) {
 
@@ -3306,16 +3312,17 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                   $('#sr_cumm_order_by_'+key+'_data').html('<table id="top_'+key+'_table" style="margin-top: 0.05em; width: 100%"> </table>');
                   $('#top_'+key+'_table').html(table_html);
               } else {
-                  $('#sr_cumm_order_by_'+key+'_data').text('No Data');
+                  $('#sr_cumm_order_by_'+key+'_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                   $('#sr_cumm_order_by_'+key+'_data').addClass('no_data_text');
                   $('#sr_cumm_order_by_'+key+'_data').css('margin-top','6.7em');
               }
 
-              // for hiding the spinner
-              Dom_Id[0] = '#sr_cumm_order_by_'+key+'_data';
-              ajax_spinner(Dom_Id, false);
-
             }
+
+            // for hiding the spinner
+            Dom_Id[0] = '#sr_cumm_order_by_pm_data';
+            Dom_Id[1] = '#sr_cumm_order_by_sm_data';
+            ajax_spinner(Dom_Id, false);
 
             
             // var tick_format = resp['tick_format'];
@@ -3400,7 +3407,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
             //     top_prod_graph_display(top_gateway_graph_sales_count_data,tick_format,tickFormatter_top_gateway_shipping_sales_count,top_gateway_sales_count_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_gateway_sales_count_');    
             // }
             // else {
-            //     $('#sr_cumm_order_by_pm_data').text('No Data');
+            //     $('#sr_cumm_order_by_pm_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
             //     $('#sr_cumm_order_by_pm_data').addClass('no_data_text');
             //     $('#sr_cumm_order_by_pm_data').css('margin-top','6.7em');
             // }
@@ -3423,7 +3430,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
           <div class="cumm_header">
               <i class="fa fa-globe icon_cumm_widgets" ></i>
               <!-- <i class="fa fa-rocket icon_cumm_widgets" ></i> -->
-              Billing Countries
+              <?php _e('Billing Countries', $sr_text_domain); ?>
           </div>
     </div>
     
@@ -3446,6 +3453,9 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
             if( typeof (resp) != 'undefined' && resp.hasOwnProperty('sales') && Object.keys(resp.sales).length > 0) {
                 $('#sr_cumm_sales_countries_graph').removeClass('no_data_text');
                 $('#sr_cumm_sales_countries_graph').css('margin-top','0.5em');
+                $("#sr_cumm_sales_countries_graph").width(($("#sr_cumm_sales_countries").width())+"px");
+                $("#sr_cumm_sales_countries_graph").height(($("#sr_cumm_sales_countries").height()-75)+"px");
+
                 // $('#sr_cumm_sales_countries_graph').css({"margin-top" :"0.5em","height" :"85%","width" :"100%"});
 
                 $('#sr_cumm_sales_countries_graph').vectorMap({
@@ -3493,7 +3503,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                 });
                 
             } else {
-                $('#sr_cumm_sales_countries_graph').text('No Data');
+                $('#sr_cumm_sales_countries_graph').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#sr_cumm_sales_countries_graph').addClass('no_data_text');
                 $('#sr_cumm_sales_countries_graph').css('margin-top','6.7em');
             }
@@ -3516,7 +3526,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
 <div id="sr_cumm_order_by_shipping_method" class="cumm_widget">    
     <div class="cumm_header">
       <i class="fa fa-truck icon_cumm_widgets" ></i>
-      Shipping Methods
+      <?php _e('Shipping Methods', $sr_text_domain); ?>
     </div>
 
     <div class="ajax_loader cumm_widget" style="display : none;"></div>
@@ -3620,7 +3630,7 @@ if ( !isset($_GET['view']) && ( isset($_GET['page']) && $_GET['page'] == 'wc-rep
                 top_prod_graph_display(top_shipping_method_graph_sales_count_data,tick_format,tickFormatter_top_gateway_shipping_sales_count,top_shipping_method_sales_count_data,resp['cumm_sales_min_date'],resp['cumm_sales_max_date'],'span_top_shipping_method_sales_count_');
             }
             else {
-                $('#sr_cumm_order_by_sm_data').text('No Data');
+                $('#sr_cumm_order_by_sm_data').text("<?php _e('No Data',  $sr_text_domain); ?>");
                 $('#sr_cumm_order_by_sm_data').addClass('no_data_text');
                 $('#sr_cumm_order_by_sm_data').css('margin-top','6.7em');
             }
@@ -3781,10 +3791,13 @@ else if ( !empty($_GET['page']) && ($_GET['page'] == 'wc-reports' || $_GET['page
 }
 
 function smart_reporter_footer() {
+
+    global $sr_text_domain;
+
     if ( ! get_option( 'sr_admin_footer' ) ) {
       ?>
       <div id="sr_putler_promotion" class="sr_promotion_footer">
-          <?php echo __(" For more Extensive Reporting use "); ?> <a href="http://www.putler.com/?&utm_source=SR_IN_WP" target="_blank"> <?php echo __('Putler'); ?></a> 
+          <?php echo __(" For more Extensive Reporting use ", $sr_text_domain); ?> <a href="http://www.putler.com/?&utm_source=SR_IN_WP" target="_blank"> <?php echo __('Putler', $sr_text_domain); ?></a> 
       </div>
 
       <br/>
@@ -3798,7 +3811,7 @@ function smart_reporter_footer() {
 
         <div id="sr_wp_rating" class="wrap" style="color:#9e9b9b;font-size:0.95em;">
           <?php
-            echo sprintf( __( 'If you like <strong>Smart Reporter</strong> please leave us a %s&#9733;&#9733;&#9733;&#9733;&#9733;%s rating. A huge thank you from StoreApps in advance!', 'smart-reporter-for-wp-e-commerce' ), '<a href="https://wordpress.org/support/view/plugin-reviews/smart-reporter-for-wp-e-commerce?filter=5#postform" target="_blank" class="wc-rating-link" data-rated="' . esc_attr__( 'Thanks :)', 'smart-reporter-for-wp-e-commerce' ) . '">', '</a>' );
+            echo sprintf( __( 'If you like <strong>Smart Reporter</strong> please leave us a %s&#9733;&#9733;&#9733;&#9733;&#9733;%s rating. A huge thank you from StoreApps in advance!', $sr_text_domain ), '<a href="https://wordpress.org/support/view/plugin-reviews/smart-reporter-for-wp-e-commerce?filter=5#postform" target="_blank" data-rated="' . esc_attr__( 'Thanks :)', $sr_text_domain ) . '">', '</a>' );
           ?>
         </div>
       </div>

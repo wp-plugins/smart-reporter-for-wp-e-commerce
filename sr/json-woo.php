@@ -7,7 +7,9 @@ if ( !defined( 'ABSPATH' ) ) {
 
 ob_start();
 
-$sr_domain = ( defined('SR_DOMAIN') ) ? SR_DOMAIN : 'smart-reporter-for-wp-e-commerce';
+global $sr_text_domain;
+
+$sr_text_domain = ( defined('SR_TEXT_DOMAIN') ) ? SR_TEXT_DOMAIN : 'smart-reporter-for-wp-e-commerce';
 
 if ( empty( $wpdb ) || !is_object( $wpdb ) ) {
     require_once ABSPATH . 'wp-includes/wp-db.php';
@@ -210,17 +212,25 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 			$results = $wpdb->get_results($query, 'ARRAY_A'); 
 
 			if ( count($results) > 0 ) {
+				
 				foreach ( $results as $row ) {
 
 					// assigning products titles
 					foreach ( $data as &$arr ) {
 
-						$key = array_search($row['id'], $params['t_v_ids']);
+						$v_ids = $params['t_v_ids'];
 
-						if ( !empty($arr[$row['id']]) ) {
-							$arr[$row['id']]['title'] = $row['title'];
-						} else if ( !empty($key) && !empty($arr[$key]) ) {
-							$arr[$key]['title'] = $row['title'];
+						foreach ($arr as $key => &$value) {
+						
+							$index = array_search($row['id'], $v_ids);
+
+							if ( !empty($row['id']) && $row['id'] == $key ) {
+								$value['title'] = $row['title'];
+							} else if ( !empty($index) && $index == $key ) {
+								$value['title'] = $row['title'];
+								unset($v_ids[$index]);
+							}
+							
 						}
 					}
 				}
@@ -320,7 +330,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 	     		die( 'Security check' );
 	     	}
 
-		    global $wpdb;
+		    global $wpdb, $sr_text_domain;
 
 		    $returns = array();
 		   
@@ -346,7 +356,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 				foreach( (array) WC_Payment_Gateways::instance()->get_available_payment_gateways() as $key => $value) {
 					$chart_keys[] = 'pm_'.$key.'_sales';
 					$chart_keys[] = 'pm_'.$key.'_orders';
-					$returns['kpi']['pm'][$key] = array('title' => $value->get_title(), 
+					$returns['kpi']['pm'][$key] = array('title' => __($value->get_title(), $sr_text_domain), 
 														'sales' => 0, 
 														'orders' => 0,
 														's_link' => '&s='.$value->get_title().'&s_col=payment_method&s_val='.$key);
@@ -354,7 +364,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 				foreach( (array) WC_Shipping::instance()->get_shipping_methods() as $key => $value) {
 					$chart_keys[] = 'sm_'.$key.'_sales';
 					$chart_keys[] = 'sm_'.$key.'_orders';
-					$returns['kpi']['sm'][$key] = array('title' => $value->get_title(), 
+					$returns['kpi']['sm'][$key] = array('title' => __($value->get_title(), $sr_text_domain), 
 														'sales' => 0, 
 														'orders' => 0, 
 														's_link' => '&s='.$value->get_title().'&s_col=shipping_method&s_val='.$key);
@@ -717,9 +727,9 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 
 					// Set values in charts
 					if ( !empty($row['tps_id']) ) {
-						$returns['chart'][ 'tps_'.$row['tps_id'] ][ $i ] += $row[ 'sales' ];
-					} else {
-						$returns['chart'][ 'tpq_'.$row['tpq_id'] ][ $i ] += $row[ 'qty' ];
+						$returns['chart'][ 'tps_'.$row['tps_id'] ][ $i ] += (!empty($row[ 'sales' ])) ? $row[ 'sales' ] : 0;
+					} else if ( !empty($row['tpq_id']) ) {
+						$returns['chart'][ 'tpq_'.$row['tpq_id'] ][ $i ] += (!empty($row[ 'qty' ])) ? $row[ 'qty' ] : 0;
 					}
 				}
 			}
@@ -1165,7 +1175,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
      		die( 'Security check' ); 
      	}
 
-		global $wpdb, $sr_domain;
+		global $wpdb, $sr_text_domain;
 
 		//chk if the SR db dump table exists or not
     	$table_name = "{$wpdb->prefix}woo_sr_orders";
@@ -1190,7 +1200,7 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 
 		foreach ( $daily_widget_keys as $key ) {
 			$daily_widget_data [$key] = array();
-			$daily_widget_data [$key] ['title'] = __(ucwords(str_replace('_', ' ', $key)), $sr_domain);
+			$daily_widget_data [$key] ['title'] = __(ucwords(str_replace('_', ' ', $key)), $sr_text_domain);
 			$daily_widget_data [$key] ['c'] = 0;
 			$daily_widget_data [$key] ['lp'] = 0;
 
@@ -1375,10 +1385,10 @@ function sr_multidimensional_array_sort($array, $on, $order='ASC'){
 				}
 
 			} else {
-				$daily_widget_data ['orders_to_fulfill']['c'] = __('NA', $sr_domain);	
+				$daily_widget_data ['orders_to_fulfill']['c'] = __('NA', $sr_text_domain);	
 			}
 		} else {
-			$daily_widget_data ['orders_to_fulfill']['c'] = __('NA', $sr_domain);
+			$daily_widget_data ['orders_to_fulfill']['c'] = __('NA', $sr_text_domain);
 		}
 
 
